@@ -3,6 +3,7 @@ import { eq, and } from 'drizzle-orm';
 import * as argon2 from 'argon2';
 import { randomBytes, createHash } from 'crypto';
 import type { RegisterInput, LoginInput, AuthResponse, UserResponse } from '@homer-io/shared';
+import { NotFoundError } from '../../lib/errors.js';
 import { db } from '../../lib/db/index.js';
 import { tenants } from '../../lib/db/schema/tenants.js';
 import { users, refreshTokens } from '../../lib/db/schema/users.js';
@@ -144,7 +145,7 @@ export async function getMe(userId: string): Promise<UserResponse> {
     .limit(1);
 
   if (!user) {
-    throw new Error('User not found');
+    throw new NotFoundError('User not found');
   }
 
   return {

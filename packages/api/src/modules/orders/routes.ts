@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { createOrderSchema, updateOrderStatusSchema, paginationSchema } from '@homer-io/shared';
+import { createOrderSchema, updateOrderStatusSchema, paginationSchema, csvImportSchema } from '@homer-io/shared';
 import { authenticate, requireRole } from '../../plugins/auth.js';
 import { createOrder, listOrders, getOrder, updateOrderStatus, deleteOrder, importOrdersCsv } from './service.js';
 
@@ -36,7 +36,7 @@ export async function orderRoutes(app: FastifyInstance) {
   });
 
   app.post('/import/csv', { preHandler: [requireRole('dispatcher')] }, async (request, reply) => {
-    const { orders: orderRows } = request.body as { orders: Array<Record<string, string>> };
+    const { orders: orderRows } = csvImportSchema.parse(request.body);
     const result = await importOrdersCsv(request.user.tenantId, orderRows);
     reply.code(201).send(result);
   });

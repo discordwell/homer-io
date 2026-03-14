@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, jsonb, numeric, pgEnum } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { users } from './users.js';
 import { vehicles } from './vehicles.js';
@@ -18,8 +18,8 @@ export const drivers = pgTable('drivers', {
   status: driverStatusEnum('status').default('offline').notNull(),
   currentVehicleId: uuid('current_vehicle_id').references(() => vehicles.id, { onDelete: 'set null' }),
   skillTags: jsonb('skill_tags').default([]).notNull(),
-  currentLat: varchar('current_lat', { length: 20 }),
-  currentLng: varchar('current_lng', { length: 20 }),
+  currentLat: numeric('current_lat', { precision: 10, scale: 7 }),
+  currentLng: numeric('current_lng', { precision: 10, scale: 7 }),
   lastLocationAt: timestamp('last_location_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

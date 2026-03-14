@@ -3,6 +3,7 @@ import type { CreateVehicleInput, CreateDriverInput, PaginationInput } from '@ho
 import { db } from '../../lib/db/index.js';
 import { vehicles } from '../../lib/db/schema/vehicles.js';
 import { drivers } from '../../lib/db/schema/drivers.js';
+import { NotFoundError } from '../../lib/errors.js';
 
 // ---- Vehicles ----
 
@@ -45,7 +46,7 @@ export async function getVehicle(tenantId: string, id: string) {
   const [vehicle] = await db.select().from(vehicles)
     .where(and(eq(vehicles.id, id), eq(vehicles.tenantId, tenantId)))
     .limit(1);
-  if (!vehicle) throw new Error('Vehicle not found');
+  if (!vehicle) throw new NotFoundError('Vehicle not found');
   return vehicle;
 }
 
@@ -64,7 +65,7 @@ export async function updateVehicle(tenantId: string, id: string, input: Partial
     .set(updates)
     .where(and(eq(vehicles.id, id), eq(vehicles.tenantId, tenantId)))
     .returning();
-  if (!vehicle) throw new Error('Vehicle not found');
+  if (!vehicle) throw new NotFoundError('Vehicle not found');
   return vehicle;
 }
 
@@ -72,7 +73,7 @@ export async function deleteVehicle(tenantId: string, id: string) {
   const result = await db.delete(vehicles)
     .where(and(eq(vehicles.id, id), eq(vehicles.tenantId, tenantId)))
     .returning({ id: vehicles.id });
-  if (result.length === 0) throw new Error('Vehicle not found');
+  if (result.length === 0) throw new NotFoundError('Vehicle not found');
 }
 
 // ---- Drivers ----
@@ -114,7 +115,7 @@ export async function getDriver(tenantId: string, id: string) {
   const [driver] = await db.select().from(drivers)
     .where(and(eq(drivers.id, id), eq(drivers.tenantId, tenantId)))
     .limit(1);
-  if (!driver) throw new Error('Driver not found');
+  if (!driver) throw new NotFoundError('Driver not found');
   return driver;
 }
 
@@ -130,7 +131,7 @@ export async function updateDriver(tenantId: string, id: string, input: Partial<
     .set(updates)
     .where(and(eq(drivers.id, id), eq(drivers.tenantId, tenantId)))
     .returning();
-  if (!driver) throw new Error('Driver not found');
+  if (!driver) throw new NotFoundError('Driver not found');
   return driver;
 }
 
@@ -138,5 +139,5 @@ export async function deleteDriver(tenantId: string, id: string) {
   const result = await db.delete(drivers)
     .where(and(eq(drivers.id, id), eq(drivers.tenantId, tenantId)))
     .returning({ id: drivers.id });
-  if (result.length === 0) throw new Error('Driver not found');
+  if (result.length === 0) throw new NotFoundError('Driver not found');
 }

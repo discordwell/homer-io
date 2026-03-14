@@ -3,7 +3,9 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import sensible from '@fastify/sensible';
 import rateLimit from '@fastify/rate-limit';
+import { ZodError } from 'zod';
 import { config } from './config.js';
+import { HttpError } from './lib/errors.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { fleetRoutes } from './modules/fleet/routes.js';
 import { orderRoutes } from './modules/orders/routes.js';
@@ -17,6 +19,26 @@ const app = Fastify({
       options: { colorize: true },
     } : undefined,
   },
+});
+
+// Global error handler — catch Zod and HttpError, clean up responses
+app.setErrorHandler((error, request, reply) => {
+  if (error instanceof ZodError) {
+    return reply.status(400).send({
+      statusCode: 400,
+      error: 'Validation Error',
+      message: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; '),
+    });
+  }
+  if (error instanceof HttpError) {
+    return reply.status(error.statusCode).send({
+      statusCode: error.statusCode,
+      error: error.constructor.name,
+      message: error.message,
+    });
+  }
+  // Let Fastify handle everything else (including @fastify/sensible errors)
+  reply.send(error);
 });
 
 // Plugins
@@ -34,7 +56,11 @@ app.get('/health', async () => ({
 
 // API routes
 await app.register(async (api) => {
-  await api.register(authRoutes, { prefix: '/auth' });
+  // Tighter rate limit on auth endpoints to prevent brute force
+  await api.register(async (authScope) => {
+    await authScope.register(rateLimit, { max: 10, timeWindow: '1 minute' });
+    await authScope.register(authRoutes);
+  }, { prefix: '/auth' });
   await api.register(fleetRoutes, { prefix: '/fleet' });
   await api.register(orderRoutes, { prefix: '/orders' });
   await api.register(routeRoutes, { prefix: '/routes' });

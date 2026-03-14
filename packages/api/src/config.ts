@@ -1,3 +1,13 @@
+const isProduction = process.env.NODE_ENV === 'production';
+
+function requireEnv(name: string): string {
+  const val = process.env[name];
+  if (!val && isProduction) {
+    throw new Error(`Missing required env var ${name} in production`);
+  }
+  return val || '';
+}
+
 export const config = {
   port: Number(process.env.PORT) || 3000,
   host: process.env.HOST || '0.0.0.0',
@@ -12,17 +22,16 @@ export const config = {
   },
 
   jwt: {
-    secret: process.env.JWT_SECRET || 'homer-dev-secret-change-in-production',
+    secret: isProduction ? requireEnv('JWT_SECRET') : (process.env.JWT_SECRET || 'homer-dev-secret-do-not-use-in-prod'),
     accessExpiresIn: '15m',
     refreshExpiresIn: '7d',
   },
 
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',') || [
-      'http://localhost:3001',
-      'https://app.homer.io',
-      'https://homer.discordwell.com',
-    ],
+    origin: process.env.CORS_ORIGIN?.split(',') || (isProduction
+      ? ['https://app.homer.io', 'https://homer.discordwell.com']
+      : ['http://localhost:3001']
+    ),
   },
 
   minio: {

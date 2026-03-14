@@ -1,5 +1,6 @@
 import { pgTable, uuid, varchar, timestamp, numeric, integer, boolean, text, jsonb, pgEnum } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
+import { routes } from './routes.js';
 
 export const orderStatusEnum = pgEnum('order_status', [
   'received', 'assigned', 'in_transit', 'delivered', 'failed', 'returned',
@@ -31,7 +32,7 @@ export const orders = pgTable('orders', {
   requiresSignature: boolean('requires_signature').default(false).notNull(),
   requiresPhoto: boolean('requires_photo').default(false).notNull(),
   failureReason: text('failure_reason'),
-  routeId: uuid('route_id'),
+  routeId: uuid('route_id').references(() => routes.id, { onDelete: 'set null' }),
   stopSequence: integer('stop_sequence'),
   completedAt: timestamp('completed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

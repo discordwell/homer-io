@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, boolean, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, boolean, pgEnum, uniqueIndex } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 export const roleEnum = pgEnum('user_role', ['owner', 'admin', 'dispatcher', 'driver']);
@@ -6,7 +6,7 @@ export const roleEnum = pgEnum('user_role', ['owner', 'admin', 'dispatcher', 'dr
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }).notNull(),
-  email: varchar('email', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).unique().notNull(),
   passwordHash: varchar('password_hash', { length: 255 }),
   name: varchar('name', { length: 255 }).notNull(),
   role: roleEnum('role').default('driver').notNull(),

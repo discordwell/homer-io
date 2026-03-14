@@ -19,15 +19,16 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   try {
     await request.jwtVerify();
   } catch (err) {
-    reply.unauthorized('Invalid or expired token');
+    return reply.unauthorized('Invalid or expired token');
   }
 }
 
 export function requireRole(minRole: Role) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     await authenticate(request, reply);
+    if (reply.sent) return;
     if (!hasMinRole(request.user.role, minRole)) {
-      reply.forbidden(`Requires ${minRole} role or higher`);
+      return reply.forbidden(`Requires ${minRole} role or higher`);
     }
   };
 }

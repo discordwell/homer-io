@@ -1,20 +1,9 @@
 import { eq, and, sql } from 'drizzle-orm';
-import type { PaginationInput } from '@homer-io/shared';
+import type { PaginationInput, CreateRouteInput } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { routes, routeStatusEnum } from '../../lib/db/schema/routes.js';
 import { orders } from '../../lib/db/schema/orders.js';
-
-interface CreateRouteInput {
-  name: string;
-  driverId?: string;
-  vehicleId?: string;
-  depotAddress?: Record<string, unknown>;
-  depotLat?: number;
-  depotLng?: number;
-  plannedStartAt?: string;
-  plannedEndAt?: string;
-  orderIds?: string[];
-}
+import { NotFoundError } from '../../lib/errors.js';
 
 export async function createRoute(tenantId: string, input: CreateRouteInput) {
   const [route] = await db.transaction(async (tx) => {
@@ -80,7 +69,7 @@ export async function getRoute(tenantId: string, id: string) {
   const [route] = await db.select().from(routes)
     .where(and(eq(routes.id, id), eq(routes.tenantId, tenantId)))
     .limit(1);
-  if (!route) throw new Error('Route not found');
+  if (!route) throw new NotFoundError('Route not found');
 
   // Get associated orders
   const routeOrders = await db.select().from(orders)
@@ -100,7 +89,7 @@ export async function updateRoute(tenantId: string, id: string, input: Partial<C
     .set(updates)
     .where(and(eq(routes.id, id), eq(routes.tenantId, tenantId)))
     .returning();
-  if (!route) throw new Error('Route not found');
+  if (!route) throw new NotFoundError('Route not found');
   return route;
 }
 
@@ -114,7 +103,7 @@ export async function deleteRoute(tenantId: string, id: string) {
     const result = await tx.delete(routes)
       .where(and(eq(routes.id, id), eq(routes.tenantId, tenantId)))
       .returning({ id: routes.id });
-    if (result.length === 0) throw new Error('Route not found');
+    if (result.length === 0) throw new NotFoundError('Route not found');
   });
 }
 
