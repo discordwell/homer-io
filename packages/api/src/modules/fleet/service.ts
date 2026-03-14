@@ -1,8 +1,8 @@
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, ilike } from 'drizzle-orm';
 import type { CreateVehicleInput, CreateDriverInput, PaginationInput } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { vehicles } from '../../lib/db/schema/vehicles.js';
-import { drivers } from '../../lib/db/schema/drivers.js';
+import { drivers, driverStatusEnum } from '../../lib/db/schema/drivers.js';
 import { NotFoundError } from '../../lib/errors.js';
 
 // ---- Vehicles ----
@@ -94,17 +94,32 @@ export async function createDriver(tenantId: string, input: CreateDriverInput) {
   return driver;
 }
 
-export async function listDrivers(tenantId: string, pagination: PaginationInput) {
+export async function listDrivers(
+  tenantId: string,
+  pagination: PaginationInput,
+  status?: string,
+  search?: string,
+) {
   const { page, limit } = pagination;
   const offset = (page - 1) * limit;
 
+  const conditions = [eq(drivers.tenantId, tenantId)];
+  if (status && driverStatusEnum.enumValues.includes(status as any)) {
+    conditions.push(eq(drivers.status, status as any));
+  }
+  if (search) {
+    conditions.push(ilike(drivers.name, `%${search}%`));
+  }
+
+  const where = and(...conditions);
+
   const [items, countResult] = await Promise.all([
     db.select().from(drivers)
-      .where(eq(drivers.tenantId, tenantId))
+      .where(where)
       .limit(limit).offset(offset)
       .orderBy(drivers.createdAt),
     db.select({ count: sql<number>`count(*)` }).from(drivers)
-      .where(eq(drivers.tenantId, tenantId)),
+      .where(where),
   ]);
 
   const total = Number(countResult[0].count);

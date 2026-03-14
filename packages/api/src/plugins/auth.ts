@@ -25,8 +25,9 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
 
 export function requireRole(minRole: Role) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    await authenticate(request, reply);
-    if (reply.sent) return;
+    if (!request.user) {
+      return reply.unauthorized('Not authenticated');
+    }
     if (!hasMinRole(request.user.role, minRole)) {
       return reply.forbidden(`Requires ${minRole} role or higher`);
     }

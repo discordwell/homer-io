@@ -10,6 +10,8 @@ import { authRoutes } from './modules/auth/routes.js';
 import { fleetRoutes } from './modules/fleet/routes.js';
 import { orderRoutes } from './modules/orders/routes.js';
 import { routeRoutes } from './modules/routes/routes.js';
+import { dashboardRoutes } from './modules/dashboard/routes.js';
+import { aiRoutes } from './modules/ai/routes.js';
 
 const app = Fastify({
   logger: {
@@ -64,6 +66,8 @@ await app.register(async (api) => {
   await api.register(fleetRoutes, { prefix: '/fleet' });
   await api.register(orderRoutes, { prefix: '/orders' });
   await api.register(routeRoutes, { prefix: '/routes' });
+  await api.register(dashboardRoutes, { prefix: '/dashboard' });
+  await api.register(aiRoutes, { prefix: '/ai' });
 }, { prefix: '/api' });
 
 // Graceful shutdown

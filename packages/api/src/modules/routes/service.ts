@@ -115,11 +115,87 @@ export async function optimizeRoute(tenantId: string, routeId: string) {
     return { message: 'No orders to optimize', route: routeData };
   }
 
-  // TODO: Integrate with AI optimization (Claude API / OR-Tools)
-  // For now, return the route as-is with a placeholder message
-  return {
-    message: 'Route optimization will be available when AI service is configured',
-    route: routeData,
-    optimized: false,
-  };
+  // Build a prompt with stop addresses
+  const stops = routeData.orders.map((order, idx) => {
+    const addr = order.deliveryAddress as Record<string, string> | null;
+    const addressStr = addr
+      ? [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(', ')
+      : `Stop ${idx + 1}`;
+    return `${idx}: ${addressStr}`;
+  });
+
+  const prompt =
+    `I have a delivery route with the following stops (index: address):\n${stops.join('\n')}\n\n` +
+    `Please determine the optimal order to visit these stops to minimize total travel distance. ` +
+    `Return ONLY a JSON array of the stop indices in optimal order, e.g. [2, 0, 1, 3]. No other text.`;
+
+  try {
+    const { chatWithClaude } = await import('../../lib/ai/claude.js');
+    const response = await chatWithClaude(
+      'You are a route optimization assistant. Return only valid JSON arrays of indices.',
+      [{ role: 'user', content: prompt }],
+    );
+
+    // Check if the response is the "no API key" message
+    if (response.includes('AI features require an Anthropic API key')) {
+      return {
+        message: 'Route optimization requires an Anthropic API key. Set ANTHROPIC_API_KEY to enable.',
+        route: routeData,
+        optimized: false,
+      };
+    }
+
+    // Parse the response to get ordered stop indices
+    const jsonMatch = response.match(/\[[\d,\s]+\]/);
+    if (!jsonMatch) {
+      return {
+        message: 'Could not parse optimization result',
+        route: routeData,
+        optimized: false,
+      };
+    }
+
+    const orderedIndices: number[] = JSON.parse(jsonMatch[0]);
+
+    // Validate indices
+    if (orderedIndices.length !== routeData.orders.length ||
+        !orderedIndices.every((i) => i >= 0 && i < routeData.orders.length)) {
+      return {
+        message: 'Invalid optimization result from AI',
+        route: routeData,
+        optimized: false,
+      };
+    }
+
+    // Update stopSequence on orders accordingly
+    for (let newSeq = 0; newSeq < orderedIndices.length; newSeq++) {
+      const originalIdx = orderedIndices[newSeq];
+      const order = routeData.orders[originalIdx];
+      await db.update(orders)
+        .set({ stopSequence: newSeq + 1, updatedAt: new Date() })
+        .where(and(eq(orders.id, order.id), eq(orders.tenantId, tenantId)));
+    }
+
+    // Set optimizationNotes on the route
+    await db.update(routes)
+      .set({
+        optimizationNotes: `AI-optimized on ${new Date().toISOString()}. Order: ${orderedIndices.join(' -> ')}`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
+
+    // Re-fetch the updated route
+    const updatedRoute = await getRoute(tenantId, routeId);
+    return {
+      message: 'Route optimized successfully',
+      route: updatedRoute,
+      optimized: true,
+    };
+  } catch (error) {
+    return {
+      message: 'Route optimization failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
+      route: routeData,
+      optimized: false,
+    };
+  }
 }

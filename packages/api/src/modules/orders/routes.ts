@@ -14,8 +14,15 @@ export async function orderRoutes(app: FastifyInstance) {
 
   app.get('/', async (request) => {
     const query = paginationSchema.parse(request.query);
-    const { status } = request.query as { status?: string };
-    return listOrders(request.user.tenantId, query, status);
+    const { status, search, dateFrom, dateTo, sortBy, sortDir } = request.query as {
+      status?: string;
+      search?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      sortBy?: string;
+      sortDir?: 'asc' | 'desc';
+    };
+    return listOrders(request.user.tenantId, query, status, search, dateFrom, dateTo, sortBy, sortDir);
   });
 
   app.get('/:id', async (request) => {

@@ -103,12 +103,43 @@ RESTful API at `/api/*`:
 - `POST /api/auth/refresh` — Token refresh (rotation)
 - `GET /api/auth/me` — Current user profile
 - `CRUD /api/fleet/vehicles` — Vehicle management
-- `CRUD /api/fleet/drivers` — Driver management
-- `CRUD /api/orders` — Order management
+- `CRUD /api/fleet/drivers` — Driver management (filterable by status/search)
+- `CRUD /api/orders` — Order management (filterable by status/search/date)
 - `POST /api/orders/import/csv` — CSV bulk import
 - `CRUD /api/routes` — Route management
-- `POST /api/routes/:id/optimize` — AI route optimization
+- `POST /api/routes/:id/optimize` — AI route optimization (Claude-powered)
+- `GET /api/dashboard/stats` — Dashboard KPIs + recent orders
+- `POST /api/ai/chat` — AI chat with fleet context
 - `GET /health` — Health check
+
+## Frontend Routes
+
+Nested under `DashboardLayout` with sidebar navigation:
+
+```
+/login                    → LoginPage
+/register                 → RegisterPage
+/dashboard                → DashboardPage (KPIs + recent orders)
+/dashboard/fleet/vehicles → VehiclesPage (CRUD table)
+/dashboard/fleet/drivers  → DriversPage (CRUD table + status filters)
+/dashboard/orders         → OrdersPage (CRUD table + CSV import)
+/dashboard/routes         → RoutesPage (list with progress bars)
+/dashboard/routes/new     → RouteBuilderPage (Leaflet map + stop builder)
+/dashboard/routes/:id     → RouteDetailPage (map + stop list + AI optimize)
+```
+
+## Component Library
+
+18 shared components in `packages/web/src/components/`:
+Badge, Pill, Bar, KPICard, FormField, SelectField, Modal, DataTable, EmptyState, Toast, LoadingSpinner, ConfirmDialog, Sidebar, DashboardLayout, AIChatPanel, RouteMap, AddressSearch, CsvImportWizard
+
+## State Management (Zustand)
+
+- `auth.ts` — JWT tokens, user profile (persisted to localStorage)
+- `fleet.ts` — Vehicles + drivers with pagination and filters
+- `orders.ts` — Orders with status/search/date filters and CSV import
+- `routes.ts` — Routes with CRUD and optimization
+- `chat.ts` — AI chat messages and panel state
 
 ## Authentication Flow
 

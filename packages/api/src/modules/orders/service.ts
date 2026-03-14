@@ -1,4 +1,4 @@
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, ilike, gte, lte, desc, asc } from 'drizzle-orm';
 import type { CreateOrderInput, UpdateOrderStatusInput, PaginationInput } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { orders, orderStatusEnum } from '../../lib/db/schema/orders.js';
@@ -31,7 +31,16 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
   return order;
 }
 
-export async function listOrders(tenantId: string, pagination: PaginationInput, status?: string) {
+export async function listOrders(
+  tenantId: string,
+  pagination: PaginationInput,
+  status?: string,
+  search?: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sortBy?: string,
+  sortDir?: 'asc' | 'desc',
+) {
   const { page, limit } = pagination;
   const offset = (page - 1) * limit;
 
@@ -39,13 +48,34 @@ export async function listOrders(tenantId: string, pagination: PaginationInput, 
   if (status && orderStatusEnum.enumValues.includes(status as any)) {
     conditions.push(eq(orders.status, status as any));
   }
+  if (search) {
+    conditions.push(ilike(orders.recipientName, `%${search}%`));
+  }
+  if (dateFrom) {
+    conditions.push(gte(orders.createdAt, new Date(dateFrom)));
+  }
+  if (dateTo) {
+    conditions.push(lte(orders.createdAt, new Date(dateTo)));
+  }
 
   const where = and(...conditions);
+
+  // Determine sort column and direction
+  const sortColumn = (() => {
+    switch (sortBy) {
+      case 'recipientName': return orders.recipientName;
+      case 'priority': return orders.priority;
+      case 'status': return orders.status;
+      case 'createdAt':
+      default: return orders.createdAt;
+    }
+  })();
+  const orderByClause = sortDir === 'asc' ? asc(sortColumn) : desc(sortColumn);
 
   const [items, countResult] = await Promise.all([
     db.select().from(orders).where(where)
       .limit(limit).offset(offset)
-      .orderBy(orders.createdAt),
+      .orderBy(orderByClause),
     db.select({ count: sql<number>`count(*)` }).from(orders).where(where),
   ]);
 

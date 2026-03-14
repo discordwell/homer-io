@@ -4,6 +4,8 @@ import {
   paginationSchema, coordsSchema, addressSchema,
   createVehicleSchema, createDriverSchema,
   createOrderSchema, updateOrderStatusSchema,
+  dashboardStatsSchema,
+  aiChatRequestSchema, aiChatMessageSchema,
 } from '../index.js';
 import { hasMinRole } from '../types/roles.js';
 
@@ -183,5 +185,89 @@ describe('Role Hierarchy', () => {
     expect(hasMinRole('dispatcher', 'driver')).toBe(true);
     expect(hasMinRole('dispatcher', 'dispatcher')).toBe(true);
     expect(hasMinRole('dispatcher', 'admin')).toBe(false);
+  });
+});
+
+describe('Dashboard Schema', () => {
+  it('parses valid dashboard stats', () => {
+    const stats = {
+      ordersToday: 5,
+      activeRoutes: 2,
+      activeDrivers: 3,
+      deliveryRate: 85.5,
+      totalVehicles: 10,
+      recentOrders: [
+        { id: 'abc123', recipientName: 'John', status: 'delivered', priority: 'normal', packageCount: 2, createdAt: '2024-01-01T00:00:00Z' },
+      ],
+    };
+    expect(dashboardStatsSchema.parse(stats)).toEqual(stats);
+  });
+
+  it('rejects missing required fields', () => {
+    expect(() => dashboardStatsSchema.parse({})).toThrow();
+  });
+
+  it('rejects non-numeric deliveryRate', () => {
+    expect(() => dashboardStatsSchema.parse({
+      ordersToday: 5, activeRoutes: 2, activeDrivers: 3,
+      deliveryRate: 'invalid', totalVehicles: 10, recentOrders: [],
+    })).toThrow();
+  });
+
+  it('accepts empty recentOrders array', () => {
+    const stats = {
+      ordersToday: 0, activeRoutes: 0, activeDrivers: 0,
+      deliveryRate: 0, totalVehicles: 0, recentOrders: [],
+    };
+    expect(dashboardStatsSchema.parse(stats)).toEqual(stats);
+  });
+});
+
+describe('AI Schemas', () => {
+  it('parses valid chat request', () => {
+    const request = {
+      message: 'How many deliveries today?',
+      history: [
+        { role: 'user', content: 'Hello' },
+        { role: 'assistant', content: 'Hi, how can I help?' },
+      ],
+    };
+    expect(aiChatRequestSchema.parse(request)).toEqual(request);
+  });
+
+  it('defaults history to empty array', () => {
+    const result = aiChatRequestSchema.parse({ message: 'Hello' });
+    expect(result.history).toEqual([]);
+  });
+
+  it('rejects empty message', () => {
+    expect(() => aiChatRequestSchema.parse({ message: '' })).toThrow();
+  });
+
+  it('rejects oversized message (>5000 chars)', () => {
+    expect(() => aiChatRequestSchema.parse({
+      message: 'x'.repeat(5001),
+    })).toThrow();
+  });
+
+  it('rejects history exceeding 50 entries', () => {
+    const history = Array.from({ length: 51 }, (_, i) => ({
+      role: i % 2 === 0 ? 'user' : 'assistant',
+      content: `message ${i}`,
+    }));
+    expect(() => aiChatRequestSchema.parse({
+      message: 'test',
+      history,
+    })).toThrow();
+  });
+
+  it('validates role enum in aiChatMessageSchema', () => {
+    expect(aiChatMessageSchema.parse({ role: 'user', content: 'hi' })).toEqual({ role: 'user', content: 'hi' });
+    expect(aiChatMessageSchema.parse({ role: 'assistant', content: 'hello' })).toEqual({ role: 'assistant', content: 'hello' });
+  });
+
+  it('rejects invalid role in aiChatMessageSchema', () => {
+    expect(() => aiChatMessageSchema.parse({ role: 'system', content: 'hi' })).toThrow();
+    expect(() => aiChatMessageSchema.parse({ role: 'admin', content: 'hi' })).toThrow();
   });
 });

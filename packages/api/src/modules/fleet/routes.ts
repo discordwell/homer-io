@@ -48,7 +48,8 @@ export async function fleetRoutes(app: FastifyInstance) {
 
   app.get('/drivers', async (request) => {
     const query = paginationSchema.parse(request.query);
-    return listDrivers(request.user.tenantId, query);
+    const { status, search } = request.query as { status?: string; search?: string };
+    return listDrivers(request.user.tenantId, query, status, search);
   });
 
   app.get('/drivers/:id', async (request) => {
