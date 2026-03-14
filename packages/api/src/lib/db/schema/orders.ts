@@ -1,0 +1,39 @@
+import { pgTable, uuid, varchar, timestamp, numeric, integer, boolean, text, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+import { tenants } from './tenants.js';
+
+export const orderStatusEnum = pgEnum('order_status', [
+  'received', 'assigned', 'in_transit', 'delivered', 'failed', 'returned',
+]);
+
+export const orderPriorityEnum = pgEnum('order_priority', [
+  'low', 'normal', 'high', 'urgent',
+]);
+
+export const orders = pgTable('orders', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }).notNull(),
+  externalId: varchar('external_id', { length: 255 }),
+  status: orderStatusEnum('status').default('received').notNull(),
+  priority: orderPriorityEnum('priority').default('normal').notNull(),
+  recipientName: varchar('recipient_name', { length: 255 }).notNull(),
+  recipientPhone: varchar('recipient_phone', { length: 20 }),
+  recipientEmail: varchar('recipient_email', { length: 255 }),
+  pickupAddress: jsonb('pickup_address'),
+  deliveryAddress: jsonb('delivery_address').notNull(),
+  deliveryLat: numeric('delivery_lat', { precision: 10, scale: 7 }),
+  deliveryLng: numeric('delivery_lng', { precision: 10, scale: 7 }),
+  packageCount: integer('package_count').default(1).notNull(),
+  weight: numeric('weight', { precision: 10, scale: 2 }),
+  volume: numeric('volume', { precision: 10, scale: 2 }),
+  timeWindowStart: timestamp('time_window_start', { withTimezone: true }),
+  timeWindowEnd: timestamp('time_window_end', { withTimezone: true }),
+  notes: text('notes'),
+  requiresSignature: boolean('requires_signature').default(false).notNull(),
+  requiresPhoto: boolean('requires_photo').default(false).notNull(),
+  failureReason: text('failure_reason'),
+  routeId: uuid('route_id'),
+  stopSequence: integer('stop_sequence'),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});

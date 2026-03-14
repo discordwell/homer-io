@@ -1,0 +1,22 @@
+# HOMER.io Caddy Configuration
+# Demo site — preserved at homer.discordwell.com
+homer.discordwell.com {
+	root * /opt/homer-io/site
+	file_server
+	try_files {path} /index.html
+}
+
+# Product app — app.homer.io
+app.homer.io {
+	reverse_proxy localhost:3001
+}
+
+# API — api.homer.io
+api.homer.io {
+	reverse_proxy localhost:3000
+}
+
+# Public tracking pages
+track.homer.io {
+	reverse_proxy localhost:3000
+}
