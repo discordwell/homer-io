@@ -49,7 +49,8 @@ export async function listOrders(
     conditions.push(eq(orders.status, status as any));
   }
   if (search) {
-    conditions.push(ilike(orders.recipientName, `%${search}%`));
+    const escaped = search.replace(/[%_\\]/g, '\\$&');
+    conditions.push(ilike(orders.recipientName, `%${escaped}%`));
   }
   if (dateFrom) {
     conditions.push(gte(orders.createdAt, new Date(dateFrom)));

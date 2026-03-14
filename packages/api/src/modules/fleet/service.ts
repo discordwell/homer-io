@@ -108,7 +108,8 @@ export async function listDrivers(
     conditions.push(eq(drivers.status, status as any));
   }
   if (search) {
-    conditions.push(ilike(drivers.name, `%${search}%`));
+    const escaped = search.replace(/[%_\\]/g, '\\$&');
+    conditions.push(ilike(drivers.name, `%${escaped}%`));
   }
 
   const where = and(...conditions);

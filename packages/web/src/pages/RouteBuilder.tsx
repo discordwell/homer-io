@@ -45,8 +45,10 @@ export function RouteBuilderPage() {
     const order = orders.find(o => o.id === orderId);
     if (!order || selectedOrders.includes(orderId)) return;
 
-    const lat = order.deliveryAddress ? 40.7128 + (Math.random() - 0.5) * 0.1 : 40.7128;
-    const lng = order.deliveryAddress ? -74.006 + (Math.random() - 0.5) * 0.1 : -74.006;
+    // Use real coordinates if available, otherwise generate approximate ones
+    const orderRec = order as unknown as Record<string, unknown>;
+    const lat = orderRec.deliveryLat ? Number(orderRec.deliveryLat) : 40.7128 + (Math.random() - 0.5) * 0.1;
+    const lng = orderRec.deliveryLng ? Number(orderRec.deliveryLng) : -74.006 + (Math.random() - 0.5) * 0.1;
 
     setStops(prev => [...prev, {
       lat, lng,

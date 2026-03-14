@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { C } from '../theme.js';
@@ -9,6 +9,8 @@ interface RouteMapProps { stops?: Stop[]; center?: [number, number]; zoom?: numb
 export function RouteMap({ stops = [], center = [40.7128, -74.006], zoom = 12, height = 400, onClick }: RouteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const onClickRef = useRef(onClick);
+  onClickRef.current = onClick;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -18,9 +20,9 @@ export function RouteMap({ stops = [], center = [40.7128, -74.006], zoom = 12, h
     }).addTo(map);
     mapRef.current = map;
 
-    if (onClick) {
-      map.on('click', (e: L.LeafletMouseEvent) => onClick(e.latlng.lat, e.latlng.lng));
-    }
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      onClickRef.current?.(e.latlng.lat, e.latlng.lng);
+    });
 
     return () => { map.remove(); mapRef.current = null; };
   }, []);
@@ -30,7 +32,9 @@ export function RouteMap({ stops = [], center = [40.7128, -74.006], zoom = 12, h
     if (!map) return;
 
     // Clear existing markers/polylines
-    map.eachLayer(layer => { if (layer instanceof L.Marker || layer instanceof L.Polyline) map.removeLayer(layer); });
+    map.eachLayer(layer => {
+      if (layer instanceof L.CircleMarker || layer instanceof L.Polyline) map.removeLayer(layer);
+    });
 
     if (stops.length === 0) return;
 

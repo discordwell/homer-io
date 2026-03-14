@@ -17,17 +17,20 @@ export async function chatWithClaude(
     return 'AI features require an Anthropic API key. Please set the ANTHROPIC_API_KEY environment variable to enable AI-powered features.';
   }
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages: messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-  });
+  try {
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    });
 
-  // Extract text from the response
-  const textBlock = response.content.find((block) => block.type === 'text');
-  return textBlock?.text ?? 'No response generated.';
+    const textBlock = response.content.find((block) => block.type === 'text');
+    return textBlock?.text ?? 'No response generated.';
+  } catch {
+    return 'Sorry, the AI service is temporarily unavailable. Please try again later.';
+  }
 }

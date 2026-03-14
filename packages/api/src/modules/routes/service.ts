@@ -157,8 +157,10 @@ export async function optimizeRoute(tenantId: string, routeId: string) {
 
     const orderedIndices: number[] = JSON.parse(jsonMatch[0]);
 
-    // Validate indices
+    // Validate indices — check length, range, and no duplicates
+    const uniqueIndices = new Set(orderedIndices);
     if (orderedIndices.length !== routeData.orders.length ||
+        uniqueIndices.size !== orderedIndices.length ||
         !orderedIndices.every((i) => i >= 0 && i < routeData.orders.length)) {
       return {
         message: 'Invalid optimization result from AI',
@@ -167,22 +169,23 @@ export async function optimizeRoute(tenantId: string, routeId: string) {
       };
     }
 
-    // Update stopSequence on orders accordingly
-    for (let newSeq = 0; newSeq < orderedIndices.length; newSeq++) {
-      const originalIdx = orderedIndices[newSeq];
-      const order = routeData.orders[originalIdx];
-      await db.update(orders)
-        .set({ stopSequence: newSeq + 1, updatedAt: new Date() })
-        .where(and(eq(orders.id, order.id), eq(orders.tenantId, tenantId)));
-    }
+    // Update stopSequence on orders in a transaction
+    await db.transaction(async (tx) => {
+      for (let newSeq = 0; newSeq < orderedIndices.length; newSeq++) {
+        const originalIdx = orderedIndices[newSeq];
+        const order = routeData.orders[originalIdx];
+        await tx.update(orders)
+          .set({ stopSequence: newSeq + 1, updatedAt: new Date() })
+          .where(and(eq(orders.id, order.id), eq(orders.tenantId, tenantId)));
+      }
 
-    // Set optimizationNotes on the route
-    await db.update(routes)
-      .set({
-        optimizationNotes: `AI-optimized on ${new Date().toISOString()}. Order: ${orderedIndices.join(' -> ')}`,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
+      await tx.update(routes)
+        .set({
+          optimizationNotes: `AI-optimized on ${new Date().toISOString()}. Order: ${orderedIndices.join(' -> ')}`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
+    });
 
     // Re-fetch the updated route
     const updatedRoute = await getRoute(tenantId, routeId);
