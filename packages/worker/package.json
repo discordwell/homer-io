@@ -11,8 +11,12 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@homer-io/shared": "*",
-    "bullmq": "^5.45.0"
+    "bullmq": "^5.45.0",
+    "drizzle-orm": "^0.44.7",
+    "ioredis": "^5.10.0",
+    "postgres": "^3.4.8"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

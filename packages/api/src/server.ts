@@ -12,6 +12,15 @@ import { orderRoutes } from './modules/orders/routes.js';
 import { routeRoutes } from './modules/routes/routes.js';
 import { dashboardRoutes } from './modules/dashboard/routes.js';
 import { aiRoutes } from './modules/ai/routes.js';
+import { trackingRoutes } from './modules/tracking/routes.js';
+import { analyticsRoutes } from './modules/analytics/routes.js';
+import { settingsRoutes } from './modules/settings/routes.js';
+import { teamRoutes } from './modules/team/routes.js';
+import { apiKeyRoutes } from './modules/api-keys/routes.js';
+import { notificationRoutes } from './modules/notifications/routes.js';
+import { initSocketIO } from './lib/ws/index.js';
+import { registerSwagger } from './plugins/swagger.js';
+import { publicRoutes } from './modules/public/routes.js';
 
 const app = Fastify({
   logger: {
@@ -59,6 +68,9 @@ await app.register(jwt, { secret: config.jwt.secret });
 await app.register(sensible);
 await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
 
+// Swagger / OpenAPI docs
+await registerSwagger(app);
+
 // Health check
 app.get('/health', async () => ({
   status: 'ok',
@@ -77,7 +89,24 @@ await app.register(async (api) => {
   await api.register(orderRoutes, { prefix: '/orders' });
   await api.register(routeRoutes, { prefix: '/routes' });
   await api.register(dashboardRoutes, { prefix: '/dashboard' });
-  await api.register(aiRoutes, { prefix: '/ai' });
+  // AI endpoints — tighter rate limit (5/min)
+  await api.register(async (aiScope) => {
+    await aiScope.register(rateLimit, { max: 5, timeWindow: '1 minute' });
+    await aiScope.register(aiRoutes);
+  }, { prefix: '/ai' });
+  // Tracking endpoints — 60/min for driver location POST
+  await api.register(async (trackingScope) => {
+    await trackingScope.register(rateLimit, { max: 60, timeWindow: '1 minute' });
+    await trackingScope.register(trackingRoutes);
+  }, { prefix: '/tracking' });
+
+  // Public routes — no auth required, rate limited within the plugin
+  await api.register(publicRoutes, { prefix: '/public' });
+  await api.register(analyticsRoutes, { prefix: '/analytics' });
+  await api.register(settingsRoutes, { prefix: '/settings' });
+  await api.register(teamRoutes, { prefix: '/team' });
+  await api.register(apiKeyRoutes, { prefix: '/api-keys' });
+  await api.register(notificationRoutes, { prefix: '/notifications' });
 }, { prefix: '/api' });
 
 // Graceful shutdown
@@ -93,7 +122,9 @@ for (const signal of signals) {
 // Start
 try {
   await app.listen({ port: config.port, host: config.host });
+  initSocketIO(app.server);
   app.log.info(`HOMER.io API running at http://${config.host}:${config.port}`);
+  app.log.info('Socket.IO attached to HTTP server on /fleet namespace');
 } catch (err) {
   app.log.error(err);
   process.exit(1);

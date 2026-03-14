@@ -5,4 +5,8 @@ export * from './schemas/orders.js';
 export * from './schemas/routes.js';
 export * from './schemas/dashboard.js';
 export * from './schemas/ai.js';
+export * from './schemas/tracking.js';
+export * from './schemas/notifications.js';
+export * from './schemas/settings.js';
+export * from './schemas/analytics.js';
 export * from './types/roles.js';

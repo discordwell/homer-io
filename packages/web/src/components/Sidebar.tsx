@@ -5,6 +5,7 @@ import { C, F } from '../theme.js';
 
 const navItems = [
   { label: 'Dashboard', path: '/dashboard', icon: '📊' },
+  { label: 'Live Map', path: '/dashboard/live', icon: '📡', pulse: true },
   {
     label: 'Fleet', icon: '🚛', children: [
       { label: 'Vehicles', path: '/dashboard/fleet/vehicles' },
@@ -13,6 +14,8 @@ const navItems = [
   },
   { label: 'Orders', path: '/dashboard/orders', icon: '📦' },
   { label: 'Routes', path: '/dashboard/routes', icon: '🗺️' },
+  { label: 'Analytics', path: '/dashboard/analytics', icon: '📈' },
+  { label: 'Settings', path: '/dashboard/settings', icon: '⚙️' },
 ];
 
 export function Sidebar() {
@@ -76,7 +79,17 @@ export function Sidebar() {
             fontSize: 14, fontWeight: isActive ? 500 : 400,
             textDecoration: 'none',
           })}>
-            <span style={{ fontSize: 16 }}>{item.icon}</span>
+            <span style={{ fontSize: 16, position: 'relative' }}>
+              {item.icon}
+              {'pulse' in item && item.pulse && (
+                <span style={{
+                  position: 'absolute', top: -2, right: -4,
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: C.green,
+                  animation: 'pulse 2s infinite',
+                }} />
+              )}
+            </span>
             {item.label}
           </NavLink>
         ),

@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { paginationSchema, createRouteSchema } from '@homer-io/shared';
+import { paginationSchema, createRouteSchema, routeStatusTransitionSchema, deliveryEventSchema } from '@homer-io/shared';
 import { authenticate, requireRole } from '../../plugins/auth.js';
-import { createRoute, listRoutes, getRoute, updateRoute, deleteRoute, optimizeRoute } from './service.js';
+import { createRoute, listRoutes, getRoute, updateRoute, deleteRoute, optimizeRoute, transitionRouteStatus, completeStop } from './service.js';
 
 export async function routeRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
@@ -38,5 +38,19 @@ export async function routeRoutes(app: FastifyInstance) {
   app.post('/:id/optimize', { preHandler: [requireRole('dispatcher')] }, async (request) => {
     const { id } = request.params as { id: string };
     return optimizeRoute(request.user.tenantId, id);
+  });
+
+  // POST /api/routes/:id/transition — dispatcher transitions route status
+  app.post('/:id/transition', { preHandler: [requireRole('dispatcher')] }, async (request) => {
+    const { id } = request.params as { id: string };
+    const body = routeStatusTransitionSchema.parse(request.body);
+    return transitionRouteStatus(request.user.tenantId, id, body.status, request.user.id);
+  });
+
+  // POST /api/routes/:id/stops/:orderId/complete — driver completes a stop
+  app.post('/:id/stops/:orderId/complete', { preHandler: [requireRole('driver')] }, async (request) => {
+    const { id, orderId } = request.params as { id: string; orderId: string };
+    const body = deliveryEventSchema.pick({ status: true, failureReason: true }).parse(request.body);
+    return completeStop(request.user.tenantId, id, orderId, body, request.user.id);
   });
 }

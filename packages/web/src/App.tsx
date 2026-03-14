@@ -9,6 +9,10 @@ import { OrdersPage } from './pages/Orders.js';
 import { RoutesPage } from './pages/Routes.js';
 import { RouteBuilderPage } from './pages/RouteBuilder.js';
 import { RouteDetailPage } from './pages/RouteDetail.js';
+import LiveMapPage from './pages/LiveMap.js';
+import { AnalyticsPage } from './pages/Analytics.js';
+import { SettingsPage } from './pages/Settings.js';
+import { PublicTrackingPage } from './pages/PublicTracking.js';
 import { DashboardLayout } from './components/DashboardLayout.js';
 import { C, F } from './theme.js';
 
@@ -29,6 +33,7 @@ export function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/track/:orderId" element={<PublicTrackingPage />} />
         <Route path="/dashboard" element={
           <ProtectedRoute><DashboardLayout /></ProtectedRoute>
         }>
@@ -39,6 +44,9 @@ export function App() {
           <Route path="routes" element={<RoutesPage />} />
           <Route path="routes/new" element={<RouteBuilderPage />} />
           <Route path="routes/:id" element={<RouteDetailPage />} />
+          <Route path="live" element={<LiveMapPage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

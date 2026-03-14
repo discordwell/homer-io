@@ -3,7 +3,12 @@ import type { PaginationInput, CreateRouteInput } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { routes, routeStatusEnum } from '../../lib/db/schema/routes.js';
 import { orders } from '../../lib/db/schema/orders.js';
-import { NotFoundError } from '../../lib/errors.js';
+import { drivers } from '../../lib/db/schema/drivers.js';
+import { notifications } from '../../lib/db/schema/notifications.js';
+import { users } from '../../lib/db/schema/users.js';
+import { NotFoundError, HttpError } from '../../lib/errors.js';
+import { broadcastToTenant } from '../../lib/ws/index.js';
+import { logActivity } from '../../lib/activity.js';
 
 export async function createRoute(tenantId: string, input: CreateRouteInput) {
   const [route] = await db.transaction(async (tx) => {
@@ -201,4 +206,233 @@ export async function optimizeRoute(tenantId: string, routeId: string) {
       optimized: false,
     };
   }
+}
+
+// ---- Route Status Transitions ----
+
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  draft: ['planned'],
+  planned: ['in_progress', 'cancelled'],
+  in_progress: ['completed', 'cancelled'],
+  completed: [],
+  cancelled: [],
+};
+
+export async function transitionRouteStatus(
+  tenantId: string,
+  routeId: string,
+  newStatus: 'planned' | 'in_progress' | 'completed' | 'cancelled',
+  userId?: string,
+) {
+  const [route] = await db
+    .select()
+    .from(routes)
+    .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)))
+    .limit(1);
+
+  if (!route) throw new NotFoundError('Route not found');
+
+  const allowed = VALID_TRANSITIONS[route.status] ?? [];
+  // Any non-terminal status can transition to 'cancelled'
+  if (!allowed.includes(newStatus) && !(newStatus === 'cancelled' && route.status !== 'completed' && route.status !== 'cancelled')) {
+    throw new HttpError(422, `Cannot transition from '${route.status}' to '${newStatus}'`);
+  }
+
+  const now = new Date();
+  const routeUpdates: Record<string, unknown> = {
+    status: newStatus,
+    updatedAt: now,
+  };
+
+  if (newStatus === 'in_progress') {
+    routeUpdates.actualStartAt = now;
+  }
+  if (newStatus === 'completed') {
+    routeUpdates.actualEndAt = now;
+  }
+
+  await db.transaction(async (tx) => {
+    // Update route status
+    await tx
+      .update(routes)
+      .set(routeUpdates)
+      .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
+
+    // Update driver status based on route transition
+    if (route.driverId) {
+      if (newStatus === 'in_progress') {
+        await tx
+          .update(drivers)
+          .set({ status: 'on_route', updatedAt: now })
+          .where(eq(drivers.id, route.driverId));
+      } else if (newStatus === 'completed' || newStatus === 'cancelled') {
+        await tx
+          .update(drivers)
+          .set({ status: 'available', updatedAt: now })
+          .where(eq(drivers.id, route.driverId));
+      }
+    }
+
+    // Update order statuses when route starts
+    if (newStatus === 'in_progress') {
+      await tx
+        .update(orders)
+        .set({ status: 'in_transit', updatedAt: now })
+        .where(and(eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)));
+    }
+  });
+
+  // Broadcast via Socket.IO
+  broadcastToTenant(tenantId, 'route:status', {
+    routeId,
+    routeName: route.name,
+    previousStatus: route.status,
+    newStatus,
+    driverId: route.driverId,
+    timestamp: now.toISOString(),
+  });
+
+  // Log activity
+  await logActivity({
+    tenantId,
+    userId,
+    action: `route_${newStatus}`,
+    entityType: 'route',
+    entityId: routeId,
+    metadata: { previousStatus: route.status, newStatus },
+  });
+
+  // Return updated route
+  return getRoute(tenantId, routeId);
+}
+
+// ---- Delivery Stop Completion ----
+
+export async function completeStop(
+  tenantId: string,
+  routeId: string,
+  orderId: string,
+  result: { status: 'delivered' | 'failed'; failureReason?: string },
+  userId?: string,
+) {
+  const [route] = await db
+    .select()
+    .from(routes)
+    .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)))
+    .limit(1);
+
+  if (!route) throw new NotFoundError('Route not found');
+
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)))
+    .limit(1);
+
+  if (!order) throw new NotFoundError('Order not found on this route');
+
+  // Idempotency guard — don't double-complete
+  if (order.status === 'delivered' || order.status === 'failed') {
+    throw new HttpError(422, `Order is already ${order.status}`);
+  }
+
+  const now = new Date();
+
+  await db.transaction(async (tx) => {
+    // Mark order as delivered or failed
+    await tx
+      .update(orders)
+      .set({
+        status: result.status,
+        failureReason: result.failureReason ?? null,
+        completedAt: now,
+        updatedAt: now,
+      })
+      .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
+
+    // Increment completed stops on the route
+    await tx
+      .update(routes)
+      .set({
+        completedStops: sql`${routes.completedStops} + 1`,
+        updatedAt: now,
+      })
+      .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
+  });
+
+  // Find a dispatcher/admin to notify
+  const [dispatcher] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(
+      eq(users.tenantId, tenantId),
+      eq(users.isActive, true),
+      sql`${users.role} IN ('owner', 'admin', 'dispatcher')`,
+    ))
+    .limit(1);
+
+  if (dispatcher) {
+    const notifTitle = result.status === 'delivered'
+      ? `Delivery completed: ${order.recipientName}`
+      : `Delivery failed: ${order.recipientName}`;
+
+    const notifBody = result.status === 'delivered'
+      ? `Order to ${order.recipientName} was successfully delivered on route "${route.name}".`
+      : `Order to ${order.recipientName} failed on route "${route.name}". Reason: ${result.failureReason || 'Not specified'}`;
+
+    await db.insert(notifications).values({
+      tenantId,
+      userId: dispatcher.id,
+      type: result.status === 'delivered' ? 'delivery_completed' : 'delivery_failed',
+      title: notifTitle,
+      body: notifBody,
+      data: { routeId, orderId, status: result.status },
+    });
+
+    // Broadcast notification
+    broadcastToTenant(tenantId, 'notification:new', {
+      type: result.status === 'delivered' ? 'delivery_completed' : 'delivery_failed',
+      title: notifTitle,
+      body: notifBody,
+      routeId,
+      orderId,
+      timestamp: now.toISOString(),
+    });
+  }
+
+  // Broadcast delivery event
+  broadcastToTenant(tenantId, 'delivery:event', {
+    routeId,
+    routeName: route.name,
+    orderId,
+    recipientName: order.recipientName,
+    status: result.status,
+    failureReason: result.failureReason ?? null,
+    timestamp: now.toISOString(),
+  });
+
+  // Log activity
+  await logActivity({
+    tenantId,
+    userId,
+    action: result.status === 'delivered' ? 'order_delivered' : 'order_failed',
+    entityType: 'order',
+    entityId: orderId,
+    metadata: { routeId, status: result.status, failureReason: result.failureReason },
+  });
+
+  // Re-read route to get the actual completedStops after the atomic increment
+  const [updatedRoute] = await db
+    .select({ completedStops: routes.completedStops, totalStops: routes.totalStops, status: routes.status })
+    .from(routes)
+    .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)))
+    .limit(1);
+
+  // Check if all stops are completed — auto-complete route if so
+  if (updatedRoute && updatedRoute.completedStops >= updatedRoute.totalStops
+      && updatedRoute.totalStops > 0 && updatedRoute.status === 'in_progress') {
+    await transitionRouteStatus(tenantId, routeId, 'completed', userId);
+  }
+
+  return { success: true, completedStops: updatedRoute?.completedStops ?? 0, totalStops: updatedRoute?.totalStops ?? 0 };
 }

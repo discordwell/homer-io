@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { registerSchema, loginSchema, refreshTokenSchema } from '@homer-io/shared';
-import { register, login, refreshToken, getMe } from './service.js';
+import { register, login, refreshToken, getMe, logout } from './service.js';
 import { authenticate } from '../../plugins/auth.js';
 
 export async function authRoutes(app: FastifyInstance) {
@@ -25,5 +25,10 @@ export async function authRoutes(app: FastifyInstance) {
   app.get('/me', { preHandler: [authenticate] }, async (request, reply) => {
     const result = await getMe(request.user.id);
     reply.send(result);
+  });
+
+  app.post('/logout', { preHandler: [authenticate] }, async (request, reply) => {
+    await logout(request.user.id);
+    reply.send({ success: true });
   });
 }

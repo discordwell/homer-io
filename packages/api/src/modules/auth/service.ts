@@ -154,6 +154,12 @@ export async function getMe(userId: string): Promise<UserResponse> {
   };
 }
 
+export async function logout(userId: string): Promise<void> {
+  await db
+    .delete(refreshTokens)
+    .where(eq(refreshTokens.userId, userId));
+}
+
 async function generateAuthResponse(
   app: FastifyInstance,
   user: typeof users.$inferSelect,

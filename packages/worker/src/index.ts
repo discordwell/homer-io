@@ -1,7 +1,10 @@
 import { Worker, Queue } from 'bullmq';
+import { config } from './lib/config.js';
+import { processOptimization } from './workers/optimization.js';
+import { processNotification } from './workers/notification.js';
+import { processAnalytics } from './workers/analytics.js';
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-const connection = { url: redisUrl };
+const connection = { url: config.redis.url };
 
 // Queue definitions
 export const optimizationQueue = new Queue('route-optimization', { connection });
@@ -9,23 +12,20 @@ export const notificationQueue = new Queue('notifications', { connection });
 export const analyticsQueue = new Queue('analytics', { connection });
 
 // Workers
-const optimizationWorker = new Worker('route-optimization', async (job) => {
-  console.log(`Processing route optimization job ${job.id}`, job.data);
-  // TODO: Implement with OR-Tools / Claude API
-  return { optimized: true, routeId: job.data.routeId };
-}, { connection, concurrency: 2 });
+const optimizationWorker = new Worker('route-optimization', processOptimization, {
+  connection,
+  concurrency: 2,
+});
 
-const notificationWorker = new Worker('notifications', async (job) => {
-  console.log(`Processing notification job ${job.id}`, job.data);
-  // TODO: Implement with Twilio/SendGrid
-  return { sent: true, type: job.data.type };
-}, { connection, concurrency: 5 });
+const notificationWorker = new Worker('notifications', processNotification, {
+  connection,
+  concurrency: 5,
+});
 
-const analyticsWorker = new Worker('analytics', async (job) => {
-  console.log(`Processing analytics job ${job.id}`, job.data);
-  // TODO: Implement analytics aggregation
-  return { aggregated: true };
-}, { connection, concurrency: 1 });
+const analyticsWorker = new Worker('analytics', processAnalytics, {
+  connection,
+  concurrency: 1,
+});
 
 // Event logging
 for (const worker of [optimizationWorker, notificationWorker, analyticsWorker]) {

@@ -5,3 +5,7 @@ export * from './drivers.js';
 export * from './orders.js';
 export * from './routes.js';
 export * from './api-keys.js';
+export * from './notifications.js';
+export * from './settings.js';
+export * from './activity-log.js';
+export * from './location-history.js';
