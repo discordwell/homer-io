@@ -19,12 +19,37 @@ export function RouteDetailPage() {
   const { currentRoute, fetchRoute, optimizeRoute } = useRoutesStore();
   const { toast } = useToast();
   const [optimizing, setOptimizing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) fetchRoute(id);
+    if (id) {
+      setLoading(true);
+      setError(null);
+      fetchRoute(id)
+        .then(() => setLoading(false))
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : 'Route not found');
+          setLoading(false);
+        });
+    }
   }, [id]);
 
-  if (!currentRoute) return <LoadingSpinner />;
+  if (loading) return <LoadingSpinner />;
+
+  if (error || !currentRoute) {
+    return (
+      <div style={{ textAlign: 'center', padding: 48 }}>
+        <div style={{ fontSize: 40, marginBottom: 16 }}>🔍</div>
+        <h3 style={{ fontFamily: F.display, fontSize: 18, marginBottom: 8, color: C.text }}>Route not found</h3>
+        <p style={{ color: C.dim, fontSize: 14, marginBottom: 20 }}>{error || 'This route does not exist or was deleted.'}</p>
+        <button onClick={() => navigate('/dashboard/routes')} style={{
+          padding: '10px 20px', borderRadius: 8, background: C.accent,
+          border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600,
+        }}>Back to Routes</button>
+      </div>
+    );
+  }
 
   const route = currentRoute;
   const pct = route.totalStops > 0 ? (route.completedStops / route.totalStops) * 100 : 0;
