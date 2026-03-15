@@ -1,5 +1,6 @@
 import { eq, and, sql, lte } from 'drizzle-orm';
-import { parseExpression } from 'cron-parser';
+import cronParser from 'cron-parser';
+const { parseExpression } = cronParser;
 import type { CreateRouteTemplateInput, PaginationInput } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { routeTemplates } from '../../lib/db/schema/route-templates.js';

@@ -1,6 +1,7 @@
 import type { Job } from 'bullmq';
 import { eq, and, lte } from 'drizzle-orm';
-import { parseExpression } from 'cron-parser';
+import cronParser from 'cron-parser';
+const { parseExpression } = cronParser;
 import { db } from '../lib/db.js';
 import { routeTemplatesTable, orders, routes } from '../lib/schema.js';
 import { logger } from '../lib/logger.js';
