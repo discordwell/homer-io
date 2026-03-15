@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, jsonb, pgEnum, text } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, jsonb, pgEnum, text, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { users } from './users.js';
 
@@ -17,4 +17,7 @@ export const notifications = pgTable('notifications', {
   data: jsonb('data').default({}).notNull(),
   readAt: timestamp('read_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index('idx_notifications_user_read').on(table.userId, table.readAt),
+  index('idx_notifications_tenant_created').on(table.tenantId, table.createdAt),
+]);

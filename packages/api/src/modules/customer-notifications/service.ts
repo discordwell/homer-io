@@ -198,11 +198,24 @@ export async function enqueueCustomerNotification(
       continue;
     }
 
+    // Try to get real ETA
+    let etaText = 'soon';
+    if (order.routeId) {
+      try {
+        const { calculateRouteETAs } = await import('../eta/service.js');
+        const etas = await calculateRouteETAs(order.routeId, tenantId);
+        const stopEta = etas.stops.find(s => s.orderId === orderId);
+        if (stopEta) {
+          etaText = `${stopEta.etaMinutes} minutes`;
+        }
+      } catch { /* fallback to 'soon' */ }
+    }
+
     // Render template variables
     const vars: Record<string, string> = {
       recipientName: order.recipientName || 'Customer',
       driverName: 'Your Driver',
-      eta: 'soon',
+      eta: etaText,
       trackingUrl: `https://track.homer.io/${orderId}`,
       orderRef: order.externalId || orderId.slice(0, 8),
     };

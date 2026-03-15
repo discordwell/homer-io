@@ -56,4 +56,22 @@ export const config = {
     apiKey: process.env.SENDGRID_API_KEY || '',
     fromEmail: process.env.SENDGRID_FROM_EMAIL || 'noreply@homer.io',
   },
+
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+    prices: {
+      starterMonthly: process.env.STRIPE_PRICE_STARTER_MONTHLY || '',
+      starterAnnual: process.env.STRIPE_PRICE_STARTER_ANNUAL || '',
+      growthMonthly: process.env.STRIPE_PRICE_GROWTH_MONTHLY || '',
+      growthAnnual: process.env.STRIPE_PRICE_GROWTH_ANNUAL || '',
+      enterpriseMonthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || '',
+      enterpriseAnnual: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || '',
+    },
+  },
+
+  integrations: {
+    encryptionKey: process.env.INTEGRATION_ENCRYPTION_KEY || '',
+  },
 } as const;

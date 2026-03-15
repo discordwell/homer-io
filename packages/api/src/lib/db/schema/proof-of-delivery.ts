@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, numeric, text, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, numeric, text, jsonb, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { orders } from './orders.js';
 import { routes } from './routes.js';
@@ -18,4 +18,7 @@ export const proofOfDelivery = pgTable('proof_of_delivery', {
   locationLng: numeric('location_lng', { precision: 10, scale: 7 }),
   capturedAt: timestamp('captured_at', { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index('idx_pod_tenant').on(table.tenantId),
+  index('idx_pod_route').on(table.routeId),
+]);

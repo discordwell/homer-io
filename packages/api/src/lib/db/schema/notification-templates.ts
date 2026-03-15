@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, text, boolean, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, text, boolean, pgEnum, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 export const notificationTriggerEnum = pgEnum('notification_trigger', [
@@ -19,4 +19,6 @@ export const notificationTemplates = pgTable('notification_templates', {
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index('idx_notification_templates_tenant_trigger').on(table.tenantId, table.trigger),
+]);

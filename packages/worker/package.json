@@ -16,10 +16,12 @@
     "bullmq": "^5.45.0",
     "drizzle-orm": "^0.44.7",
     "ioredis": "^5.10.0",
+    "pdfkit": "^0.18.0",
     "postgres": "^3.4.8"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/pdfkit": "^0.17.5",
     "tsx": "^4.20.0",
     "typescript": "^5.8.0",
     "vitest": "^3.2.0"

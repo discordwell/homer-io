@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, jsonb, numeric, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, jsonb, numeric, pgEnum, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { users } from './users.js';
 import { vehicles } from './vehicles.js';
@@ -23,4 +23,7 @@ export const drivers = pgTable('drivers', {
   lastLocationAt: timestamp('last_location_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index('idx_drivers_tenant_status').on(table.tenantId, table.status),
+  index('idx_drivers_tenant_user').on(table.tenantId, table.userId),
+]);

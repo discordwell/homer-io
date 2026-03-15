@@ -5,11 +5,15 @@ import { ApiKeysTab } from '../components/settings/ApiKeysTab.js';
 import { NotificationsTab } from '../components/settings/NotificationsTab.js';
 import { CustomerNotificationLog } from '../components/settings/CustomerNotificationLog.js';
 import { WebhooksTab } from '../components/settings/WebhooksTab.js';
+import { BillingTab } from '../components/settings/BillingTab.js';
+import { IntegrationsTab } from '../components/settings/IntegrationsTab.js';
 import { C, F } from '../theme.js';
 
 const tabs = [
   { id: 'organization', label: 'Organization' },
   { id: 'team', label: 'Team' },
+  { id: 'billing', label: 'Billing' },
+  { id: 'integrations', label: 'Integrations' },
   { id: 'api-keys', label: 'API Keys' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'webhooks', label: 'Webhooks' },
@@ -44,6 +48,7 @@ export function SettingsPage() {
       <div style={{
         display: 'flex', gap: 4, marginBottom: 24,
         borderBottom: `1px solid ${C.border}`, paddingBottom: 0,
+        overflowX: 'auto',
       }}>
         {tabs.map(tab => (
           <button
@@ -61,6 +66,7 @@ export function SettingsPage() {
               fontSize: 14,
               fontWeight: activeTab === tab.id ? 600 : 400,
               transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap',
             }}
           >
             {tab.label}
@@ -70,6 +76,8 @@ export function SettingsPage() {
 
       {activeTab === 'organization' && <OrganizationTab />}
       {activeTab === 'team' && <TeamTab />}
+      {activeTab === 'billing' && <BillingTab />}
+      {activeTab === 'integrations' && <IntegrationsTab />}
       {activeTab === 'api-keys' && <ApiKeysTab />}
       {activeTab === 'notifications' && <NotificationsTab onViewLog={() => setShowLog(true)} />}
       {activeTab === 'webhooks' && <WebhooksTab />}

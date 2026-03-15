@@ -2,6 +2,16 @@
 
 ## Session Summaries
 
+### 2026-03-15T05:30 UTC — Phase 4 "Launch Ready" Implementation
+- Implemented full Phase 4 (billing, integrations, operational intelligence, infrastructure) using foundation-first + 4 parallel agents.
+- **Stream A — Billing**: Stripe SDK integration (checkout sessions, customer portal, seat sync, webhook handler at /stripe/webhook). Billing enforcement middleware (trialing/active/past_due/402). 6 billing API endpoints. Frontend: BillingTab (plan card + invoice table), PlanSelector (3-column comparison modal), SubscriptionBanner (trial/past_due/expired warnings in DashboardLayout). Zustand billing store. Billing-usage worker for daily snapshots.
+- **Stream B — Integrations**: Generic EcommerceConnector pattern. Shopify connector (REST API, webhook subscriptions for orders/create/updated/cancelled). WooCommerce connector (REST API v3, consumer key auth). AES-256-GCM credential encryption (lib/integrations/crypto.ts). 9 integration API endpoints + inbound webhook receiver. Frontend: IntegrationsTab (platform cards), IntegrationConnectForm (platform-specific fields + test button), IntegrationDetailPanel. Zustand integrations store. Integration-sync worker (concurrency 3).
+- **Stream C — Operational Intelligence**: Haversine distance + road correction ETA (lib/geo.ts). ETA service (calculateRouteETAs, recalculateFromDriverPosition) with vehicle-specific speeds/dwell times. Geofencing service (100m auto-arrival detection, Redis dedup with 24h TTL, triggers delivery_approaching notification + Socket.IO event). Carbon tracking (emission factors by fuel type, zero for EVs/bikes). Carbon routes (GET /api/analytics/carbon). Tracking service updated with fire-and-forget geofence + ETA recalculation. Customer notification ETA hardcode replaced with real calculation.
+- **Stream D — Infrastructure**: Redis cache wrapper (homer: prefix, graceful error handling). PostgreSQL RLS (current_tenant_id() function, withTenant helper). Drizzle migration runner (db:migrate:run script). PDF report generator (pdfkit: daily summary, driver performance, route efficiency). 3 report download endpoints (Content-Type: application/pdf). Report scheduler (BullMQ repeatable jobs). Frontend: CarbonDashboard (KPIs + per-driver bar chart + EV savings), ReportDownload dropdown, EtaBadge component.
+- **Foundation**: 5 new DB schemas (subscriptions, invoices, usage_records, integration_connections, integration_orders). 5 new shared Zod schemas (billing, integrations, eta, carbon, reports). Config extended (stripe, integrations). Database indexes on all 22 tables. PWA completion (vite-plugin-pwa with Workbox, manifest, apple meta tags, service worker).
+- **Integration wiring**: server.ts (6 new route modules + billing webhook + billing enforcement middleware). Settings page (7 tabs: +Billing, +Integrations). DashboardLayout (+SubscriptionBanner). Analytics page (+CarbonDashboard, +ReportDownload). Worker (8 queues: +billing-usage, +integration-sync, +report-generation).
+- 3 new npm deps (stripe, pdfkit, vite-plugin-pwa). 219 tests pass (158 API + 61 shared). All packages + demo build clean. PWA service worker generated.
+
 ### 2026-03-14T03:30 UTC — Phase 3 "The Last Mile" Implementation
 - Implemented full Phase 3 using 4 parallel agents (same foundation-first strategy as Phase 2).
 - **Driver PWA (P1)**: Driver API module (current-route, upcoming-routes, status toggle), DriverLayout with BottomTabBar, 4 driver pages (DriverRoute, DriverStopDetail, DriverMap, DriverProfile), driver Zustand store, useGeoLocation hook (10s location posting), PWA manifest. Mobile-first with 44px touch targets.
@@ -61,4 +71,11 @@
 - **Customer notification triggers**: Wired into transitionRouteStatus (driver_en_route for all orders) and completeStop (delivered/failed). Uses .catch(() => {}) to not block main flow.
 - **Webhook triggers**: Same pattern — enqueueWebhook called in transitionRouteStatus and completeStop with .catch(() => {}).
 - **Drizzle enum type casting**: When querying pgEnum columns with string variables, need `as any` cast to satisfy TypeScript.
-- **Worker queues**: Now 5 total: route-optimization(2), notifications(5), analytics(1), customer-notifications(5), webhook-delivery(10).
+- **Worker queues**: Now 8 total: route-optimization(2), notifications(5), analytics(1), customer-notifications(5), webhook-delivery(10), billing-usage(1), integration-sync(3), report-generation(2).
+- **Billing middleware**: requireActiveSubscription skips /api/auth, /api/public, /api/billing, /health, /stripe. No sub record → allow (new tenant). 402 blocks mutations for expired/canceled.
+- **Geofencing pattern**: On every location update, fire-and-forget checkGeofences(). Redis key geofence:triggered:{routeId}:{orderId} with 24h TTL prevents duplicate notifications.
+- **ETA calculation**: haversine × 1.3 road correction ÷ vehicle speed × 60 + dwell time. Recalculated on every driver location update, broadcast as route:eta Socket.IO event.
+- **Carbon tracking**: Computed on-the-fly from routes.totalDistance + vehicles.fuelType/type. No new DB table needed.
+- **Credential encryption**: AES-256-GCM with INTEGRATION_ENCRYPTION_KEY env var, key hashed to 32 bytes via SHA-256.
+- **Settings page tabs**: Now 7 total (Organization, Team, Billing, Integrations, API Keys, Notifications, Webhooks).
+- **Stripe webhook**: Registered at root level (outside /api prefix) with raw body parser for HMAC verification.

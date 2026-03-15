@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, numeric, integer, boolean, text, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, numeric, integer, boolean, text, jsonb, pgEnum, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { routes } from './routes.js';
 
@@ -37,4 +37,9 @@ export const orders = pgTable('orders', {
   completedAt: timestamp('completed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index('idx_orders_tenant_status').on(table.tenantId, table.status),
+  index('idx_orders_tenant_route').on(table.tenantId, table.routeId),
+  index('idx_orders_tenant_status_route').on(table.tenantId, table.status, table.routeId),
+  index('idx_orders_tenant_created').on(table.tenantId, table.createdAt),
+]);

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, text, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, text, pgEnum, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { orders } from './orders.js';
 
@@ -20,4 +20,7 @@ export const customerNotificationsLog = pgTable('customer_notifications_log', {
   errorMessage: text('error_message'),
   sentAt: timestamp('sent_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index('idx_customer_notifications_tenant_created').on(table.tenantId, table.createdAt),
+  index('idx_customer_notifications_order').on(table.orderId),
+]);

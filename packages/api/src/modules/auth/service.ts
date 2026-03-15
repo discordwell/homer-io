@@ -8,6 +8,7 @@ import { db } from '../../lib/db/index.js';
 import { tenants } from '../../lib/db/schema/tenants.js';
 import { users, refreshTokens } from '../../lib/db/schema/users.js';
 import type { JwtPayload } from '../../plugins/auth.js';
+import { createStripeCustomer } from '../billing/service.js';
 
 function slugify(name: string): string {
   return name
@@ -58,6 +59,14 @@ export async function register(
 
     return { tenant, user };
   });
+
+  // Set up trial subscription for the new tenant
+  try {
+    await createStripeCustomer(result.tenant.id, input.email, input.orgName);
+  } catch (err) {
+    console.error('[auth] Failed to create Stripe customer during registration:', err);
+    // Non-fatal — tenant can still use the app; billing can be set up later
+  }
 
   return generateAuthResponse(app, result.user);
 }

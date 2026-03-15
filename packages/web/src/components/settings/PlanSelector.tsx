@@ -1,0 +1,280 @@
+import { useState } from 'react';
+import { useBillingStore } from '../../stores/billing.js';
+import { C, F } from '../../theme.js';
+
+interface PlanSelectorProps {
+  open: boolean;
+  onClose: () => void;
+  currentPlan: string;
+}
+
+const plans = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    monthlyPrice: 49,
+    annualPrice: 39,
+    features: [
+      '500 orders/driver/month',
+      'Manual route optimization',
+      'Email notifications',
+      '3 webhook endpoints',
+      'Basic analytics',
+    ],
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    monthlyPrice: 59,
+    annualPrice: 47,
+    popular: true,
+    features: [
+      'Unlimited orders',
+      'AI route optimization',
+      'Email + SMS notifications',
+      '10 webhook endpoints',
+      'Third-party integrations',
+      'Advanced analytics',
+    ],
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    monthlyPrice: 65,
+    annualPrice: 52,
+    features: [
+      'Unlimited orders',
+      'AI auto-dispatch',
+      'Email + SMS + branded notifications',
+      'Unlimited webhooks',
+      'All integrations',
+      'Priority support',
+      'Custom branding',
+    ],
+  },
+];
+
+export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) {
+  const { createCheckout, changePlan } = useBillingStore();
+  const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  if (!open) return null;
+
+  async function handleSelect(planId: string) {
+    if (planId === currentPlan) return;
+    setLoadingPlan(planId);
+    try {
+      // If currently on a paid plan, change directly; otherwise start checkout
+      if (currentPlan !== 'starter' || planId === 'starter') {
+        await changePlan(planId, interval);
+        onClose();
+      } else {
+        const url = await createCheckout(planId, interval);
+        window.location.href = url;
+      }
+    } catch {
+      // Error handled by store
+    } finally {
+      setLoadingPlan(null);
+    }
+  }
+
+  return (
+    <div style={overlayStyle} onClick={onClose}>
+      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <h2 style={{ fontFamily: F.display, fontSize: 22, color: C.text, margin: 0 }}>
+            Choose Your Plan
+          </h2>
+          <button onClick={onClose} style={closeBtnStyle}>
+            &times;
+          </button>
+        </div>
+
+        {/* Interval Toggle */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+          <div style={{
+            display: 'flex',
+            background: C.bg,
+            borderRadius: 8,
+            padding: 3,
+            border: `1px solid ${C.border}`,
+          }}>
+            <button
+              onClick={() => setInterval('monthly')}
+              style={{
+                ...toggleBtnStyle,
+                background: interval === 'monthly' ? C.accent : 'transparent',
+                color: interval === 'monthly' ? '#fff' : C.dim,
+              }}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setInterval('annual')}
+              style={{
+                ...toggleBtnStyle,
+                background: interval === 'annual' ? C.accent : 'transparent',
+                color: interval === 'annual' ? '#fff' : C.dim,
+              }}
+            >
+              Annual
+              <span style={{
+                marginLeft: 6,
+                fontSize: 11,
+                background: `${C.green}20`,
+                color: C.green,
+                padding: '2px 6px',
+                borderRadius: 4,
+                fontWeight: 700,
+              }}>
+                -20%
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Plan Cards */}
+        <div style={{ display: 'flex', gap: 16 }}>
+          {plans.map((plan) => {
+            const isCurrent = plan.id === currentPlan;
+            const price = interval === 'annual' ? plan.annualPrice : plan.monthlyPrice;
+
+            return (
+              <div
+                key={plan.id}
+                style={{
+                  flex: 1,
+                  background: C.bg3,
+                  borderRadius: 12,
+                  padding: 24,
+                  border: `1px solid ${isCurrent ? C.accent : plan.popular ? C.muted : C.border}`,
+                  position: 'relative',
+                }}
+              >
+                {plan.popular && (
+                  <div style={{
+                    position: 'absolute',
+                    top: -10,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: C.accent,
+                    color: '#fff',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    fontFamily: F.body,
+                    padding: '3px 12px',
+                    borderRadius: 10,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}>
+                    Most Popular
+                  </div>
+                )}
+
+                <h3 style={{ fontFamily: F.display, fontSize: 18, color: C.text, margin: '0 0 8px' }}>
+                  {plan.name}
+                </h3>
+
+                <div style={{ marginBottom: 20 }}>
+                  <span style={{ fontFamily: F.display, fontSize: 36, color: C.text, fontWeight: 700 }}>
+                    ${price}
+                  </span>
+                  <span style={{ color: C.dim, fontSize: 14 }}>
+                    /driver/{interval === 'annual' ? 'mo' : 'mo'}
+                  </span>
+                </div>
+
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px' }}>
+                  {plan.features.map((f) => (
+                    <li key={f} style={{
+                      color: C.text,
+                      fontSize: 13,
+                      fontFamily: F.body,
+                      padding: '5px 0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}>
+                      <span style={{ color: C.green, fontSize: 14, fontWeight: 700 }}>&#10003;</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => handleSelect(plan.id)}
+                  disabled={isCurrent || loadingPlan === plan.id}
+                  style={{
+                    width: '100%',
+                    padding: '12px 0',
+                    borderRadius: 8,
+                    border: isCurrent ? `1px solid ${C.muted}` : 'none',
+                    background: isCurrent ? 'transparent' : C.accent,
+                    color: isCurrent ? C.dim : '#fff',
+                    cursor: isCurrent ? 'default' : 'pointer',
+                    fontFamily: F.body,
+                    fontWeight: 600,
+                    fontSize: 14,
+                    opacity: loadingPlan === plan.id ? 0.6 : 1,
+                  }}
+                >
+                  {isCurrent
+                    ? 'Current Plan'
+                    : loadingPlan === plan.id
+                      ? 'Processing...'
+                      : 'Select Plan'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const overlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(0,0,0,0.7)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 1000,
+};
+
+const modalStyle: React.CSSProperties = {
+  background: C.bg2,
+  borderRadius: 16,
+  padding: 32,
+  maxWidth: 800,
+  width: '90vw',
+  maxHeight: '90vh',
+  overflowY: 'auto',
+  border: `1px solid ${C.muted}`,
+};
+
+const closeBtnStyle: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  color: C.dim,
+  fontSize: 24,
+  cursor: 'pointer',
+  padding: '0 4px',
+  lineHeight: 1,
+};
+
+const toggleBtnStyle: React.CSSProperties = {
+  padding: '8px 20px',
+  borderRadius: 6,
+  border: 'none',
+  cursor: 'pointer',
+  fontFamily: F.body,
+  fontWeight: 600,
+  fontSize: 14,
+  display: 'flex',
+  alignItems: 'center',
+};

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, numeric, integer, jsonb, pgEnum, text } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, numeric, integer, jsonb, pgEnum, text, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { drivers } from './drivers.js';
 import { vehicles } from './vehicles.js';
@@ -29,4 +29,8 @@ export const routes = pgTable('routes', {
   waypoints: jsonb('waypoints').default([]).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index('idx_routes_tenant_status').on(table.tenantId, table.status),
+  index('idx_routes_tenant_driver_status').on(table.tenantId, table.driverId, table.status),
+  index('idx_routes_tenant_created').on(table.tenantId, table.createdAt),
+]);

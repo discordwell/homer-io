@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, text, boolean, jsonb, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, text, boolean, jsonb, integer, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 export const webhookEndpoints = pgTable('webhook_endpoints', {
@@ -14,4 +14,6 @@ export const webhookEndpoints = pgTable('webhook_endpoints', {
   lastFailureAt: timestamp('last_failure_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index('idx_webhook_endpoints_tenant').on(table.tenantId),
+]);

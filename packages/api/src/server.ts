@@ -26,6 +26,13 @@ import { initSocketIO } from './lib/ws/index.js';
 import { registerSwagger } from './plugins/swagger.js';
 import { publicRoutes } from './modules/public/routes.js';
 import { webhookRoutes } from './modules/webhooks/routes.js';
+import { billingRoutes } from './modules/billing/routes.js';
+import { billingWebhookPlugin } from './modules/billing/webhook.js';
+import { integrationRoutes, integrationWebhookRoutes } from './modules/integrations/routes.js';
+import { etaRoutes } from './modules/eta/routes.js';
+import { carbonRoutes } from './modules/carbon/routes.js';
+import { reportRoutes } from './modules/reports/routes.js';
+import { requireActiveSubscription } from './plugins/billing.js';
 
 const app = Fastify({
   logger: {
@@ -83,8 +90,13 @@ app.get('/health', async () => ({
   version: '0.1.0',
 }));
 
+// Stripe webhook — must be registered at root level (outside /api) with raw body parsing
+await app.register(billingWebhookPlugin);
+
 // API routes
 await app.register(async (api) => {
+  // Billing enforcement — skip for auth, public, health, stripe routes
+  api.addHook('preHandler', requireActiveSubscription);
   // Tighter rate limit on auth endpoints to prevent brute force
   await api.register(async (authScope) => {
     await authScope.register(rateLimit, { max: 10, timeWindow: '1 minute' });
@@ -122,6 +134,12 @@ await app.register(async (api) => {
     await dispatchScope.register(dispatchRoutes);
   }, { prefix: '/dispatch' });
   await api.register(webhookRoutes, { prefix: '/webhooks' });
+  await api.register(billingRoutes, { prefix: '/billing' });
+  await api.register(integrationRoutes, { prefix: '/integrations' });
+  await api.register(integrationWebhookRoutes, { prefix: '/integrations/webhook' });
+  await api.register(etaRoutes);
+  await api.register(carbonRoutes, { prefix: '/analytics' });
+  await api.register(reportRoutes, { prefix: '/reports' });
 }, { prefix: '/api' });
 
 // Graceful shutdown

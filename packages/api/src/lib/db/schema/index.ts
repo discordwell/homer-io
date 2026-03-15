@@ -14,3 +14,8 @@ export * from './notification-templates.js';
 export * from './customer-notifications-log.js';
 export * from './webhook-endpoints.js';
 export * from './webhook-deliveries.js';
+export * from './subscriptions.js';
+export * from './invoices.js';
+export * from './usage-records.js';
+export * from './integration-connections.js';
+export * from './integration-orders.js';

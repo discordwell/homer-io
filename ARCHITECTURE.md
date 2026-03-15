@@ -109,6 +109,14 @@ Every table has a `tenant_id` FK. All queries filter by the authenticated user's
 - **WebhookEndpoint** — External HTTPS webhook subscription with event filtering and HMAC signing
 - **WebhookDelivery** — Webhook delivery attempt log with retry tracking
 
+## Data Model — Phase 4 Additions
+
+- **Subscription** — Stripe-backed billing (plan, status, quantity/seats, trial dates, period dates)
+- **Invoice** — Stripe invoice mirror (amount, status, PDF/URL links)
+- **UsageRecord** — Monthly snapshot of driver/order/route counts per tenant
+- **IntegrationConnection** — E-commerce platform connections (Shopify/WooCommerce) with encrypted credentials
+- **IntegrationOrder** — Imported external order deduplication (unique on connection + external ID)
+
 ## API Design
 
 RESTful API at `/api/*` with Swagger docs at `/api/docs`:
@@ -183,6 +191,33 @@ RESTful API at `/api/*` with Swagger docs at `/api/docs`:
 - `POST /api/webhooks/:id/test` — Send test webhook
 - `GET /api/webhooks/:id/deliveries` — Delivery history
 
+### Billing (Phase 4 — owner role)
+- `GET /api/billing/subscription` — Current plan + usage stats
+- `POST /api/billing/checkout` — Create Stripe Checkout Session
+- `POST /api/billing/portal` — Create Stripe Customer Portal URL
+- `GET /api/billing/invoices` — Paginated invoice history
+- `GET /api/billing/plans` — Available plans with features
+- `POST /api/billing/change-plan` — Upgrade/downgrade plan
+- `POST /stripe/webhook` — Stripe webhook receiver (root-level, HMAC verified)
+
+### E-commerce Integrations (Phase 4 — admin role)
+- `GET /api/integrations/platforms` — Available platforms
+- `CRUD /api/integrations/connections` — Platform connections
+- `POST /api/integrations/connections/:id/test` — Test credentials
+- `POST /api/integrations/connections/:id/sync` — Trigger manual sync
+- `GET /api/integrations/connections/:id/orders` — Imported orders
+- `POST /api/integrations/webhook/:platform/:connectionId` — Inbound platform webhook
+
+### ETA & Carbon (Phase 4)
+- `GET /api/routes/:id/eta` — Calculate ETAs for route stops
+- `GET /api/tracking/route/:routeId/eta` — ETA from tracking context
+- `GET /api/analytics/carbon` — Carbon overview + per-driver breakdown
+
+### Reports (Phase 4 — admin role)
+- `GET /api/reports/daily-summary` — Download daily summary PDF
+- `GET /api/reports/driver-performance` — Download driver performance PDF
+- `GET /api/reports/route-efficiency` — Download route efficiency PDF
+
 ### Public (No Auth)
 - `GET /api/public/track/:orderId` — Public shipment tracking
 - `POST /api/ai/chat` — AI chat with fleet context
@@ -205,7 +240,7 @@ Nested under `DashboardLayout` with sidebar navigation:
 /dashboard/routes/new     → RouteBuilderPage (Leaflet map + stop builder)
 /dashboard/routes/:id     → RouteDetailPage (map + stop list + AI optimize)
 /dashboard/analytics      → AnalyticsPage (charts + leaderboard)
-/dashboard/settings       → SettingsPage (org, team, API keys, notifications, webhooks)
+/dashboard/settings       → SettingsPage (org, team, billing, integrations, API keys, notifications, webhooks)
 ```
 
 ### Driver PWA Routes (Phase 3)
@@ -219,13 +254,13 @@ Nested under `DriverLayout` with bottom tab bar (mobile-optimized):
 
 ## Component Library
 
-45+ shared components in `packages/web/src/components/`:
+55+ shared components in `packages/web/src/components/`:
 
-**Core UI:** Badge, Pill, Bar, KPICard, FormField, SelectField, Modal, DataTable, EmptyState, Toast, LoadingSpinner, ConfirmDialog
+**Core UI:** Badge, Pill, Bar, KPICard, FormField, SelectField, Modal, DataTable, EmptyState, Toast, LoadingSpinner, ConfirmDialog, EtaBadge, SubscriptionBanner
 **Layout:** Sidebar, DashboardLayout, AIChatPanel, NotificationCenter, NotificationItem
 **Maps:** RouteMap, AddressSearch, LiveFleetMap, DriverMarker, DeliveryEventFeed
-**Analytics:** TrendChart, DriverLeaderboard, RouteEfficiencyCard
-**Settings:** OrganizationTab, TeamTab, ApiKeysTab, NotificationsTab, NotificationTemplateEditor, CustomerNotificationLog, WebhooksTab, WebhookEndpointForm, WebhookDeliveryLog
+**Analytics:** TrendChart, DriverLeaderboard, RouteEfficiencyCard, CarbonDashboard, ReportDownload
+**Settings:** OrganizationTab, TeamTab, BillingTab, PlanSelector, IntegrationsTab, IntegrationConnectForm, IntegrationDetailPanel, ApiKeysTab, NotificationsTab, NotificationTemplateEditor, CustomerNotificationLog, WebhooksTab, WebhookEndpointForm, WebhookDeliveryLog
 **Public Tracking:** StatusTimeline, TrackingMap
 **Import:** CsvImportWizard
 **Driver PWA:** DriverLayout, BottomTabBar, StopCard, NavigateButton, SignaturePad, PhotoCapture, PODFlow, DeliveryFailureFlow, PODViewer
@@ -244,17 +279,19 @@ Nested under `DriverLayout` with bottom tab bar (mobile-optimized):
 - `notifications.ts` — Notifications list, unread count, polling
 - `driver.ts` — Driver PWA state (current route, stops, GPS, POD uploads)
 - `customer-notifications.ts` — Notification templates CRUD and customer log
+- `billing.ts` — Subscription status, invoices, Stripe checkout/portal
+- `integrations.ts` — E-commerce connections, sync controls, platform discovery
 
 ## Real-Time Infrastructure
 
 - **Socket.IO** server attached to Fastify's HTTP server on `/fleet` namespace
 - JWT auth middleware verifies tokens from handshake
 - Tenant room isolation (`tenant:{id}`) for multi-tenant broadcasts
-- Events: `driver:location`, `route:status`, `delivery:event`, `notification:new`
+- Events: `driver:location`, `route:status`, `delivery:event`, `notification:new`, `route:eta`, `delivery:approaching`
 
 ## Background Workers (BullMQ)
 
-5 job queues processed by `packages/worker/`:
+8 job queues processed by `packages/worker/`:
 
 | Queue | Concurrency | Purpose |
 |-------|-------------|---------|
@@ -263,6 +300,9 @@ Nested under `DriverLayout` with bottom tab bar (mobile-optimized):
 | `analytics` | 1 | Aggregate analytics computation |
 | `customer-notifications` | 5 | SMS (Twilio) + email (SendGrid) delivery |
 | `webhook-delivery` | 10 | HMAC-signed webhook POST with exponential backoff (5 retries) |
+| `billing-usage` | 1 | Daily tenant usage snapshots + limit alerts |
+| `integration-sync` | 3 | E-commerce order sync (initial + periodic poll) |
+| `report-generation` | 2 | PDF report generation + email delivery |
 
 ## Webhook System
 
@@ -291,6 +331,30 @@ Nested under `DriverLayout` with bottom tab bar (mobile-optimized):
 3. API requests include `Authorization: Bearer <jwt>`
 4. On 401, client auto-refreshes using refresh token (rotation)
 5. Roles enforced via `requireRole()` middleware
+
+## Infrastructure Hardening (Phase 4)
+
+- **Redis Cache** — `lib/cache.ts` wrapper with `homer:` prefix (dashboard 60s, analytics 120s, settings 300s)
+- **PostgreSQL RLS** — `current_tenant_id()` function + per-table policies for defense-in-depth
+- **Database Indexes** — Composite indexes on all 22 tables for tenant-scoped queries
+- **Drizzle Migrations** — `db:migrate:run` script with `drizzle-kit generate` workflow
+- **PWA** — Service worker via `vite-plugin-pwa` (NetworkFirst for API, CacheFirst for static)
+- **Billing Enforcement** — `requireActiveSubscription` middleware (trial/active/past_due/402)
+- **Credential Encryption** — AES-256-GCM for integration platform credentials
+
+## Billing & Pricing (Phase 4)
+
+| | Starter | Growth | Enterprise |
+|---|---------|--------|------------|
+| Price | $49/driver/mo | $59/driver/mo | $65/driver/mo |
+| Orders | 500/driver/mo | Unlimited | Unlimited |
+| Optimization | Manual | AI-powered | AI + auto-dispatch |
+| Notifications | Email only | Email + SMS | All + branded |
+| Webhooks | 3 endpoints | 10 endpoints | Unlimited |
+| Integrations | — | Shopify + WooCommerce | All + custom API |
+| Trial | 14 days | 14 days | 14 days |
+
+Annual discount: 20%. Per-seat billing (quantity = active drivers).
 
 ## Deployment
 

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, numeric, integer, boolean, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, numeric, integer, boolean, pgEnum, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 export const vehicleTypeEnum = pgEnum('vehicle_type', [
@@ -23,4 +23,6 @@ export const vehicles = pgTable('vehicles', {
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index('idx_vehicles_tenant').on(table.tenantId),
+]);

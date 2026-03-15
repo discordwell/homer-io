@@ -1,4 +1,4 @@
-import { pgTable, uuid, numeric, integer, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, numeric, integer, timestamp, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { drivers } from './drivers.js';
 
@@ -12,4 +12,6 @@ export const locationHistory = pgTable('location_history', {
   heading: integer('heading'),
   accuracy: numeric('accuracy', { precision: 8, scale: 2 }),
   timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index('idx_location_history_tenant_driver_ts').on(table.tenantId, table.driverId, table.timestamp),
+]);

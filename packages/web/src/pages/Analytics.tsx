@@ -3,6 +3,8 @@ import { KPICard } from '../components/KPICard.js';
 import { TrendChart } from '../components/analytics/TrendChart.js';
 import { DriverLeaderboard } from '../components/analytics/DriverLeaderboard.js';
 import { RouteEfficiencyCard } from '../components/analytics/RouteEfficiencyCard.js';
+import { CarbonDashboard } from '../components/analytics/CarbonDashboard.js';
+import { ReportDownload } from '../components/analytics/ReportDownload.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
 import { C, F } from '../theme.js';
 
@@ -43,6 +45,8 @@ export function AnalyticsPage() {
               </button>
             ))}
           </div>
+          {/* Report download */}
+          <ReportDownload />
           {/* Export button */}
           <button
             onClick={exportCsv}
@@ -90,6 +94,11 @@ export function AnalyticsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, marginBottom: 24 }}>
         <TrendChart data={trends} />
         <RouteEfficiencyCard data={routeEfficiency} />
+      </div>
+
+      {/* Carbon Dashboard */}
+      <div style={{ marginBottom: 24 }}>
+        <CarbonDashboard range={range} />
       </div>
 
       {/* Full-width: Driver Leaderboard */}
