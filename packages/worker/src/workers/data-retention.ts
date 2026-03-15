@@ -1,7 +1,7 @@
 import type { Job } from 'bullmq';
 import { lt, sql } from 'drizzle-orm';
 import { db } from '../lib/db.js';
-import { locationHistory, activityLog, customerNotificationsLog, webhookDeliveries } from '../lib/schema.js';
+import { locationHistory, activityLog, customerNotificationsLog, webhookDeliveries, passwordResetTokens } from '../lib/schema.js';
 import { logger } from '../lib/logger.js';
 
 const POLICIES = [
@@ -9,6 +9,7 @@ const POLICIES = [
   { name: 'activity_log', table: activityLog, days: 365 },
   { name: 'customer_notifications_log', table: customerNotificationsLog, days: 180 },
   { name: 'webhook_deliveries', table: webhookDeliveries, days: 90 },
+  { name: 'password_reset_tokens', table: passwordResetTokens, days: 7 },
 ];
 
 const log = logger.child({ worker: 'data-retention' });

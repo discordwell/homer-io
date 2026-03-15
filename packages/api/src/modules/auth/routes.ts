@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import rateLimit from '@fastify/rate-limit';
 import { registerSchema, loginSchema, refreshTokenSchema, requestPasswordResetSchema, resetPasswordSchema, verifyEmailSchema } from '@homer-io/shared';
 import { register, login, refreshToken, getMe, logout, verifyEmail, resendVerification, requestPasswordReset, resetPassword } from './service.js';
 import { authenticate } from '../../plugins/auth.js';
@@ -29,16 +30,21 @@ export async function authRoutes(app: FastifyInstance) {
     reply.send(result);
   });
 
-  app.post('/resend-verification', async (request, reply) => {
-    const { email } = z.object({ email: z.string().email() }).parse(request.body);
-    const result = await resendVerification(email);
-    reply.send(result);
-  });
+  // Tighter rate limit on email-sending endpoints (3/min) to prevent abuse
+  await app.register(async (emailScope) => {
+    await emailScope.register(rateLimit, { max: 3, timeWindow: '1 minute' });
 
-  app.post('/forgot-password', async (request, reply) => {
-    const body = requestPasswordResetSchema.parse(request.body);
-    await requestPasswordReset(app, body.email);
-    reply.send({ success: true });
+    emailScope.post('/resend-verification', async (request, reply) => {
+      const { email } = z.object({ email: z.string().email() }).parse(request.body);
+      const result = await resendVerification(email);
+      reply.send(result);
+    });
+
+    emailScope.post('/forgot-password', async (request, reply) => {
+      const body = requestPasswordResetSchema.parse(request.body);
+      await requestPasswordReset(app, body.email);
+      reply.send({ success: true });
+    });
   });
 
   app.post('/reset-password', async (request, reply) => {

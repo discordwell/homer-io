@@ -184,23 +184,25 @@ export async function batchUpdateStatus(tenantId: string, orderIds: string[], st
 }
 
 export async function batchAssignToRoute(tenantId: string, orderIds: string[], routeId: string) {
-  let sequence = 1;
-  // Get current max stop sequence on the route
-  const [maxSeq] = await db.select({ max: sql<number>`coalesce(max(${orders.stopSequence}), 0)` })
-    .from(orders).where(and(eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)));
-  sequence = (maxSeq?.max ?? 0) + 1;
+  await db.transaction(async (tx) => {
+    let sequence = 1;
+    // Get current max stop sequence on the route
+    const [maxSeq] = await tx.select({ max: sql<number>`coalesce(max(${orders.stopSequence}), 0)` })
+      .from(orders).where(and(eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)));
+    sequence = (maxSeq?.max ?? 0) + 1;
 
-  for (const orderId of orderIds) {
-    await db.update(orders).set({
-      routeId, stopSequence: sequence++, status: 'assigned' as any, updatedAt: new Date(),
-    }).where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
-  }
+    for (const orderId of orderIds) {
+      await tx.update(orders).set({
+        routeId, stopSequence: sequence++, status: 'assigned' as any, updatedAt: new Date(),
+      }).where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
+    }
 
-  // Update route total stops
-  const [countResult] = await db.select({ count: sql<number>`count(*)` })
-    .from(orders).where(and(eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)));
-  await db.update(routes).set({ totalStops: Number(countResult.count), updatedAt: new Date() })
-    .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
+    // Update route total stops
+    const [countResult] = await tx.select({ count: sql<number>`count(*)` })
+      .from(orders).where(and(eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)));
+    await tx.update(routes).set({ totalStops: Number(countResult.count), updatedAt: new Date() })
+      .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
+  });
 
   await logActivity({ tenantId, action: 'batch_assigned', entityType: 'order', metadata: { count: orderIds.length, routeId } });
   return { assigned: orderIds.length };

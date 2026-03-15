@@ -21,40 +21,42 @@ export async function processRouteTemplate(job: Job) {
 
   for (const template of dueTemplates) {
     try {
-      const orderItems = template.orderTemplate as Array<Record<string, unknown>>;
+      await db.transaction(async (tx) => {
+        const orderItems = template.orderTemplate as Array<Record<string, unknown>>;
 
-      // Create orders + route
-      const createdOrderIds: string[] = [];
-      for (const item of orderItems) {
-        const [order] = await db.insert(orders).values({
+        // Create orders + route
+        const createdOrderIds: string[] = [];
+        for (const item of orderItems) {
+          const [order] = await tx.insert(orders).values({
+            tenantId: template.tenantId,
+            recipientName: (item.recipientName as string) || 'Template Order',
+            deliveryAddress: item.deliveryAddress ?? { street: '', city: '', state: '', zip: '' },
+          }).returning();
+          createdOrderIds.push(order.id);
+        }
+
+        const [route] = await tx.insert(routes).values({
           tenantId: template.tenantId,
-          recipientName: (item.recipientName as string) || 'Template Order',
-          deliveryAddress: item.deliveryAddress ?? { street: '', city: '', state: '', zip: '' },
+          name: `${template.name} - ${now.toLocaleDateString()}`,
+          driverId: template.driverId,
+          totalStops: createdOrderIds.length,
         }).returning();
-        createdOrderIds.push(order.id);
-      }
 
-      const [route] = await db.insert(routes).values({
-        tenantId: template.tenantId,
-        name: `${template.name} - ${now.toLocaleDateString()}`,
-        driverId: template.driverId,
-        totalStops: createdOrderIds.length,
-      }).returning();
+        for (let i = 0; i < createdOrderIds.length; i++) {
+          await tx.update(orders).set({
+            routeId: route.id, stopSequence: i + 1, status: 'assigned', updatedAt: now,
+          }).where(eq(orders.id, createdOrderIds[i]));
+        }
 
-      for (let i = 0; i < createdOrderIds.length; i++) {
-        await db.update(orders).set({
-          routeId: route.id, stopSequence: i + 1, status: 'assigned', updatedAt: now,
-        }).where(eq(orders.id, createdOrderIds[i]));
-      }
+        // Update template
+        const interval = parseExpression(template.recurrenceRule, { tz: template.recurrenceTimezone });
+        const nextGenerateAt = interval.next().toDate();
+        await tx.update(routeTemplatesTable).set({
+          lastGeneratedAt: now, nextGenerateAt, updatedAt: now,
+        }).where(eq(routeTemplatesTable.id, template.id));
 
-      // Update template
-      const interval = parseExpression(template.recurrenceRule, { tz: template.recurrenceTimezone });
-      const nextGenerateAt = interval.next().toDate();
-      await db.update(routeTemplatesTable).set({
-        lastGeneratedAt: now, nextGenerateAt, updatedAt: now,
-      }).where(eq(routeTemplatesTable.id, template.id));
-
-      log.info('Generated route from template', { routeName: route.name, templateName: template.name });
+        log.info('Generated route from template', { routeName: route.name, templateName: template.name });
+      });
     } catch (err) {
       log.error('Failed to generate from template', {
         templateName: template.name,

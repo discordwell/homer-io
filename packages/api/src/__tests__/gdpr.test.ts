@@ -1,19 +1,42 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { dataExportRequestSchema, dataDeletionRequestSchema, dataDeletionConfirmSchema } from '@homer-io/shared';
 
-// Mock db
+// Mock db — flexible chain builder
+const returning = vi.fn();
 const mockInsert = vi.fn();
-const mockSelect = vi.fn();
 const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
-
-const returning = vi.fn();
+const mockSelect = vi.fn();
 const where = vi.fn();
-const from = vi.fn();
-const limit = vi.fn();
-const orderBy = vi.fn();
 const set = vi.fn();
 const values = vi.fn();
+
+function makeChain(resolveValue: unknown = []) {
+  const chainLimit = vi.fn().mockReturnValue({
+    offset: vi.fn().mockResolvedValue(resolveValue),
+  });
+  const chainOrderBy = vi.fn().mockReturnValue({
+    limit: chainLimit,
+  });
+  // Make .where() thenable (for terminal queries like count) AND chainable (for .orderBy().limit().offset())
+  const whereResult = {
+    limit: vi.fn().mockResolvedValue(resolveValue),
+    orderBy: chainOrderBy,
+    then: (resolve: (v: unknown) => void, reject?: (e: unknown) => void) =>
+      Promise.resolve(resolveValue).then(resolve, reject),
+  };
+  const chainWhere = vi.fn().mockReturnValue(whereResult);
+  return { from: vi.fn().mockReturnValue({ where: chainWhere, orderBy: chainOrderBy }), where: chainWhere };
+}
+
+// Track select call count to return different chains for Promise.all
+let selectCallIndex = 0;
+let selectChains: ReturnType<typeof makeChain>[] = [];
+
+function setupSelectChains(...chains: ReturnType<typeof makeChain>[]) {
+  selectCallIndex = 0;
+  selectChains = chains;
+}
 
 vi.mock('../lib/db/index.js', () => ({
   db: {
@@ -23,21 +46,11 @@ vi.mock('../lib/db/index.js', () => ({
     },
     select: (...args: unknown[]) => {
       mockSelect(...args);
-      return {
-        from: (...a: unknown[]) => {
-          from(...a);
-          return {
-            where: (...w: unknown[]) => {
-              where(...w);
-              return {
-                limit: () => limit(),
-                orderBy: () => orderBy(),
-              };
-            },
-            orderBy: () => orderBy(),
-          };
-        },
-      };
+      if (selectChains.length > 0 && selectCallIndex < selectChains.length) {
+        return selectChains[selectCallIndex++];
+      }
+      // Default chain
+      return makeChain([]);
     },
     update: (...args: unknown[]) => {
       mockUpdate(...args);
@@ -85,6 +98,7 @@ vi.mock('../config.js', () => ({
 
 vi.mock('../lib/email.js', () => ({
   sendTransactionalEmail: vi.fn().mockResolvedValue({ success: true }),
+  escapeHtml: (s: string) => s,
 }));
 
 vi.mock('bullmq', () => ({
@@ -126,6 +140,8 @@ describe('GDPR schemas', () => {
 describe('GDPR service - export', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    selectCallIndex = 0;
+    selectChains = [];
   });
 
   it('requestDataExport inserts a record and enqueues a job', async () => {
@@ -140,23 +156,32 @@ describe('GDPR service - export', () => {
     expect(mockInsert).toHaveBeenCalled();
   });
 
-  it('listExportRequests returns records for tenant', async () => {
+  it('listExportRequests returns paginated records', async () => {
     const mockExports = [
       { id: 'exp-1', status: 'completed' },
       { id: 'exp-2', status: 'queued' },
     ];
-    orderBy.mockResolvedValueOnce(mockExports);
+    // First select: items query, Second select: count query
+    setupSelectChains(
+      makeChain(mockExports),
+      makeChain([{ count: 2 }]),
+    );
 
     const { listExportRequests } = await import('../modules/gdpr/service.js');
-    const result = await listExportRequests('t-1');
+    const result = await listExportRequests('t-1', { page: 1, limit: 20 });
 
-    expect(result).toEqual(mockExports);
+    expect(result.items).toEqual(mockExports);
+    expect(result.total).toBe(2);
+    expect(result.page).toBe(1);
+    expect(result.totalPages).toBe(1);
   });
 });
 
 describe('GDPR service - deletion', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    selectCallIndex = 0;
+    selectChains = [];
   });
 
   it('requestAccountDeletion rejects incorrect confirm phrase', async () => {
@@ -166,7 +191,9 @@ describe('GDPR service - deletion', () => {
   });
 
   it('requestAccountDeletion rejects when pending request exists', async () => {
-    limit.mockResolvedValueOnce([{ id: 'del-1', status: 'pending' }]);
+    setupSelectChains(
+      makeChain([{ id: 'del-1', status: 'pending' }]),
+    );
 
     const { requestAccountDeletion } = await import('../modules/gdpr/service.js');
     await expect(requestAccountDeletion('t-1', 'u-1', 'DELETE MY ACCOUNT'))

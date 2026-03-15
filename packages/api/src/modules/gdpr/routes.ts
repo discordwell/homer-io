@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { dataDeletionRequestSchema, dataDeletionConfirmSchema } from '@homer-io/shared';
+import { dataDeletionRequestSchema, dataDeletionConfirmSchema, paginationSchema } from '@homer-io/shared';
 import { authenticate, requireRole } from '../../plugins/auth.js';
 import { requestDataExport, getExportStatus, listExportRequests, requestAccountDeletion, confirmDeletion, cancelDeletion, listDeletionRequests } from './service.js';
 
@@ -17,7 +17,8 @@ export async function gdprRoutes(app: FastifyInstance) {
   });
 
   app.get('/exports', async (request) => {
-    return listExportRequests(request.user.tenantId);
+    const query = paginationSchema.parse(request.query);
+    return listExportRequests(request.user.tenantId, query);
   });
 
   app.post('/delete-account', { preHandler: [requireRole('owner')] }, async (request, reply) => {
@@ -36,6 +37,7 @@ export async function gdprRoutes(app: FastifyInstance) {
   });
 
   app.get('/deletion-requests', async (request) => {
-    return listDeletionRequests(request.user.tenantId);
+    const query = paginationSchema.parse(request.query);
+    return listDeletionRequests(request.user.tenantId, query);
   });
 }

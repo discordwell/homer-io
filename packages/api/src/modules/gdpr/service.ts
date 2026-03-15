@@ -1,4 +1,5 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
+import type { PaginationInput } from '@homer-io/shared';
 import { Queue } from 'bullmq';
 import { randomBytes, createHash } from 'crypto';
 import { db } from '../../lib/db/index.js';
@@ -25,10 +26,21 @@ export async function getExportStatus(tenantId: string, exportId: string) {
   return request;
 }
 
-export async function listExportRequests(tenantId: string) {
-  return db.select().from(dataExportRequests)
-    .where(eq(dataExportRequests.tenantId, tenantId))
-    .orderBy(desc(dataExportRequests.createdAt));
+export async function listExportRequests(tenantId: string, pagination: PaginationInput) {
+  const { page, limit } = pagination;
+  const offset = (page - 1) * limit;
+  const where = eq(dataExportRequests.tenantId, tenantId);
+
+  const [items, countResult] = await Promise.all([
+    db.select().from(dataExportRequests)
+      .where(where)
+      .orderBy(desc(dataExportRequests.createdAt))
+      .limit(limit).offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(dataExportRequests).where(where),
+  ]);
+
+  const total = Number(countResult[0].count);
+  return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 
 export async function requestAccountDeletion(tenantId: string, userId: string, confirmPhrase: string) {
@@ -89,8 +101,19 @@ export async function cancelDeletion(tenantId: string) {
   return { success: true };
 }
 
-export async function listDeletionRequests(tenantId: string) {
-  return db.select().from(dataDeletionRequests)
-    .where(eq(dataDeletionRequests.tenantId, tenantId))
-    .orderBy(desc(dataDeletionRequests.createdAt));
+export async function listDeletionRequests(tenantId: string, pagination: PaginationInput) {
+  const { page, limit } = pagination;
+  const offset = (page - 1) * limit;
+  const where = eq(dataDeletionRequests.tenantId, tenantId);
+
+  const [items, countResult] = await Promise.all([
+    db.select().from(dataDeletionRequests)
+      .where(where)
+      .orderBy(desc(dataDeletionRequests.createdAt))
+      .limit(limit).offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(dataDeletionRequests).where(where),
+  ]);
+
+  const total = Number(countResult[0].count);
+  return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
