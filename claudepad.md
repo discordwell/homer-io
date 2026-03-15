@@ -2,6 +2,23 @@
 
 ## Session Summaries
 
+### 2026-03-15T23:15 UTC — Phase 5 Hardening + Full Wet Test
+- Applied 7 hardening fixes from code review: rate limits on email endpoints (3/min), GDPR list pagination, batchAssignToRoute transaction, route-template worker transaction, password reset token retention cleanup (7-day), escapeHtml utility (applied to team invite), DB indexes on emailVerificationToken + refreshTokens.tokenHash.
+- 267 tests pass (29 test files), 7 new tests in hardening.test.ts.
+- **CI fix**: Removed `composite: true` from shared tsconfig and project references from all tsconfigs. Removed `tsc` from web build (Vite handles bundling). Added `react-is` dep. CI test job now passes green.
+- **Deploy fix**: Set up full server infrastructure on ovh2 — Docker Postgres 16 + Redis 7, Node 22, PM2, Caddy reverse proxy on `homer.discordwell.com`. API on port 3030. Fixed cron-parser CJS import for Node ESM compatibility. Used `drizzle-kit push --force` for schema migration.
+- **Privacy tab fix**: PrivacyTab crashed (`r.find is not a function`) because GDPR list endpoints now return `{ items, total, ... }` but frontend expected arrays. Fixed to extract `.items`.
+- **Wet test results** (browser automation against deployed site):
+  - Flow 1 Auth: PASS — register, dashboard loads, forgot-password page renders
+  - Flow 2 Onboarding: PASS — 5-step wizard, "Go" navigates, progress tracks (green checkmark on vehicle after creation)
+  - Flow 3 Fleet Data: PASS — vehicle created, appears in table with correct data
+  - Flow 5 Dispatch: PASS — kanban renders with Unassigned column, Manual/AI tabs
+  - Flow 6 Settings 9 Tabs: PASS — all 9 tabs visible (Organization, Team, Billing, Integrations, API Keys, Notifications, Webhooks, Privacy, Health)
+  - Flow 7 GDPR Privacy: PASS (after fix) — data export, retention policies (90/365/180/90), delete account
+  - Flow 8 Health: PASS — DB 2ms, Redis 8ms, memory, uptime, all 11 queue depths
+  - Flow 9 Hard Tests: XSS PASS (`<script>alert(1)</script>` rendered as plain text), orders page functional
+  - GIF recorded: homer-wet-test-flows.gif (48 frames)
+
 ### 2026-03-15T14:15 UTC — Phase 5 "Production Grade" Implementation
 - Implemented full Phase 5 (auth hardening, stub fixes, onboarding, operational features, GDPR, observability) using foundation-first + 5 parallel agents.
 - **Foundation**: 4 new DB schemas (password_reset_tokens, route_templates, messages, data_export/deletion_requests). Column additions to users (emailVerified, failedLoginAttempts, lockedUntil) and tenants (onboardingCompletedAt, onboardingStep). 6 new Zod schemas. Config: app.frontendUrl. Dep: cron-parser.
