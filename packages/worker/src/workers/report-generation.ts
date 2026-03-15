@@ -1,5 +1,9 @@
-import { Job } from 'bullmq';
+import type { Job } from 'bullmq';
 import { config } from '../lib/config.js';
+import { db } from '../lib/db.js';
+import { orders, routes, drivers } from '../lib/schema.js';
+import { eq, and, gte, sql } from 'drizzle-orm';
+import { logger } from '../lib/logger.js';
 
 interface ReportJobData {
   tenantId: string;
@@ -8,9 +12,11 @@ interface ReportJobData {
   recipients: string[];
 }
 
+const log = logger.child({ worker: 'report-generation' });
+
 export async function processReportGeneration(job: Job<ReportJobData>) {
   const { tenantId, type, rangeDays, recipients } = job.data;
-  console.log(`[report-generation] Generating ${type} report for tenant ${tenantId}`);
+  log.info('Generating report', { tenantId, type, rangeDays });
 
   let pdfBuffer: Buffer;
 
@@ -42,27 +48,73 @@ export async function processReportGeneration(job: Job<ReportJobData>) {
     doc.fillColor('#000000');
     doc.moveDown(1.5);
 
-    // Minimal report body (the worker generates a simpler version)
-    doc.fontSize(12).font('Helvetica-Bold').text('Report Data');
-    doc.moveDown(0.5);
-    doc.fontSize(10).font('Helvetica').text(`Tenant: ${tenantId}`);
-    doc.fontSize(10).font('Helvetica').text(`Type: ${type}`);
-    doc.fontSize(10).font('Helvetica').text(`Period: ${fromStr} to ${toStr}`);
-    doc.fontSize(10).font('Helvetica').text(`Generated: ${new Date().toISOString()}`);
+    // Report body with real data queries
+    switch (type) {
+      case 'daily-summary': {
+        const [orderStats] = await db.select({
+          total: sql<number>`count(*)`,
+          delivered: sql<number>`count(*) filter (where status = 'delivered')`,
+          failed: sql<number>`count(*) filter (where status = 'failed')`,
+        }).from(orders).where(and(eq(orders.tenantId, tenantId), gte(orders.createdAt, from)));
+
+        doc.fontSize(12).font('Helvetica-Bold').text('Order Summary');
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica').text(`Total Orders: ${orderStats?.total ?? 0}`);
+        doc.text(`Delivered: ${orderStats?.delivered ?? 0}`);
+        doc.text(`Failed: ${orderStats?.failed ?? 0}`);
+        break;
+      }
+      case 'driver-performance': {
+        const driverStats = await db.select({
+          name: drivers.name,
+          deliveries: sql<number>`count(*)`,
+        }).from(orders)
+          .innerJoin(routes, eq(orders.routeId, routes.id))
+          .innerJoin(drivers, eq(routes.driverId, drivers.id))
+          .where(and(eq(orders.tenantId, tenantId), eq(orders.status, 'delivered'), gte(orders.completedAt, from)))
+          .groupBy(drivers.name);
+
+        doc.fontSize(12).font('Helvetica-Bold').text('Driver Performance');
+        doc.moveDown(0.5);
+        for (const d of driverStats) {
+          doc.fontSize(10).font('Helvetica').text(`${d.name}: ${d.deliveries} deliveries`);
+        }
+        break;
+      }
+      case 'route-efficiency': {
+        const [routeStats] = await db.select({
+          total: sql<number>`count(*)`,
+          completed: sql<number>`count(*) filter (where status = 'completed')`,
+        }).from(routes).where(and(eq(routes.tenantId, tenantId), gte(routes.createdAt, from)));
+
+        doc.fontSize(12).font('Helvetica-Bold').text('Route Efficiency');
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica').text(`Total Routes: ${routeStats?.total ?? 0}`);
+        doc.text(`Completed: ${routeStats?.completed ?? 0}`);
+        break;
+      }
+      default: {
+        doc.fontSize(12).font('Helvetica-Bold').text('Report Data');
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica').text(`Type: ${type}`);
+        doc.text(`Period: ${fromStr} to ${toStr}`);
+      }
+    }
+
     doc.moveDown(1);
     doc.fontSize(9).font('Helvetica').text(
-      'This report was generated automatically by the HOMER.io report scheduler. ' +
-      'For detailed interactive reports, visit the HOMER.io dashboard.',
+      `Generated: ${new Date().toISOString()} | ` +
+      'This report was generated automatically by the HOMER.io report scheduler.',
     );
 
     doc.end();
     pdfBuffer = await pdfReady;
   } catch (err) {
-    console.error(`[report-generation] PDF generation failed:`, err);
+    log.error('PDF generation failed', { type, error: err instanceof Error ? err.message : 'Unknown error' });
     throw err;
   }
 
-  console.log(`[report-generation] Generated ${type} PDF (${pdfBuffer.length} bytes)`);
+  log.info('Generated PDF', { type, bytes: pdfBuffer.length });
 
   // Send via email if recipients are configured and SendGrid key is set
   if (recipients.length > 0 && config.sendgrid.apiKey) {
@@ -96,15 +148,15 @@ export async function processReportGeneration(job: Job<ReportJobData>) {
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error(`[report-generation] SendGrid error:`, errText);
+        log.error('SendGrid error', { error: errText });
       } else {
-        console.log(`[report-generation] Report emailed to ${recipients.join(', ')}`);
+        log.info('Report emailed', { recipients: recipients.join(', ') });
       }
     } catch (err) {
-      console.error(`[report-generation] Email delivery failed:`, err);
+      log.error('Email delivery failed', { error: err instanceof Error ? err.message : 'Unknown error' });
     }
   } else {
-    console.log(`[report-generation] No recipients configured or SendGrid not set up — report generated but not emailed`);
+    log.info('No recipients or SendGrid not configured', { type });
   }
 
   return { type, tenantId, bytes: pdfBuffer.length, emailed: recipients.length > 0 && !!config.sendgrid.apiKey };

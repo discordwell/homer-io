@@ -6,6 +6,7 @@ import { uploadFile, ensureBucket } from '../../lib/storage/minio.js';
 import { findDriverByUserId } from '../tracking/service.js';
 import { NotFoundError, HttpError } from '../../lib/errors.js';
 import type { CreatePodInput } from '@homer-io/shared';
+import { logActivity } from '../../lib/activity.js';
 
 const POD_BUCKET = 'homer-pod';
 
@@ -69,6 +70,8 @@ export async function createPod(
         locationLng: input.locationLng?.toString() ?? null,
       })
       .returning();
+
+    logActivity({ tenantId, action: 'pod_created', entityType: 'pod', entityId: pod.id, metadata: { orderId } });
 
     return pod;
   } catch (err: any) {

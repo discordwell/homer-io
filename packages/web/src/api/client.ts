@@ -1,5 +1,12 @@
 import { useAuthStore } from '../stores/auth.js';
 
+export class BillingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BillingError';
+  }
+}
+
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -37,6 +44,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       logout();
     }
     throw new Error('Unauthorized');
+  }
+
+  if (res.status === 402) {
+    const body = await res.json().catch(() => ({}));
+    window.dispatchEvent(new CustomEvent('homer:billing-blocked', { detail: body }));
+    throw new BillingError(body.message || 'Subscription required');
   }
 
   if (!res.ok) {

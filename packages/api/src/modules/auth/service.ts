@@ -3,12 +3,15 @@ import { eq, and } from 'drizzle-orm';
 import * as argon2 from 'argon2';
 import { randomBytes, createHash } from 'crypto';
 import type { RegisterInput, LoginInput, AuthResponse, UserResponse } from '@homer-io/shared';
-import { NotFoundError } from '../../lib/errors.js';
+import { NotFoundError, HttpError } from '../../lib/errors.js';
 import { db } from '../../lib/db/index.js';
 import { tenants } from '../../lib/db/schema/tenants.js';
 import { users, refreshTokens } from '../../lib/db/schema/users.js';
+import { passwordResetTokens } from '../../lib/db/schema/password-reset-tokens.js';
 import type { JwtPayload } from '../../plugins/auth.js';
 import { createStripeCustomer } from '../billing/service.js';
+import { sendTransactionalEmail } from '../../lib/email.js';
+import { config } from '../../config.js';
 
 function slugify(name: string): string {
   return name
@@ -38,6 +41,7 @@ export async function register(
   }
 
   const passwordHash = await argon2.hash(input.password);
+  const verificationToken = randomBytes(32).toString('hex');
 
   // Create tenant + user in transaction
   const result = await db.transaction(async (tx) => {
@@ -54,6 +58,8 @@ export async function register(
         passwordHash,
         name: input.name,
         role: 'owner',
+        emailVerified: false,
+        emailVerificationToken: hashToken(verificationToken),
       })
       .returning();
 
@@ -67,6 +73,13 @@ export async function register(
     console.error('[auth] Failed to create Stripe customer during registration:', err);
     // Non-fatal — tenant can still use the app; billing can be set up later
   }
+
+  // Send verification email (fire-and-forget)
+  sendTransactionalEmail(
+    input.email,
+    'Verify your HOMER.io email',
+    `<h2>Welcome to HOMER.io!</h2><p>Click <a href="${config.app.frontendUrl}/verify-email?token=${verificationToken}">here</a> to verify your email address.</p>`
+  ).catch(err => console.error('[auth] verification email failed:', err));
 
   return generateAuthResponse(app, result.user);
 }
@@ -85,8 +98,23 @@ export async function login(
     throw app.httpErrors.unauthorized('Invalid email or password');
   }
 
+  // Check account lockout
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    throw new HttpError(423, 'Account locked. Try again later.');
+  }
+
   const valid = await argon2.verify(user.passwordHash, input.password);
   if (!valid) {
+    // Increment failed login attempts
+    const newAttempts = (user.failedLoginAttempts || 0) + 1;
+    const lockUpdate: Record<string, unknown> = {
+      failedLoginAttempts: newAttempts,
+      updatedAt: new Date(),
+    };
+    if (newAttempts >= 5) {
+      lockUpdate.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    }
+    await db.update(users).set(lockUpdate).where(eq(users.id, user.id));
     throw app.httpErrors.unauthorized('Invalid email or password');
   }
 
@@ -94,10 +122,10 @@ export async function login(
     throw app.httpErrors.forbidden('Account is disabled');
   }
 
-  // Update last login
+  // Update last login and reset failed attempts
   await db
     .update(users)
-    .set({ lastLoginAt: new Date() })
+    .set({ lastLoginAt: new Date(), failedLoginAttempts: 0, lockedUntil: null })
     .where(eq(users.id, user.id));
 
   return generateAuthResponse(app, user);
@@ -109,22 +137,15 @@ export async function refreshToken(
 ): Promise<AuthResponse> {
   const tokenHash = hashToken(token);
 
+  // Atomic delete-and-return to prevent race conditions with concurrent refresh
   const [stored] = await db
-    .select()
-    .from(refreshTokens)
+    .delete(refreshTokens)
     .where(eq(refreshTokens.tokenHash, tokenHash))
-    .limit(1);
+    .returning();
 
   if (!stored || stored.expiresAt < new Date()) {
-    // Clean up expired token if it exists
-    if (stored) {
-      await db.delete(refreshTokens).where(eq(refreshTokens.id, stored.id));
-    }
     throw app.httpErrors.unauthorized('Invalid or expired refresh token');
   }
-
-  // Delete used refresh token (rotation)
-  await db.delete(refreshTokens).where(eq(refreshTokens.id, stored.id));
 
   const [user] = await db
     .select()
@@ -167,6 +188,60 @@ export async function logout(userId: string): Promise<void> {
   await db
     .delete(refreshTokens)
     .where(eq(refreshTokens.userId, userId));
+}
+
+export async function verifyEmail(token: string): Promise<{ success: boolean }> {
+  const tokenHash = hashToken(token);
+  const [user] = await db.select({ id: users.id }).from(users)
+    .where(eq(users.emailVerificationToken, tokenHash)).limit(1);
+  if (!user) throw new HttpError(400, 'Invalid verification token');
+  await db.update(users).set({ emailVerified: true, emailVerificationToken: null, updatedAt: new Date() })
+    .where(eq(users.id, user.id));
+  return { success: true };
+}
+
+export async function resendVerification(email: string): Promise<{ success: boolean }> {
+  const [user] = await db.select({ id: users.id, emailVerified: users.emailVerified })
+    .from(users).where(eq(users.email, email.toLowerCase())).limit(1);
+  if (user && !user.emailVerified) {
+    const token = randomBytes(32).toString('hex');
+    await db.update(users).set({ emailVerificationToken: hashToken(token), updatedAt: new Date() })
+      .where(eq(users.id, user.id));
+    sendTransactionalEmail(email, 'Verify your HOMER.io email',
+      `<h2>Verify your email</h2><p>Click <a href="${config.app.frontendUrl}/verify-email?token=${token}">here</a> to verify.</p>`
+    ).catch(err => console.error('[auth] resend verification failed:', err));
+  }
+  return { success: true }; // Always success to prevent enumeration
+}
+
+export async function requestPasswordReset(app: FastifyInstance, email: string): Promise<void> {
+  const [user] = await db.select({ id: users.id }).from(users)
+    .where(eq(users.email, email.toLowerCase())).limit(1);
+  if (!user) return; // Silent — no enumeration
+  const token = randomBytes(32).toString('hex');
+  const tokenHash = hashToken(token);
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  await db.insert(passwordResetTokens).values({ userId: user.id, tokenHash, expiresAt });
+  sendTransactionalEmail(email, 'Reset your HOMER.io password',
+    `<h2>Password Reset</h2><p>Click <a href="${config.app.frontendUrl}/reset-password?token=${token}">here</a> to reset your password. This link expires in 1 hour.</p>`
+  ).catch(err => console.error('[auth] password reset email failed:', err));
+}
+
+export async function resetPassword(app: FastifyInstance, token: string, newPassword: string): Promise<{ success: boolean }> {
+  const tokenHash = hashToken(token);
+  const [stored] = await db.select().from(passwordResetTokens)
+    .where(eq(passwordResetTokens.tokenHash, tokenHash)).limit(1);
+  if (!stored || stored.expiresAt < new Date() || stored.usedAt) {
+    throw new HttpError(400, 'Invalid or expired reset token');
+  }
+  const passwordHash = await argon2.hash(newPassword);
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ passwordHash, failedLoginAttempts: 0, updatedAt: new Date() })
+      .where(eq(users.id, stored.userId));
+    await tx.update(passwordResetTokens).set({ usedAt: new Date() })
+      .where(eq(passwordResetTokens.id, stored.id));
+  });
+  return { success: true };
 }
 
 async function generateAuthResponse(

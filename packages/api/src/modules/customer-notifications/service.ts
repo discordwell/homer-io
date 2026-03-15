@@ -7,6 +7,7 @@ import { customerNotificationsLog } from '../../lib/db/schema/customer-notificat
 import { orders } from '../../lib/db/schema/orders.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { config } from '../../config.js';
+import { logActivity } from '../../lib/activity.js';
 
 const customerNotificationQueue = new Queue('customer-notifications', {
   connection: { url: config.redis.url },
@@ -32,6 +33,8 @@ export async function createTemplate(tenantId: string, input: CreateNotification
       isActive: input.isActive ?? true,
     })
     .returning();
+
+  logActivity({ tenantId, action: 'notification_template_created', entityType: 'notification_template', entityId: template.id });
 
   return template;
 }
@@ -59,6 +62,8 @@ export async function updateTemplate(
     throw new NotFoundError('Template not found');
   }
 
+  logActivity({ tenantId, action: 'notification_template_updated', entityType: 'notification_template', entityId: id });
+
   return template;
 }
 
@@ -76,6 +81,8 @@ export async function deleteTemplate(tenantId: string, id: string) {
   if (result.length === 0) {
     throw new NotFoundError('Template not found');
   }
+
+  logActivity({ tenantId, action: 'notification_template_deleted', entityType: 'notification_template', entityId: id });
 }
 
 export async function sendTestNotification(tenantId: string, templateId: string) {

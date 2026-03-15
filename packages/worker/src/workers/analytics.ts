@@ -1,15 +1,18 @@
-import { Job } from 'bullmq';
+import type { Job } from 'bullmq';
 import { eq, sql, and, gte } from 'drizzle-orm';
 import { db } from '../lib/db.js';
 import { orders, routes, drivers } from '../lib/schema.js';
+import { logger } from '../lib/logger.js';
 
 interface AnalyticsJobData {
   tenantId: string;
 }
 
+const log = logger.child({ worker: 'analytics' });
+
 export async function processAnalytics(job: Job<AnalyticsJobData>) {
   const { tenantId } = job.data;
-  console.log(`[analytics] Processing analytics aggregation for tenant ${tenantId}`);
+  log.info('Processing analytics aggregation', { tenantId });
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -53,7 +56,7 @@ export async function processAnalytics(job: Job<AnalyticsJobData>) {
     drivers: driverStats,
   };
 
-  console.log(`[analytics] Daily summary for tenant ${tenantId}:`, JSON.stringify(summary, null, 2));
+  log.info('Daily summary computed', { tenantId, summary });
 
   return summary;
 }

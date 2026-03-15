@@ -1,6 +1,10 @@
-import { Job } from 'bullmq';
+import type { Job } from 'bullmq';
+import { eq } from 'drizzle-orm';
 import { db } from '../lib/db.js';
-import { notifications } from '../lib/schema.js';
+import { notifications, users } from '../lib/schema.js';
+import { sendEmail } from './providers/email.js';
+import { config } from '../lib/config.js';
+import { logger } from '../lib/logger.js';
 
 interface NotificationJobData {
   tenantId: string;
@@ -11,9 +15,19 @@ interface NotificationJobData {
   data?: Record<string, unknown>;
 }
 
+const EMAIL_WORTHY_TYPES = new Set([
+  'delivery_completed',
+  'delivery_failed',
+  'route_started',
+  'route_completed',
+  'team_invite',
+]);
+
+const log = logger.child({ worker: 'notification' });
+
 export async function processNotification(job: Job<NotificationJobData>) {
   const { tenantId, userId, type, title, body, data } = job.data;
-  console.log(`[notification] Processing ${type} notification for user ${userId}`);
+  log.info('Processing notification', { type, userId });
 
   // Insert into notifications table
   await db.insert(notifications).values({
@@ -25,11 +39,17 @@ export async function processNotification(job: Job<NotificationJobData>) {
     data: data ?? {},
   });
 
-  console.log(`[notification] Saved notification: "${title}" for user ${userId}`);
+  log.info('Saved notification', { title, userId });
 
-  // Future: send email/SMS via Twilio/SendGrid
-  // For now, just log
-  console.log(`[notification] TODO: Send ${type} notification via email/SMS to user ${userId}`);
+  // Send email for important notification types
+  if (EMAIL_WORTHY_TYPES.has(type)) {
+    const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+    if (user?.email) {
+      await sendEmail(user.email, title, body, config.sendgrid).catch(err =>
+        log.error('Email failed', { userId, error: err instanceof Error ? err.message : 'Unknown error' }),
+      );
+    }
+  }
 
   return { sent: true, type, userId };
 }

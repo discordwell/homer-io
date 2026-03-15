@@ -1,9 +1,11 @@
 import { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { createVehicleSchema, createDriverSchema, paginationSchema } from '@homer-io/shared';
 import { authenticate, requireRole } from '../../plugins/auth.js';
 import {
   createVehicle, listVehicles, getVehicle, updateVehicle, deleteVehicle,
   createDriver, listDrivers, getDriver, updateDriver, deleteDriver,
+  batchImportVehicles, batchImportDrivers,
 } from './service.js';
 
 export async function fleetRoutes(app: FastifyInstance) {
@@ -67,5 +69,17 @@ export async function fleetRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     await deleteDriver(request.user.tenantId, id);
     reply.code(204).send();
+  });
+
+  app.post('/vehicles/batch', { preHandler: [requireRole('admin')] }, async (request, reply) => {
+    const body = z.array(createVehicleSchema).parse(request.body);
+    const result = await batchImportVehicles(request.user.tenantId, body);
+    reply.code(201).send(result);
+  });
+
+  app.post('/drivers/batch', { preHandler: [requireRole('admin')] }, async (request, reply) => {
+    const body = z.array(createDriverSchema).parse(request.body);
+    const result = await batchImportDrivers(request.user.tenantId, body);
+    reply.code(201).send(result);
   });
 }

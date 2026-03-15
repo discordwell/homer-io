@@ -4,8 +4,11 @@ import { randomBytes } from 'crypto';
 import type { InviteUserInput, Role } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { users } from '../../lib/db/schema/users.js';
+import { tenants } from '../../lib/db/schema/tenants.js';
 import { HttpError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
+import { sendTransactionalEmail } from '../../lib/email.js';
+import { config } from '../../config.js';
 
 export async function inviteUser(
   tenantId: string,
@@ -53,6 +56,23 @@ export async function inviteUser(
     entityId: user.id,
     metadata: { email: input.email, role: input.role },
   });
+
+  // Send invite email
+  db.select({ name: tenants.name }).from(tenants).where(eq(tenants.id, tenantId)).limit(1)
+    .then(([tenant]) => {
+      if (tenant) {
+        sendTransactionalEmail(
+          input.email,
+          `You've been invited to ${tenant.name} on HOMER.io`,
+          `<h2>Welcome to HOMER.io!</h2>
+           <p>You've been invited to join <strong>${tenant.name}</strong>.</p>
+           <p>Your temporary password is: <code>${tempPassword}</code></p>
+           <p><a href="${config.app.frontendUrl}/login">Sign in here</a></p>
+           <p>Please change your password after your first login.</p>`
+        ).catch(err => console.error('[team] invite email failed:', err));
+      }
+    })
+    .catch(err => console.error('[team] tenant lookup for invite email failed:', err));
 
   return {
     ...user,

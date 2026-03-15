@@ -2,6 +2,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth.js';
 import { LoginPage } from './pages/Login.js';
 import { RegisterPage } from './pages/Register.js';
+import { ForgotPasswordPage } from './pages/ForgotPassword.js';
+import { ResetPasswordPage } from './pages/ResetPassword.js';
+import { VerifyEmailPage } from './pages/VerifyEmail.js';
 import { DashboardPage } from './pages/Dashboard.js';
 import { VehiclesPage } from './pages/Vehicles.js';
 import { DriversPage } from './pages/Drivers.js';
@@ -12,6 +15,7 @@ import { RouteDetailPage } from './pages/RouteDetail.js';
 import LiveMapPage from './pages/LiveMap.js';
 import { AnalyticsPage } from './pages/Analytics.js';
 import { SettingsPage } from './pages/Settings.js';
+import { DispatchPage } from './pages/Dispatch.js';
 import { PublicTrackingPage } from './pages/PublicTracking.js';
 import { DashboardLayout } from './components/DashboardLayout.js';
 import { DriverLayout } from './components/DriverLayout.js';
@@ -38,6 +42,9 @@ export function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/track/:orderId" element={<PublicTrackingPage />} />
         <Route path="/dashboard" element={
           <ProtectedRoute><DashboardLayout /></ProtectedRoute>
@@ -49,6 +56,7 @@ export function App() {
           <Route path="routes" element={<RoutesPage />} />
           <Route path="routes/new" element={<RouteBuilderPage />} />
           <Route path="routes/:id" element={<RouteDetailPage />} />
+          <Route path="dispatch" element={<DispatchPage />} />
           <Route path="live" element={<LiveMapPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="settings" element={<SettingsPage />} />

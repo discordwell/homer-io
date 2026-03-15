@@ -5,6 +5,7 @@ import { orders } from '../../lib/db/schema/orders.js';
 import { drivers } from '../../lib/db/schema/drivers.js';
 import { findDriverByUserId } from '../tracking/service.js';
 import { NotFoundError } from '../../lib/errors.js';
+import { logActivity } from '../../lib/activity.js';
 
 /**
  * Get the current in-progress route for a driver, with ordered stops.
@@ -74,6 +75,8 @@ export async function updateDriverStatus(
     .update(drivers)
     .set({ status, updatedAt: new Date() })
     .where(and(eq(drivers.id, driverId), eq(drivers.tenantId, tenantId)));
+
+  logActivity({ tenantId, action: 'driver_status_updated', entityType: 'driver', metadata: { newStatus: status } });
 
   return { success: true, status };
 }

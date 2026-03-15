@@ -4,6 +4,8 @@ import { db } from '../../lib/db/index.js';
 import { vehicles } from '../../lib/db/schema/vehicles.js';
 import { drivers, driverStatusEnum } from '../../lib/db/schema/drivers.js';
 import { NotFoundError } from '../../lib/errors.js';
+import { syncSeats } from '../billing/service.js';
+import { logActivity } from '../../lib/activity.js';
 
 // ---- Vehicles ----
 
@@ -22,6 +24,7 @@ export async function createVehicle(tenantId: string, input: CreateVehicleInput)
       evRange: input.evRange?.toString(),
     })
     .returning();
+  logActivity({ tenantId, action: 'vehicle_created', entityType: 'vehicle', entityId: vehicle.id });
   return vehicle;
 }
 
@@ -66,6 +69,7 @@ export async function updateVehicle(tenantId: string, id: string, input: Partial
     .where(and(eq(vehicles.id, id), eq(vehicles.tenantId, tenantId)))
     .returning();
   if (!vehicle) throw new NotFoundError('Vehicle not found');
+  logActivity({ tenantId, action: 'vehicle_updated', entityType: 'vehicle', entityId: id });
   return vehicle;
 }
 
@@ -74,6 +78,7 @@ export async function deleteVehicle(tenantId: string, id: string) {
     .where(and(eq(vehicles.id, id), eq(vehicles.tenantId, tenantId)))
     .returning({ id: vehicles.id });
   if (result.length === 0) throw new NotFoundError('Vehicle not found');
+  logActivity({ tenantId, action: 'vehicle_deleted', entityType: 'vehicle', entityId: id });
 }
 
 // ---- Drivers ----
@@ -91,6 +96,8 @@ export async function createDriver(tenantId: string, input: CreateDriverInput) {
       skillTags: input.skillTags,
     })
     .returning();
+  syncSeats(tenantId).catch(err => console.error('[fleet] syncSeats failed:', err));
+  logActivity({ tenantId, action: 'driver_created', entityType: 'driver', entityId: driver.id });
   return driver;
 }
 
@@ -148,6 +155,7 @@ export async function updateDriver(tenantId: string, id: string, input: Partial<
     .where(and(eq(drivers.id, id), eq(drivers.tenantId, tenantId)))
     .returning();
   if (!driver) throw new NotFoundError('Driver not found');
+  logActivity({ tenantId, action: 'driver_updated', entityType: 'driver', entityId: id });
   return driver;
 }
 
@@ -156,4 +164,24 @@ export async function deleteDriver(tenantId: string, id: string) {
     .where(and(eq(drivers.id, id), eq(drivers.tenantId, tenantId)))
     .returning({ id: drivers.id });
   if (result.length === 0) throw new NotFoundError('Driver not found');
+  syncSeats(tenantId).catch(err => console.error('[fleet] syncSeats failed:', err));
+  logActivity({ tenantId, action: 'driver_deleted', entityType: 'driver', entityId: id });
+}
+
+export async function batchImportVehicles(tenantId: string, vehicleInputs: CreateVehicleInput[]) {
+  const created = [];
+  for (const input of vehicleInputs) {
+    const v = await createVehicle(tenantId, input);
+    created.push(v);
+  }
+  return { imported: created.length };
+}
+
+export async function batchImportDrivers(tenantId: string, driverInputs: CreateDriverInput[]) {
+  const created = [];
+  for (const input of driverInputs) {
+    const d = await createDriver(tenantId, input);
+    created.push(d);
+  }
+  return { imported: created.length };
 }

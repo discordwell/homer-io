@@ -19,3 +19,7 @@ export * from './invoices.js';
 export * from './usage-records.js';
 export * from './integration-connections.js';
 export * from './integration-orders.js';
+export * from './password-reset-tokens.js';
+export * from './route-templates.js';
+export * from './messages.js';
+export * from './data-requests.js';

@@ -6,6 +6,7 @@ import { Badge } from '../components/Badge.js';
 import { Bar } from '../components/Bar.js';
 import { KPICard } from '../components/KPICard.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
+import { MessagePanel } from '../components/MessagePanel.js';
 import { useToast } from '../components/Toast.js';
 import { C, F } from '../theme.js';
 
@@ -21,6 +22,7 @@ export function RouteDetailPage() {
   const [optimizing, setOptimizing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showMessages, setShowMessages] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -87,10 +89,15 @@ export function RouteDetailPage() {
             <Badge color={statusColors[route.status]}>{route.status.replace('_', ' ')}</Badge>
           </div>
         </div>
-        <button onClick={handleOptimize} disabled={optimizing || (route.orders?.length || 0) < 2}
-          style={primaryBtnStyle}>
-          {optimizing ? 'Optimizing...' : '🤖 AI Optimize'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setShowMessages(!showMessages)} style={secondaryBtnStyle}>
+            {showMessages ? 'Hide Messages' : 'Messages'}
+          </button>
+          <button onClick={handleOptimize} disabled={optimizing || (route.orders?.length || 0) < 2}
+            style={primaryBtnStyle}>
+            {optimizing ? 'Optimizing...' : 'AI Optimize'}
+          </button>
+        </div>
       </div>
 
       {/* KPI row */}
@@ -122,6 +129,13 @@ export function RouteDetailPage() {
         <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16, marginBottom: 24 }}>
           <h3 style={{ fontFamily: F.display, fontSize: 15, marginBottom: 8 }}>Optimization Notes</h3>
           <p style={{ color: C.dim, fontSize: 14, whiteSpace: 'pre-wrap' }}>{route.optimizationNotes}</p>
+        </div>
+      )}
+
+      {/* Messages panel */}
+      {showMessages && id && (
+        <div style={{ marginBottom: 24 }}>
+          <MessagePanel routeId={id} onClose={() => setShowMessages(false)} />
         </div>
       )}
 
@@ -158,4 +172,9 @@ export function RouteDetailPage() {
 const primaryBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.accent,
   border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
+};
+
+const secondaryBtnStyle: React.CSSProperties = {
+  padding: '10px 20px', borderRadius: 8, background: C.bg3,
+  border: `1px solid ${C.muted}`, color: C.text, cursor: 'pointer', fontFamily: F.body, fontSize: 14,
 };

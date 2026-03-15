@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, text, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, text, jsonb, integer } from 'drizzle-orm/pg-core';
 
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -10,6 +10,8 @@ export const tenants = pgTable('tenants', {
   settings: jsonb('settings').default({}).notNull(),
   logoUrl: text('logo_url'),
   primaryColor: varchar('primary_color', { length: 7 }).default('#5BA4F5'),
+  onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
+  onboardingStep: integer('onboarding_step').default(0).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

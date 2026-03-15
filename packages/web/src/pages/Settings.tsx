@@ -7,6 +7,8 @@ import { CustomerNotificationLog } from '../components/settings/CustomerNotifica
 import { WebhooksTab } from '../components/settings/WebhooksTab.js';
 import { BillingTab } from '../components/settings/BillingTab.js';
 import { IntegrationsTab } from '../components/settings/IntegrationsTab.js';
+import { PrivacyTab } from '../components/settings/PrivacyTab.js';
+import { HealthDashboard } from '../components/settings/HealthDashboard.js';
 import { C, F } from '../theme.js';
 
 const tabs = [
@@ -17,6 +19,8 @@ const tabs = [
   { id: 'api-keys', label: 'API Keys' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'webhooks', label: 'Webhooks' },
+  { id: 'privacy', label: 'Privacy' },
+  { id: 'health', label: 'Health' },
 ] as const;
 
 type TabId = (typeof tabs)[number]['id'];
@@ -81,6 +85,8 @@ export function SettingsPage() {
       {activeTab === 'api-keys' && <ApiKeysTab />}
       {activeTab === 'notifications' && <NotificationsTab onViewLog={() => setShowLog(true)} />}
       {activeTab === 'webhooks' && <WebhooksTab />}
+      {activeTab === 'privacy' && <PrivacyTab />}
+      {activeTab === 'health' && <HealthDashboard />}
     </div>
   );
 }

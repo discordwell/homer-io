@@ -67,12 +67,26 @@ export async function getPublicTracking(orderId: string) {
     }
   }
 
-  // Simple ETA estimate based on status
+  // ETA estimate based on route calculation or time window fallback
   let estimatedDelivery: string | null = null;
-  if (order.status === 'in_transit') {
-    // Estimate 30 minutes from now for in-transit orders
-    const eta = new Date(Date.now() + 30 * 60 * 1000);
-    estimatedDelivery = eta.toISOString();
+  if (order.status === 'in_transit' && order.routeId) {
+    try {
+      const { calculateRouteETAs } = await import('../eta/service.js');
+      const etas = await calculateRouteETAs(order.routeId, order.tenantId);
+      const stopEta = etas.stops.find(s => s.orderId === orderId);
+      if (stopEta?.etaTimestamp) {
+        estimatedDelivery = stopEta.etaTimestamp;
+      } else if (order.timeWindowEnd) {
+        estimatedDelivery = order.timeWindowEnd.toISOString();
+      }
+    } catch {
+      if (order.timeWindowEnd) {
+        estimatedDelivery = order.timeWindowEnd.toISOString();
+      }
+    }
+  } else if (order.status === 'in_transit') {
+    // No route assigned — fall back to time window
+    estimatedDelivery = order.timeWindowEnd?.toISOString() ?? null;
   } else if (order.status === 'delivered' && order.completedAt) {
     estimatedDelivery = order.completedAt.toISOString();
   } else if (order.timeWindowEnd) {

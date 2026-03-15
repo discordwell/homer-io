@@ -14,6 +14,7 @@
     "@anthropic-ai/sdk": "^0.78.0",
     "@homer-io/shared": "*",
     "bullmq": "^5.45.0",
+    "cron-parser": "^4.9.0",
     "drizzle-orm": "^0.44.7",
     "ioredis": "^5.10.0",
     "pdfkit": "^0.18.0",

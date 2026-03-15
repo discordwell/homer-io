@@ -74,4 +74,8 @@ export const config = {
   integrations: {
     encryptionKey: process.env.INTEGRATION_ENCRYPTION_KEY || '',
   },
+
+  app: {
+    frontendUrl: process.env.APP_FRONTEND_URL || 'http://localhost:3001',
+  },
 } as const;

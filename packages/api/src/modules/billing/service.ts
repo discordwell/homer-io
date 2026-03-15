@@ -8,6 +8,7 @@ import { drivers } from '../../lib/db/schema/drivers.js';
 import { config } from '../../config.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { cacheDelete } from '../../lib/cache.js';
+import { logActivity } from '../../lib/activity.js';
 
 let stripe: Stripe | null = null;
 
@@ -81,8 +82,11 @@ export async function createCheckoutSession(
   const s = getStripe();
   if (!s) {
     // Mock mode for dev
+    await logActivity({ tenantId, action: 'checkout_session_created', entityType: 'subscription' });
     return { url: urls.successUrl || '/settings?tab=billing&checkout=mock' };
   }
+
+  await logActivity({ tenantId, action: 'checkout_session_created', entityType: 'subscription' });
 
   const priceId = getPriceId(plan, interval);
   if (!priceId) {
@@ -228,6 +232,8 @@ export async function changePlan(tenantId: string, plan: string, interval: strin
     })
     .where(eq(subscriptions.tenantId, tenantId))
     .returning();
+
+  await logActivity({ tenantId, action: 'plan_changed', entityType: 'subscription', metadata: { newPlan: plan } });
 
   return updated;
 }

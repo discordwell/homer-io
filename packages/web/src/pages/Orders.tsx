@@ -11,6 +11,7 @@ import { EmptyState } from '../components/EmptyState.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
 import { CsvImportWizard } from '../components/CsvImportWizard.js';
 import { useToast } from '../components/Toast.js';
+import { api } from '../api/client.js';
 import { C, F } from '../theme.js';
 
 const statusColors: Record<string, string> = {
@@ -39,15 +40,66 @@ export function OrdersPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [searchInput, setSearchInput] = useState(search);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchStatus, setBatchStatus] = useState('');
+  const [batchLoading, setBatchLoading] = useState(false);
 
   useEffect(() => { fetchOrders(); }, [statusFilter]);
+  useEffect(() => { setSelectedIds(new Set()); }, [orders]);
 
   function handleSearch() {
     setSearch(searchInput);
     fetchOrders(1);
   }
 
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === orders.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(orders.map((o) => o.id)));
+    }
+  }
+
+  async function handleBatchStatus() {
+    if (!batchStatus || selectedIds.size === 0) return;
+    setBatchLoading(true);
+    try {
+      const result = await api.post<{ updated: number }>('/orders/batch/status', {
+        orderIds: Array.from(selectedIds),
+        status: batchStatus,
+      });
+      toast(`Updated ${result.updated} orders to "${batchStatus}"`, 'success');
+      setSelectedIds(new Set());
+      setBatchStatus('');
+      fetchOrders(page);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Batch update failed', 'error');
+    } finally {
+      setBatchLoading(false);
+    }
+  }
+
   const columns: Column<typeof orders[0]>[] = [
+    {
+      key: 'select', header: (
+        <input type="checkbox" checked={orders.length > 0 && selectedIds.size === orders.length}
+          onChange={toggleSelectAll} style={{ accentColor: C.accent, cursor: 'pointer' }} />
+      ) as any, width: 36,
+      render: (o) => (
+        <input type="checkbox" checked={selectedIds.has(o.id)}
+          onChange={() => toggleSelect(o.id)}
+          onClick={(e) => e.stopPropagation()}
+          style={{ accentColor: C.accent, cursor: 'pointer' }} />
+      ),
+    },
     { key: 'id', header: 'ID', width: 80, render: (o) => <span style={{ fontFamily: F.mono, fontSize: 12 }}>{o.id.slice(0, 8)}</span> },
     { key: 'recipientName', header: 'Recipient' },
     { key: 'deliveryAddress', header: 'Address', render: (o) => `${o.deliveryAddress.street}, ${o.deliveryAddress.city}` },
@@ -140,6 +192,41 @@ export function OrdersPage() {
         />
         <button onClick={handleSearch} style={secondaryBtnStyle}>Search</button>
       </div>
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
+          background: `${C.accent}15`, border: `1px solid ${C.accent}33`,
+          borderRadius: 8, marginBottom: 16,
+        }}>
+          <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>
+            {selectedIds.size} selected
+          </span>
+          <select value={batchStatus} onChange={(e) => setBatchStatus(e.target.value)}
+            style={{
+              padding: '6px 10px', borderRadius: 6, background: C.bg3,
+              border: `1px solid ${C.muted}`, color: C.text, fontSize: 13,
+              fontFamily: F.body, outline: 'none',
+            }}>
+            <option value="">Set status...</option>
+            {['received', 'assigned', 'in_transit', 'delivered', 'failed', 'returned'].map((s) => (
+              <option key={s} value={s}>{s.replace('_', ' ')}</option>
+            ))}
+          </select>
+          <button onClick={handleBatchStatus} disabled={!batchStatus || batchLoading}
+            style={{
+              ...primaryBtnStyle, padding: '6px 14px', fontSize: 13,
+              opacity: !batchStatus || batchLoading ? 0.5 : 1,
+            }}>
+            {batchLoading ? 'Updating...' : 'Apply'}
+          </button>
+          <button onClick={() => setSelectedIds(new Set())}
+            style={{ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', fontSize: 13, fontFamily: F.body }}>
+            Clear
+          </button>
+        </div>
+      )}
 
       {orders.length === 0 ? (
         <EmptyState icon="📦" title="No orders yet" description="Add orders manually or import from CSV."

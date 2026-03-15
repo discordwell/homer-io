@@ -32,7 +32,12 @@ import { integrationRoutes, integrationWebhookRoutes } from './modules/integrati
 import { etaRoutes } from './modules/eta/routes.js';
 import { carbonRoutes } from './modules/carbon/routes.js';
 import { reportRoutes } from './modules/reports/routes.js';
+import { onboardingRoutes } from './modules/onboarding/routes.js';
+import { routeTemplateRoutes } from './modules/route-templates/routes.js';
+import { messageRoutes } from './modules/messages/routes.js';
 import { requireActiveSubscription } from './plugins/billing.js';
+import { gdprRoutes } from './modules/gdpr/routes.js';
+import { adminHealthRoutes } from './modules/health/routes.js';
 
 const app = Fastify({
   logger: {
@@ -140,6 +145,11 @@ await app.register(async (api) => {
   await api.register(etaRoutes);
   await api.register(carbonRoutes, { prefix: '/analytics' });
   await api.register(reportRoutes, { prefix: '/reports' });
+  await api.register(onboardingRoutes, { prefix: '/onboarding' });
+  await api.register(routeTemplateRoutes, { prefix: '/route-templates' });
+  await api.register(messageRoutes, { prefix: '/messages' });
+  await api.register(gdprRoutes, { prefix: '/gdpr' });
+  await api.register(adminHealthRoutes, { prefix: '/admin/health' });
 }, { prefix: '/api' });
 
 // Graceful shutdown

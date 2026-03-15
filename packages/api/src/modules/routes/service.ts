@@ -47,7 +47,30 @@ export async function createRoute(tenantId: string, input: CreateRouteInput) {
     return [newRoute];
   });
 
-  return route;
+  // Check for time window overlaps (warnings only, not errors)
+  const warnings: string[] = [];
+  if (input.orderIds?.length) {
+    const assignedOrders = await db.select({
+      id: orders.id,
+      recipientName: orders.recipientName,
+      stopSequence: orders.stopSequence,
+      timeWindowStart: orders.timeWindowStart,
+      timeWindowEnd: orders.timeWindowEnd,
+    }).from(orders)
+      .where(and(eq(orders.routeId, route.id), eq(orders.tenantId, tenantId)))
+      .orderBy(orders.stopSequence);
+
+    const withWindows = assignedOrders.filter(o => o.timeWindowStart && o.timeWindowEnd);
+    for (let i = 1; i < withWindows.length; i++) {
+      const prev = withWindows[i - 1];
+      const curr = withWindows[i];
+      if (prev.timeWindowEnd! > curr.timeWindowStart!) {
+        warnings.push(`Time windows overlap between stop ${prev.stopSequence} (${prev.recipientName}) and stop ${curr.stopSequence} (${curr.recipientName})`);
+      }
+    }
+  }
+
+  return { ...route, warnings };
 }
 
 export async function listRoutes(tenantId: string, pagination: PaginationInput, status?: string) {

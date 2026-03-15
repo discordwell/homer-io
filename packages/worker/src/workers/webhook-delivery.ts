@@ -1,8 +1,9 @@
-import { Job } from 'bullmq';
+import type { Job } from 'bullmq';
 import { eq, and, sql } from 'drizzle-orm';
 import { createHmac } from 'crypto';
 import { db } from '../lib/db.js';
 import { webhookEndpoints, webhookDeliveries } from '../lib/schema.js';
+import { logger } from '../lib/logger.js';
 
 interface WebhookDeliveryJobData {
   deliveryId: string;
@@ -12,6 +13,8 @@ interface WebhookDeliveryJobData {
 
 // Retry delays: 30s, 2m, 15m, 1h, 4h
 const RETRY_DELAYS = [30_000, 120_000, 900_000, 3_600_000, 14_400_000];
+
+const log = logger.child({ worker: 'webhook-delivery' });
 
 // Block SSRF: reject private/internal IPs and cloud metadata endpoints
 function isBlockedUrl(urlStr: string): boolean {
@@ -51,7 +54,7 @@ export async function processWebhookDelivery(job: Job<WebhookDeliveryJobData>) {
 
   // SSRF protection: block internal/private URLs
   if (isBlockedUrl(endpoint.url)) {
-    console.error(`[webhook] Blocked SSRF attempt to ${endpoint.url}`);
+    log.error('Blocked SSRF attempt', { url: endpoint.url, deliveryId });
     await db.update(webhookDeliveries).set({
       status: 'failed',
       attempts: 5,
@@ -97,7 +100,7 @@ export async function processWebhookDelivery(job: Job<WebhookDeliveryJobData>) {
         updatedAt: new Date(),
       }).where(eq(webhookEndpoints.id, endpointId));
 
-      console.log(`[webhook] Delivered ${delivery.event} to ${endpoint.url}`);
+      log.info('Webhook delivered', { event: delivery.event, url: endpoint.url, deliveryId });
     } else {
       throw new Error(`HTTP ${response.status}: ${truncatedBody}`);
     }
@@ -123,7 +126,14 @@ export async function processWebhookDelivery(job: Job<WebhookDeliveryJobData>) {
       updatedAt: new Date(),
     }).where(eq(webhookEndpoints.id, endpointId));
 
-    console.error(`[webhook] Failed to deliver ${delivery.event} to ${endpoint.url}: ${errorMsg} (attempt ${attempt}/5)`);
+    log.error('Webhook delivery failed', {
+      event: delivery.event,
+      url: endpoint.url,
+      error: errorMsg,
+      attempt,
+      maxAttempts: 5,
+      deliveryId,
+    });
 
     if (attempt < 5) {
       throw error; // Let BullMQ retry

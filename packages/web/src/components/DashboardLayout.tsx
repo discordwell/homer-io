@@ -3,6 +3,8 @@ import { Sidebar } from './Sidebar.js';
 import { AIChatPanel } from './AIChatPanel.js';
 import { NotificationCenter } from './NotificationCenter.js';
 import { SubscriptionBanner } from './SubscriptionBanner.js';
+import { OnboardingWizard } from './OnboardingWizard.js';
+import { BillingBlockedModal } from './BillingBlockedModal.js';
 
 export function DashboardLayout() {
   return (
@@ -17,10 +19,12 @@ export function DashboardLayout() {
           <NotificationCenter />
         </header>
         <main style={{ flex: 1, padding: '16px 32px 32px', overflow: 'auto' }}>
+          <OnboardingWizard />
           <Outlet />
         </main>
       </div>
       <AIChatPanel />
+      <BillingBlockedModal />
     </div>
   );
 }

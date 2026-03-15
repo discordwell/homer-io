@@ -356,6 +356,65 @@ Nested under `DriverLayout` with bottom tab bar (mobile-optimized):
 
 Annual discount: 20%. Per-seat billing (quantity = active drivers).
 
+## Phase 5: Production Grade
+
+### Auth Hardening
+- **Account Lockout:** 5 failed attempts → 15-minute lock (423 status)
+- **Email Verification:** Token-based verification on registration, resend endpoint
+- **Password Reset:** Secure token flow (SHA-256 hashed, 1-hour expiry, single-use)
+- **Team Invites:** Email with org name, temp password, login link via SendGrid
+
+### Stub/Wiring Fixes
+- **Notification Worker:** Sends real emails via SendGrid (was TODO)
+- **Public Tracking ETA:** Dynamic calculation via `calculateRouteETAs` (was hardcoded 30min)
+- **Seat Sync:** `syncSeats()` called on driver create/delete
+- **402 Handling:** Frontend `BillingError` + `BillingBlockedModal`
+- **Activity Logging:** Added to orders, fleet, billing, notifications, POD, driver modules
+- **Report Worker:** Real data queries (order stats, driver performance, route efficiency)
+- **Cron Scheduling:** 5 BullMQ job schedulers (billing, integrations, reports, templates, retention)
+
+### Onboarding
+- **5-Step Wizard:** Vehicle → Driver → Order → Route → Notifications
+- **Progress Tracking:** `onboardingCompletedAt` + `onboardingStep` on tenants table
+- **Skip/Complete:** Admin-only actions, dismissible banner in DashboardLayout
+
+### Operational Features
+- **Route Templates:** CRUD + cron-based recurring generation via `cron-parser`
+- **Batch Operations:** Bulk status update + route assignment (max 100 orders), fleet batch import
+- **Messaging:** Driver-dispatcher chat (cursor-based, Socket.IO broadcast, unread badge)
+- **Dispatch Board:** Kanban drag-and-drop with HTML5 DnD API
+
+### GDPR & Observability
+- **Data Export:** Full tenant data as JSON (queued via BullMQ, 7-day expiry)
+- **Account Deletion:** 30-day grace period, email confirmation token, cascade delete
+- **Data Retention:** Automated cleanup — location 90d, activity 365d, notifications 180d, webhooks 90d
+- **Health Dashboard:** DB/Redis latency, queue depths, memory, uptime (Settings > Health)
+- **Structured Logging:** JSON logger across all 11 worker queues
+
+### New DB Tables (Phase 5)
+- `password_reset_tokens` — Secure password reset flow
+- `route_templates` — Recurring route definitions with cron rules
+- `messages` — Driver-dispatcher messaging
+- `data_export_requests` + `data_deletion_requests` — GDPR compliance
+
+### New API Routes (Phase 5)
+- `/api/auth/{verify-email,resend-verification,forgot-password,reset-password}`
+- `/api/onboarding/{status,complete,skip}`
+- `/api/route-templates` (CRUD + generate)
+- `/api/orders/batch/{status,assign}`
+- `/api/fleet/{vehicles,drivers}/batch`
+- `/api/messages` (CRUD + unread-count)
+- `/api/gdpr/{export,exports,delete-account}`
+- `/api/admin/health`
+
+### New Frontend Routes (Phase 5)
+- `/verify-email`, `/forgot-password`, `/reset-password`
+- `/dashboard/dispatch` (Manual kanban + AI auto-dispatch tabs)
+- Settings tabs: Privacy (9th), Health (10th) — now 9 total tabs
+
+### Worker Queues (Phase 5)
+11 total queues (was 8): + `route-template`, `data-export`, `data-retention`
+
 ## Deployment
 
 - **CI/CD:** GitHub Actions → test → deploy to ovh2 via SSH

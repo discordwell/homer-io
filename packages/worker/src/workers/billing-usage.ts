@@ -1,7 +1,8 @@
-import { Job } from 'bullmq';
+import type { Job } from 'bullmq';
 import { eq, sql, and, gte } from 'drizzle-orm';
 import { db } from '../lib/db.js';
 import { orders, routes, drivers } from '../lib/schema.js';
+import { logger } from '../lib/logger.js';
 
 // Minimal subscription/usage tables for worker context
 import { pgTable, uuid, varchar, timestamp, integer, pgEnum } from 'drizzle-orm/pg-core';
@@ -45,13 +46,15 @@ const PLAN_LIMITS: Record<string, { ordersPerDriver: number }> = {
   enterprise: { ordersPerDriver: Infinity },
 };
 
+const log = logger.child({ worker: 'billing-usage' });
+
 export async function processBillingUsage(job: Job<BillingUsageJobData>) {
   const { tenantId } = job.data;
   const now = new Date();
   const period = now.toISOString().slice(0, 7); // YYYY-MM
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  console.log(`[billing-usage] Processing usage for tenant ${tenantId}, period ${period}`);
+  log.info('Processing usage', { tenantId, period });
 
   // Count active drivers
   const [driverStats] = await db
@@ -111,19 +114,23 @@ export async function processBillingUsage(job: Job<BillingUsageJobData>) {
       const usagePercent = (orderCount / maxOrders) * 100;
 
       if (usagePercent >= 90) {
-        console.warn(
-          `[billing-usage] ALERT: Tenant ${tenantId} at ${usagePercent.toFixed(1)}% of order limit ` +
-          `(${orderCount}/${maxOrders}) on ${sub.plan} plan`,
-        );
+        log.warn('Tenant approaching order limit', {
+          tenantId,
+          usagePercent: usagePercent.toFixed(1),
+          orderCount,
+          maxOrders,
+          plan: sub.plan,
+        });
       } else if (usagePercent >= 75) {
-        console.log(
-          `[billing-usage] Warning: Tenant ${tenantId} at ${usagePercent.toFixed(1)}% of order limit`,
-        );
+        log.info('Tenant usage warning', {
+          tenantId,
+          usagePercent: usagePercent.toFixed(1),
+        });
       }
     }
   }
 
   const summary = { tenantId, period, driverCount, orderCount, routeCount };
-  console.log(`[billing-usage] Usage summary:`, JSON.stringify(summary));
+  log.info('Usage summary', summary);
   return summary;
 }

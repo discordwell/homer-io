@@ -1,8 +1,10 @@
-import { eq, and, sql, ilike, gte, lte, desc, asc } from 'drizzle-orm';
+import { eq, and, sql, ilike, gte, lte, desc, asc, inArray } from 'drizzle-orm';
 import type { CreateOrderInput, UpdateOrderStatusInput, PaginationInput } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { orders, orderStatusEnum } from '../../lib/db/schema/orders.js';
+import { routes } from '../../lib/db/schema/routes.js';
 import { NotFoundError } from '../../lib/errors.js';
+import { logActivity } from '../../lib/activity.js';
 
 export async function createOrder(tenantId: string, input: CreateOrderInput) {
   const [order] = await db
@@ -28,6 +30,7 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
       requiresPhoto: input.requiresPhoto,
     })
     .returning();
+  logActivity({ tenantId, action: 'order_created', entityType: 'order', entityId: order.id });
   return order;
 }
 
@@ -108,6 +111,7 @@ export async function updateOrderStatus(tenantId: string, id: string, input: Upd
     .where(and(eq(orders.id, id), eq(orders.tenantId, tenantId)))
     .returning();
   if (!order) throw new NotFoundError('Order not found');
+  logActivity({ tenantId, action: 'order_status_updated', entityType: 'order', entityId: id, metadata: { newStatus: input.status } });
   return order;
 }
 
@@ -116,6 +120,7 @@ export async function deleteOrder(tenantId: string, id: string) {
     .where(and(eq(orders.id, id), eq(orders.tenantId, tenantId)))
     .returning({ id: orders.id });
   if (result.length === 0) throw new NotFoundError('Order not found');
+  logActivity({ tenantId, action: 'order_deleted', entityType: 'order', entityId: id });
 }
 
 export async function importOrdersCsv(tenantId: string, rows: Array<Record<string, string | undefined>>) {
@@ -153,5 +158,50 @@ export async function importOrdersCsv(tenantId: string, rows: Array<Record<strin
     }
   });
 
+  logActivity({ tenantId, action: 'orders_imported', entityType: 'order', metadata: { count: created.length } });
   return { imported: created.length, errors, total: rows.length };
+}
+
+export async function batchUpdateStatus(tenantId: string, orderIds: string[], status: string) {
+  // Validate status is a valid enum value
+  if (!orderStatusEnum.enumValues.includes(status as any)) {
+    throw new NotFoundError('Invalid order status');
+  }
+  const result = await db.update(orders)
+    .set({
+      status: status as any,
+      updatedAt: new Date(),
+      ...(status === 'delivered' || status === 'failed' ? { completedAt: new Date() } : {}),
+    })
+    .where(and(
+      eq(orders.tenantId, tenantId),
+      inArray(orders.id, orderIds),
+    ))
+    .returning({ id: orders.id });
+
+  await logActivity({ tenantId, action: 'batch_status_updated', entityType: 'order', metadata: { count: result.length, newStatus: status } });
+  return { updated: result.length };
+}
+
+export async function batchAssignToRoute(tenantId: string, orderIds: string[], routeId: string) {
+  let sequence = 1;
+  // Get current max stop sequence on the route
+  const [maxSeq] = await db.select({ max: sql<number>`coalesce(max(${orders.stopSequence}), 0)` })
+    .from(orders).where(and(eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)));
+  sequence = (maxSeq?.max ?? 0) + 1;
+
+  for (const orderId of orderIds) {
+    await db.update(orders).set({
+      routeId, stopSequence: sequence++, status: 'assigned' as any, updatedAt: new Date(),
+    }).where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
+  }
+
+  // Update route total stops
+  const [countResult] = await db.select({ count: sql<number>`count(*)` })
+    .from(orders).where(and(eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)));
+  await db.update(routes).set({ totalStops: Number(countResult.count), updatedAt: new Date() })
+    .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
+
+  await logActivity({ tenantId, action: 'batch_assigned', entityType: 'order', metadata: { count: orderIds.length, routeId } });
+  return { assigned: orderIds.length };
 }

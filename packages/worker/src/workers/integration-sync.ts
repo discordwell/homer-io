@@ -1,7 +1,8 @@
-import { Job } from 'bullmq';
+import type { Job } from 'bullmq';
 import { eq, and, sql } from 'drizzle-orm';
 import { createHash, createDecipheriv } from 'crypto';
 import { db } from '../lib/db.js';
+import { logger } from '../lib/logger.js';
 
 // Minimal schema definitions for worker (mirrors API schema)
 import { pgTable, uuid, varchar, timestamp, boolean, integer, jsonb, pgEnum, uniqueIndex, numeric, text } from 'drizzle-orm/pg-core';
@@ -226,10 +227,12 @@ export interface IntegrationSyncJobData {
   type: 'initial' | 'periodic';
 }
 
+const log = logger.child({ worker: 'integration-sync' });
+
 export async function processIntegrationSync(job: Job<IntegrationSyncJobData>) {
   const { connectionId, tenantId, type } = job.data;
 
-  console.log(`[integration-sync] Starting ${type} sync for connection ${connectionId}`);
+  log.info('Starting sync', { connectionId, type, tenantId });
 
   // Fetch the connection
   const [conn] = await db.select().from(integrationConnections)
@@ -237,7 +240,7 @@ export async function processIntegrationSync(job: Job<IntegrationSyncJobData>) {
     .limit(1);
 
   if (!conn) {
-    console.error(`[integration-sync] Connection ${connectionId} not found`);
+    log.error('Connection not found', { connectionId });
     return;
   }
 
@@ -342,10 +345,10 @@ export async function processIntegrationSync(job: Job<IntegrationSyncJobData>) {
       updatedAt: new Date(),
     }).where(eq(integrationConnections.id, connectionId));
 
-    console.log(`[integration-sync] Completed ${type} sync for ${connectionId}: ${imported} imported, ${skipped} skipped, ${failed} failed`);
+    log.info('Sync completed', { connectionId, type, imported, skipped, failed });
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown sync error';
-    console.error(`[integration-sync] Sync failed for ${connectionId}:`, errorMsg);
+    log.error('Sync failed', { connectionId, error: errorMsg });
 
     await db.update(integrationConnections).set({
       syncStatus: 'error',

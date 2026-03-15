@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { createOrderSchema, updateOrderStatusSchema, paginationSchema, csvImportSchema } from '@homer-io/shared';
+import { createOrderSchema, updateOrderStatusSchema, paginationSchema, csvImportSchema, batchOrderStatusSchema, batchDriverAssignSchema } from '@homer-io/shared';
 import { authenticate, requireRole } from '../../plugins/auth.js';
-import { createOrder, listOrders, getOrder, updateOrderStatus, deleteOrder, importOrdersCsv } from './service.js';
+import { createOrder, listOrders, getOrder, updateOrderStatus, deleteOrder, importOrdersCsv, batchUpdateStatus, batchAssignToRoute } from './service.js';
 
 export async function orderRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
@@ -46,5 +46,17 @@ export async function orderRoutes(app: FastifyInstance) {
     const { orders: orderRows } = csvImportSchema.parse(request.body);
     const result = await importOrdersCsv(request.user.tenantId, orderRows);
     reply.code(201).send(result);
+  });
+
+  app.post('/batch/status', { preHandler: [requireRole('dispatcher')] }, async (request, reply) => {
+    const body = batchOrderStatusSchema.parse(request.body);
+    const result = await batchUpdateStatus(request.user.tenantId, body.orderIds, body.status);
+    reply.send(result);
+  });
+
+  app.post('/batch/assign', { preHandler: [requireRole('dispatcher')] }, async (request, reply) => {
+    const body = batchDriverAssignSchema.parse(request.body);
+    const result = await batchAssignToRoute(request.user.tenantId, body.orderIds, body.routeId);
+    reply.send(result);
   });
 }

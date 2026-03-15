@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDriverStore } from '../../stores/driver.js';
 import { StopCard } from '../../components/driver/StopCard.js';
+import { DriverChat } from '../../components/driver/DriverChat.js';
 import { LoadingSpinner } from '../../components/LoadingSpinner.js';
 import { EmptyState } from '../../components/EmptyState.js';
 import { C, F } from '../../theme.js';
@@ -14,6 +15,7 @@ function formatAddress(addr: { street?: string; city?: string; state?: string; z
 export function DriverRoutePage() {
   const navigate = useNavigate();
   const { currentRoute, upcomingRoutes, loading, error, fetchCurrentRoute, fetchUpcomingRoutes } = useDriverStore();
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     fetchCurrentRoute();
@@ -132,6 +134,26 @@ export function DriverRoutePage() {
           />
         ))}
       </div>
+
+      {/* Chat FAB */}
+      <button
+        onClick={() => setChatOpen(true)}
+        style={{
+          position: 'fixed', bottom: 20, right: 20,
+          width: 52, height: 52, borderRadius: 26,
+          background: C.accent, border: 'none',
+          color: '#fff', fontSize: 22, cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(91,164,245,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 50,
+        }}
+        title="Open chat"
+      >
+        &#9993;
+      </button>
+
+      {/* Chat panel */}
+      {chatOpen && <DriverChat onClose={() => setChatOpen(false)} />}
     </div>
   );
 }

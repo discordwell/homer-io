@@ -59,6 +59,12 @@ export function LoginPage() {
             required style={inputStyle} />
         </label>
 
+        <div style={{ textAlign: 'right', marginTop: -16, marginBottom: 16 }}>
+          <Link to="/forgot-password" style={{ color: C.accent, textDecoration: 'none', fontSize: 13 }}>
+            Forgot password?
+          </Link>
+        </div>
+
         <button type="submit" disabled={loading} style={{
           width: '100%', padding: 14, borderRadius: 10,
           background: C.accent, color: '#fff', border: 'none',

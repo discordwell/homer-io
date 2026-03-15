@@ -1,18 +1,21 @@
-import { Job } from 'bullmq';
+import type { Job } from 'bullmq';
 import { eq, and } from 'drizzle-orm';
 import Anthropic from '@anthropic-ai/sdk';
 import { db } from '../lib/db.js';
 import { config } from '../lib/config.js';
 import { orders, routes } from '../lib/schema.js';
+import { logger } from '../lib/logger.js';
 
 interface OptimizationJobData {
   tenantId: string;
   routeId: string;
 }
 
+const log = logger.child({ worker: 'optimization' });
+
 export async function processOptimization(job: Job<OptimizationJobData>) {
   const { tenantId, routeId } = job.data;
-  console.log(`[optimization] Processing route ${routeId} for tenant ${tenantId}`);
+  log.info('Processing route optimization', { routeId, tenantId });
 
   // Get route
   const [route] = await db
@@ -33,7 +36,7 @@ export async function processOptimization(job: Job<OptimizationJobData>) {
     .orderBy(orders.stopSequence);
 
   if (routeOrders.length === 0) {
-    console.log(`[optimization] No orders on route ${routeId}, skipping`);
+    log.info('No orders on route, skipping', { routeId });
     return { optimized: false, routeId, message: 'No orders to optimize' };
   }
 
@@ -52,7 +55,7 @@ export async function processOptimization(job: Job<OptimizationJobData>) {
     `Return ONLY a JSON array of the stop indices in optimal order, e.g. [2, 0, 1, 3]. No other text.`;
 
   if (!config.anthropic.apiKey) {
-    console.log(`[optimization] No Anthropic API key, skipping AI optimization`);
+    log.info('No Anthropic API key, skipping AI optimization', { routeId });
     return { optimized: false, routeId, message: 'No API key configured' };
   }
 
@@ -72,7 +75,7 @@ export async function processOptimization(job: Job<OptimizationJobData>) {
 
     const jsonMatch = responseText.match(/\[[\d,\s]+\]/);
     if (!jsonMatch) {
-      console.warn(`[optimization] Could not parse AI response for route ${routeId}`);
+      log.warn('Could not parse AI response', { routeId });
       return { optimized: false, routeId, message: 'Could not parse optimization result' };
     }
 
@@ -85,7 +88,7 @@ export async function processOptimization(job: Job<OptimizationJobData>) {
       uniqueIndices.size !== orderedIndices.length ||
       !orderedIndices.every((i) => i >= 0 && i < routeOrders.length)
     ) {
-      console.warn(`[optimization] Invalid indices from AI for route ${routeId}`);
+      log.warn('Invalid indices from AI', { routeId });
       return { optimized: false, routeId, message: 'Invalid optimization result from AI' };
     }
 
@@ -108,11 +111,11 @@ export async function processOptimization(job: Job<OptimizationJobData>) {
       })
       .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
 
-    console.log(`[optimization] Route ${routeId} optimized successfully`);
+    log.info('Route optimized successfully', { routeId, order: orderedIndices });
     return { optimized: true, routeId, order: orderedIndices };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[optimization] Failed for route ${routeId}: ${msg}`);
+    log.error('Optimization failed', { routeId, error: msg });
     throw error;
   }
 }

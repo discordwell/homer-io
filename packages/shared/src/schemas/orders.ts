@@ -20,7 +20,10 @@ export const createOrderSchema = z.object({
   weight: z.number().positive().optional(),
   volume: z.number().positive().optional(),
   priority: orderPriorityEnum.default('normal'),
-  timeWindow: timeWindowSchema.optional(),
+  timeWindow: timeWindowSchema.optional().refine(
+    (tw) => !tw || new Date(tw.start) < new Date(tw.end),
+    { message: 'Time window start must be before end' },
+  ),
   notes: z.string().max(1000).optional(),
   requiresSignature: z.boolean().default(false),
   requiresPhoto: z.boolean().default(false),

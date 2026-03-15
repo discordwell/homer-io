@@ -1,5 +1,6 @@
 import { Worker, Queue } from 'bullmq';
 import { config } from './lib/config.js';
+import { logger } from './lib/logger.js';
 import { processOptimization } from './workers/optimization.js';
 import { processNotification } from './workers/notification.js';
 import { processAnalytics } from './workers/analytics.js';
@@ -8,6 +9,9 @@ import { processWebhookDelivery } from './workers/webhook-delivery.js';
 import { processBillingUsage } from './workers/billing-usage.js';
 import { processIntegrationSync } from './workers/integration-sync.js';
 import { processReportGeneration } from './workers/report-generation.js';
+import { processRouteTemplate } from './workers/route-template.js';
+import { processDataExport } from './workers/data-export.js';
+import { processDataRetention } from './workers/data-retention.js';
 
 const connection = { url: config.redis.url };
 
@@ -20,6 +24,9 @@ export const webhookDeliveryQueue = new Queue('webhook-delivery', { connection }
 export const billingUsageQueue = new Queue('billing-usage', { connection });
 export const integrationSyncQueue = new Queue('integration-sync', { connection });
 export const reportGenerationQueue = new Queue('report-generation', { connection });
+export const routeTemplateQueue = new Queue('route-template', { connection });
+export const dataExportQueue = new Queue('data-export', { connection });
+export const dataRetentionQueue = new Queue('data-retention', { connection });
 
 // Workers
 const optimizationWorker = new Worker('route-optimization', processOptimization, {
@@ -62,29 +69,41 @@ const reportGenerationWorker = new Worker('report-generation', processReportGene
   concurrency: 2,
 });
 
+const routeTemplateWorker = new Worker('route-template', processRouteTemplate, { connection, concurrency: 1 });
+const dataExportWorker = new Worker('data-export', processDataExport, { connection, concurrency: 1 });
+const dataRetentionWorker = new Worker('data-retention', processDataRetention, { connection, concurrency: 1 });
+
 // Event logging
 const allWorkers = [
   optimizationWorker, notificationWorker, analyticsWorker,
   customerNotificationWorker, webhookDeliveryWorker,
   billingUsageWorker, integrationSyncWorker, reportGenerationWorker,
+  routeTemplateWorker, dataExportWorker, dataRetentionWorker,
 ];
 
 for (const worker of allWorkers) {
   worker.on('completed', (job) => {
-    console.log(`Job ${job.id} in ${worker.name} completed`);
+    logger.info('Job completed', { jobId: job.id, queue: worker.name });
   });
   worker.on('failed', (job, err) => {
-    console.error(`Job ${job?.id} in ${worker.name} failed:`, err.message);
+    logger.error('Job failed', { jobId: job?.id, queue: worker.name, error: err.message });
   });
 }
 
-console.log('HOMER.io Worker started — listening for jobs (8 queues)');
+// Cron job schedulers
+await billingUsageQueue.upsertJobScheduler('billing-usage-daily', { pattern: '0 2 * * *' }, { name: 'billing-usage-cron' });
+await integrationSyncQueue.upsertJobScheduler('integration-sync-periodic', { every: 900000 }, { name: 'integration-sync-cron' });
+await reportGenerationQueue.upsertJobScheduler('report-generation-daily', { pattern: '0 6 * * *' }, { name: 'report-generation-cron' });
+await routeTemplateQueue.upsertJobScheduler('route-template-periodic', { every: 300000 }, { name: 'route-template-cron' });
+await dataRetentionQueue.upsertJobScheduler('data-retention-daily', { pattern: '0 3 * * *' }, { name: 'data-retention-cron' });
+
+logger.info('HOMER.io Worker started', { queues: 11 });
 
 // Graceful shutdown
 const signals = ['SIGINT', 'SIGTERM'] as const;
 for (const signal of signals) {
   process.on(signal, async () => {
-    console.log(`Received ${signal}, closing workers...`);
+    logger.info('Shutting down', { signal });
     await Promise.all(allWorkers.map(w => w.close()));
     process.exit(0);
   });

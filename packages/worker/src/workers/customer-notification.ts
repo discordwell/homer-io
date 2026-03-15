@@ -1,10 +1,11 @@
-import { Job } from 'bullmq';
+import type { Job } from 'bullmq';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../lib/db.js';
 import { customerNotificationsLog } from '../lib/schema.js';
 import { config } from '../lib/config.js';
 import { sendSms } from './providers/sms.js';
 import { sendEmail } from './providers/email.js';
+import { logger } from '../lib/logger.js';
 
 interface CustomerNotificationJobData {
   tenantId: string;
@@ -14,9 +15,11 @@ interface CustomerNotificationJobData {
   templateId: string;
 }
 
+const log = logger.child({ worker: 'customer-notification' });
+
 export async function processCustomerNotification(job: Job<CustomerNotificationJobData>) {
   const { tenantId, orderId, trigger, logId, templateId } = job.data;
-  console.log(`[customer-notification] Processing ${trigger} for order ${orderId}`);
+  log.info('Processing customer notification', { trigger, orderId, logId });
 
   // Get the log entry — enforce tenant isolation
   const [logEntry] = await db
@@ -26,7 +29,7 @@ export async function processCustomerNotification(job: Job<CustomerNotificationJ
     .limit(1);
 
   if (!logEntry) {
-    console.error(`[customer-notification] Log entry ${logId} not found`);
+    log.error('Log entry not found', { logId });
     return;
   }
 
@@ -55,9 +58,12 @@ export async function processCustomerNotification(job: Job<CustomerNotificationJ
     })
     .where(eq(customerNotificationsLog.id, logId));
 
-  console.log(
-    `[customer-notification] ${trigger} ${result.success ? 'sent' : 'failed'} for order ${orderId}`,
-  );
+  log.info('Customer notification processed', {
+    trigger,
+    orderId,
+    success: result.success,
+    channel: logEntry.channel,
+  });
 
   return result;
 }

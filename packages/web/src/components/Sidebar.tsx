@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.js';
+import { useMessagesStore } from '../stores/messages.js';
 import { C, F } from '../theme.js';
 
 const navItems = [
@@ -14,6 +15,8 @@ const navItems = [
   },
   { label: 'Orders', path: '/dashboard/orders', icon: '📦' },
   { label: 'Routes', path: '/dashboard/routes', icon: '🗺️' },
+  { label: 'Dispatch', path: '/dashboard/dispatch', icon: '\u2699' },
+  { label: 'Messages', path: '/dashboard/messages', icon: '💬', badge: true },
   { label: 'Analytics', path: '/dashboard/analytics', icon: '📈' },
   { label: 'Settings', path: '/dashboard/settings', icon: '⚙️' },
 ];
@@ -23,6 +26,10 @@ export function Sidebar() {
   const logout = useAuthStore((s) => s.logout);
   const location = useLocation();
   const [fleetOpen, setFleetOpen] = useState(location.pathname.includes('/fleet'));
+  const unreadCount = useMessagesStore((s) => s.unreadCount);
+  const fetchUnreadCount = useMessagesStore((s) => s.fetchUnreadCount);
+
+  useEffect(() => { fetchUnreadCount(); }, []);
 
   return (
     <nav style={{
@@ -88,6 +95,18 @@ export function Sidebar() {
                   background: C.green,
                   animation: 'pulse 2s infinite',
                 }} />
+              )}
+              {'badge' in item && item.badge && unreadCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: -4, right: -6,
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  background: C.red, color: '#fff',
+                  fontSize: 10, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '0 4px',
+                }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
               )}
             </span>
             {item.label}

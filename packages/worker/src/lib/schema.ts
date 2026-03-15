@@ -127,6 +127,84 @@ export const webhookEndpoints = pgTable('webhook_endpoints', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Users (needed by notification worker for email lookup)
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  role: varchar('role', { length: 20 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Route templates
+export const routeTemplatesTable = pgTable('route_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  depotAddress: jsonb('depot_address'),
+  depotLat: numeric('depot_lat', { precision: 10, scale: 7 }),
+  depotLng: numeric('depot_lng', { precision: 10, scale: 7 }),
+  driverId: uuid('driver_id'),
+  vehicleId: uuid('vehicle_id'),
+  recurrenceRule: varchar('recurrence_rule', { length: 255 }).notNull(),
+  recurrenceTimezone: varchar('recurrence_timezone', { length: 100 }).default('UTC').notNull(),
+  orderTemplate: jsonb('order_template').default([]).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  lastGeneratedAt: timestamp('last_generated_at', { withTimezone: true }),
+  nextGenerateAt: timestamp('next_generate_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Data export requests
+export const dataExportRequests = pgTable('data_export_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  requestedBy: uuid('requested_by').notNull(),
+  status: varchar('status', { length: 20 }).default('queued').notNull(),
+  fileUrl: text('file_url'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Location history (for retention)
+export const locationHistory = pgTable('location_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Tenants
+export const tenants = pgTable('tenants', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Subscriptions (for deletion worker)
+export const subscriptions = pgTable('subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  stripeCustomerId: varchar('stripe_customer_id', { length: 255 }),
+  stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
+  status: varchar('status', { length: 20 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Data deletion requests
+export const dataDeletionRequests = pgTable('data_deletion_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  requestedBy: uuid('requested_by').notNull(),
+  status: varchar('status', { length: 20 }).default('pending').notNull(),
+  scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Webhook deliveries
 export const webhookDeliveries = pgTable('webhook_deliveries', {
   id: uuid('id').primaryKey().defaultRandom(),
