@@ -41,7 +41,7 @@ export async function listVehicles(tenantId: string, pagination: PaginationInput
       .where(eq(vehicles.tenantId, tenantId)),
   ]);
 
-  const total = Number(countResult[0].count);
+  const total = Number(countResult[0]?.count ?? 0);
   return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 
@@ -130,7 +130,7 @@ export async function listDrivers(
       .where(where),
   ]);
 
-  const total = Number(countResult[0].count);
+  const total = Number(countResult[0]?.count ?? 0);
   return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 

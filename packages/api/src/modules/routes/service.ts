@@ -91,7 +91,7 @@ export async function listRoutes(tenantId: string, pagination: PaginationInput, 
     db.select({ count: sql<number>`count(*)` }).from(routes).where(where),
   ]);
 
-  const total = Number(countResult[0].count);
+  const total = Number(countResult[0]?.count ?? 0);
   return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 

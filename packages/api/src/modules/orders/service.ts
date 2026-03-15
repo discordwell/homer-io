@@ -83,7 +83,7 @@ export async function listOrders(
     db.select({ count: sql<number>`count(*)` }).from(orders).where(where),
   ]);
 
-  const total = Number(countResult[0].count);
+  const total = Number(countResult[0]?.count ?? 0);
   return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 

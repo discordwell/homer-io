@@ -180,7 +180,7 @@ export async function getInvoices(tenantId: string, page: number, limit: number)
       .where(eq(invoices.tenantId, tenantId)),
   ]);
 
-  const total = Number(countResult[0].count);
+  const total = Number(countResult[0]?.count ?? 0);
 
   return {
     data: items.map((inv) => ({

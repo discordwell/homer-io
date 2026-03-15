@@ -37,7 +37,7 @@ export async function listTemplates(tenantId: string, pagination: PaginationInpu
     db.select({ count: sql<number>`count(*)` }).from(routeTemplates)
       .where(eq(routeTemplates.tenantId, tenantId)),
   ]);
-  const total = Number(countResult[0].count);
+  const total = Number(countResult[0]?.count ?? 0);
   return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 

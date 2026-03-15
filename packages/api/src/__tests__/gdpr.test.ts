@@ -202,7 +202,6 @@ describe('GDPR service - deletion', () => {
 
   it('cancelDeletion throws when no active request found', async () => {
     returning.mockResolvedValueOnce([]);
-    returning.mockResolvedValueOnce([]);
 
     const { cancelDeletion } = await import('../modules/gdpr/service.js');
     await expect(cancelDeletion('t-1'))

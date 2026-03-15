@@ -19,6 +19,7 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
+  index('idx_users_tenant_id').on(table.tenantId),
   index('idx_users_email_verification_token').on(table.emailVerificationToken),
 ]);
 

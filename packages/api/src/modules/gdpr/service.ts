@@ -1,4 +1,4 @@
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import type { PaginationInput } from '@homer-io/shared';
 import { Queue } from 'bullmq';
 import { randomBytes, createHash } from 'crypto';
@@ -6,7 +6,7 @@ import { db } from '../../lib/db/index.js';
 import { dataExportRequests, dataDeletionRequests } from '../../lib/db/schema/data-requests.js';
 import { HttpError, NotFoundError } from '../../lib/errors.js';
 import { config } from '../../config.js';
-import { sendTransactionalEmail } from '../../lib/email.js';
+import { sendTransactionalEmail, escapeHtml } from '../../lib/email.js';
 import { users } from '../../lib/db/schema/users.js';
 
 const dataExportQueue = new Queue('data-export', { connection: { url: config.redis.url } });
@@ -39,7 +39,7 @@ export async function listExportRequests(tenantId: string, pagination: Paginatio
     db.select({ count: sql<number>`count(*)` }).from(dataExportRequests).where(where),
   ]);
 
-  const total = Number(countResult[0].count);
+  const total = Number(countResult[0]?.count ?? 0);
   return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 
@@ -64,11 +64,12 @@ export async function requestAccountDeletion(tenantId: string, userId: string, c
   // Send confirmation email
   const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
   if (user) {
+    const safeUrl = escapeHtml(`${config.app.frontendUrl}/dashboard/settings?confirm-delete=${token}`);
     sendTransactionalEmail(user.email, 'Confirm Account Deletion - HOMER.io',
       `<h2>Account Deletion Requested</h2>
-       <p>You requested to delete your HOMER.io account. This will be processed after a 30-day grace period (${scheduledAt.toLocaleDateString()}).</p>
-       <p>To confirm, click <a href="${config.app.frontendUrl}/dashboard/settings?confirm-delete=${token}">here</a>.</p>
-       <p>To cancel, go to Settings > Privacy in your dashboard.</p>`
+       <p>You requested to delete your HOMER.io account. This will be processed after a 30-day grace period (${escapeHtml(scheduledAt.toLocaleDateString())}).</p>
+       <p>To confirm, click <a href="${safeUrl}">here</a>.</p>
+       <p>To cancel, go to Settings &gt; Privacy in your dashboard.</p>`
     ).catch(err => console.error('[gdpr] deletion email failed:', err));
   }
 
@@ -89,15 +90,9 @@ export async function cancelDeletion(tenantId: string) {
   const result = await db.delete(dataDeletionRequests)
     .where(and(
       eq(dataDeletionRequests.tenantId, tenantId),
-      eq(dataDeletionRequests.status, 'pending'),
+      inArray(dataDeletionRequests.status, ['pending', 'confirmed']),
     )).returning({ id: dataDeletionRequests.id });
-  // Also try confirmed
-  const result2 = await db.delete(dataDeletionRequests)
-    .where(and(
-      eq(dataDeletionRequests.tenantId, tenantId),
-      eq(dataDeletionRequests.status, 'confirmed'),
-    )).returning({ id: dataDeletionRequests.id });
-  if (result.length === 0 && result2.length === 0) throw new NotFoundError('No active deletion request found');
+  if (result.length === 0) throw new NotFoundError('No active deletion request found');
   return { success: true };
 }
 
@@ -114,6 +109,6 @@ export async function listDeletionRequests(tenantId: string, pagination: Paginat
     db.select({ count: sql<number>`count(*)` }).from(dataDeletionRequests).where(where),
   ]);
 
-  const total = Number(countResult[0].count);
+  const total = Number(countResult[0]?.count ?? 0);
   return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
