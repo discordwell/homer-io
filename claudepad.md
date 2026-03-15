@@ -2,6 +2,22 @@
 
 ## Session Summaries
 
+### 2026-03-15T07:00 UTC — Phase 4 Code Review + Security/Performance Fixes
+- Performed thorough code review of all Phase 4 changes (billing, integrations, operational intelligence, infrastructure).
+- Found 5 CRITICAL, 8 HIGH, 8 MEDIUM, 4 LOW issues across security, performance, logic, and code quality.
+- **CRITICAL fixes applied**:
+  - C1: Inbound integration webhook signature verification was optional — now mandatory (reject if no signature).
+  - C2: Webhook handler was re-fetching entire external order catalog (SSRF/DoS risk) — now maps directly from webhook body.
+  - C3: Webhook callback URL pointed to frontend domain instead of API domain — fixed with env-aware URL selection.
+- **HIGH fixes applied**:
+  - H1: Billing enforcement middleware was hitting DB on every request — now cached in Redis (60s TTL) with invalidation on webhook events.
+  - H4: Trial with null trialEndsAt treated as expired — now allows access when no expiry set.
+  - H5: Portal endpoint returnUrl not validated — added Zod schema.
+  - H6: Invoices endpoint page/limit unbounded — added Zod schema with max(100).
+  - H7: ETA calculation used (0,0) as fallback for missing coords — now returns null for stops without valid coordinates, ETA schema updated to allow nullable.
+  - H8: Report date parameters unvalidated — added Zod regex + date validation.
+- All 219 tests pass (158 API + 61 shared). All 4 packages + demo build clean.
+
 ### 2026-03-15T05:30 UTC — Phase 4 "Launch Ready" Implementation
 - Implemented full Phase 4 (billing, integrations, operational intelligence, infrastructure) using foundation-first + 4 parallel agents.
 - **Stream A — Billing**: Stripe SDK integration (checkout sessions, customer portal, seat sync, webhook handler at /stripe/webhook). Billing enforcement middleware (trialing/active/past_due/402). 6 billing API endpoints. Frontend: BillingTab (plan card + invoice table), PlanSelector (3-column comparison modal), SubscriptionBanner (trial/past_due/expired warnings in DashboardLayout). Zustand billing store. Billing-usage worker for daily snapshots.

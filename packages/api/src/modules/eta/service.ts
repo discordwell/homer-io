@@ -45,9 +45,9 @@ export async function calculateRouteETAs(
     if (vehicle) vehicleType = vehicle.type;
   }
 
-  // Get driver position as starting point
-  let startLat = route.depotLat ? Number(route.depotLat) : 0;
-  let startLng = route.depotLng ? Number(route.depotLng) : 0;
+  // Get driver position as starting point — require valid coordinates
+  let startLat = route.depotLat ? Number(route.depotLat) : NaN;
+  let startLng = route.depotLng ? Number(route.depotLng) : NaN;
 
   if (route.driverId) {
     const [driver] = await db
@@ -87,25 +87,34 @@ export async function calculateRouteETAs(
   let prevLng = startLng;
 
   const stops = uncompletedOrders.map((order) => {
-    const toLat = order.deliveryLat ? Number(order.deliveryLat) : 0;
-    const toLng = order.deliveryLng ? Number(order.deliveryLng) : 0;
+    const toLat = order.deliveryLat ? Number(order.deliveryLat) : NaN;
+    const toLng = order.deliveryLng ? Number(order.deliveryLng) : NaN;
 
-    const etaMin = estimateEtaMinutes(prevLat, prevLng, toLat, toLng, vehicleType);
-    const distKm = haversineDistance(prevLat, prevLng, toLat, toLng);
+    // Skip ETA calculation for stops or origins with missing coordinates
+    const hasValidCoords = !isNaN(prevLat) && !isNaN(prevLng) && !isNaN(toLat) && !isNaN(toLng);
 
-    cumulativeMinutes += etaMin;
+    let etaMin = 0;
+    let distKm = 0;
+    if (hasValidCoords) {
+      etaMin = estimateEtaMinutes(prevLat, prevLng, toLat, toLng, vehicleType);
+      distKm = haversineDistance(prevLat, prevLng, toLat, toLng);
+      cumulativeMinutes += etaMin;
+    }
 
     const etaTimestamp = new Date(now.getTime() + cumulativeMinutes * 60_000);
 
-    prevLat = toLat;
-    prevLng = toLng;
+    // Update prev coordinates only if the current stop has valid coords
+    if (!isNaN(toLat) && !isNaN(toLng)) {
+      prevLat = toLat;
+      prevLng = toLng;
+    }
 
     return {
       orderId: order.id,
       sequence: order.stopSequence ?? 0,
-      etaMinutes: Math.round(cumulativeMinutes * 10) / 10,
-      etaTimestamp: etaTimestamp.toISOString(),
-      distanceKm: Math.round(distKm * 100) / 100,
+      etaMinutes: hasValidCoords ? Math.round(cumulativeMinutes * 10) / 10 : null,
+      etaTimestamp: hasValidCoords ? etaTimestamp.toISOString() : null,
+      distanceKm: hasValidCoords ? Math.round(distKm * 100) / 100 : null,
     };
   });
 
@@ -176,25 +185,33 @@ export async function recalculateFromDriverPosition(
   let prevLng = driverLng;
 
   const stops = uncompletedOrders.map((order) => {
-    const toLat = order.deliveryLat ? Number(order.deliveryLat) : 0;
-    const toLng = order.deliveryLng ? Number(order.deliveryLng) : 0;
+    const toLat = order.deliveryLat ? Number(order.deliveryLat) : NaN;
+    const toLng = order.deliveryLng ? Number(order.deliveryLng) : NaN;
 
-    const etaMin = estimateEtaMinutes(prevLat, prevLng, toLat, toLng, vehicleType);
-    const distKm = haversineDistance(prevLat, prevLng, toLat, toLng);
+    // Skip ETA calculation for stops with missing coordinates
+    const hasValidCoords = !isNaN(prevLat) && !isNaN(prevLng) && !isNaN(toLat) && !isNaN(toLng);
 
-    cumulativeMinutes += etaMin;
+    let etaMin = 0;
+    let distKm = 0;
+    if (hasValidCoords) {
+      etaMin = estimateEtaMinutes(prevLat, prevLng, toLat, toLng, vehicleType);
+      distKm = haversineDistance(prevLat, prevLng, toLat, toLng);
+      cumulativeMinutes += etaMin;
+    }
 
     const etaTimestamp = new Date(now.getTime() + cumulativeMinutes * 60_000);
 
-    prevLat = toLat;
-    prevLng = toLng;
+    if (!isNaN(toLat) && !isNaN(toLng)) {
+      prevLat = toLat;
+      prevLng = toLng;
+    }
 
     return {
       orderId: order.id,
       sequence: order.stopSequence ?? 0,
-      etaMinutes: Math.round(cumulativeMinutes * 10) / 10,
-      etaTimestamp: etaTimestamp.toISOString(),
-      distanceKm: Math.round(distKm * 100) / 100,
+      etaMinutes: hasValidCoords ? Math.round(cumulativeMinutes * 10) / 10 : null,
+      etaTimestamp: hasValidCoords ? etaTimestamp.toISOString() : null,
+      distanceKm: hasValidCoords ? Math.round(distKm * 100) / 100 : null,
     };
   });
 

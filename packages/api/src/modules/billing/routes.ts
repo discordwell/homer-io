@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { FastifyInstance } from 'fastify';
 import { checkoutRequestSchema, changePlanRequestSchema, planFeatures } from '@homer-io/shared';
 import { authenticate, requireRole } from '../../plugins/auth.js';
@@ -8,6 +9,15 @@ import {
   getInvoices,
   changePlan,
 } from './service.js';
+
+const portalRequestSchema = z.object({
+  returnUrl: z.string().url().optional(),
+});
+
+const invoicesQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+});
 
 export async function billingRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
@@ -29,14 +39,14 @@ export async function billingRoutes(app: FastifyInstance) {
 
   // POST /api/billing/portal — create Stripe Customer Portal URL
   app.post('/portal', async (request) => {
-    const { returnUrl } = (request.body as { returnUrl?: string }) || {};
-    return createPortalSession(request.user.tenantId, returnUrl || '');
+    const body = portalRequestSchema.parse(request.body || {});
+    return createPortalSession(request.user.tenantId, body.returnUrl || '');
   });
 
   // GET /api/billing/invoices — paginated invoice history
   app.get('/invoices', async (request) => {
-    const { page = '1', limit = '10' } = request.query as { page?: string; limit?: string };
-    return getInvoices(request.user.tenantId, Number(page), Number(limit));
+    const { page, limit } = invoicesQuerySchema.parse(request.query);
+    return getInvoices(request.user.tenantId, page, limit);
   });
 
   // GET /api/billing/plans — available plans with features

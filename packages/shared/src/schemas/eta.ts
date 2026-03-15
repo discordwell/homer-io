@@ -23,9 +23,9 @@ export const etaResponseSchema = z.object({
   stops: z.array(z.object({
     orderId: z.string(),
     sequence: z.number(),
-    etaMinutes: z.number(),
-    etaTimestamp: z.string(),
-    distanceKm: z.number(),
+    etaMinutes: z.number().nullable(),
+    etaTimestamp: z.string().nullable(),
+    distanceKm: z.number().nullable(),
   })),
   totalEtaMinutes: z.number(),
   calculatedAt: z.string(),

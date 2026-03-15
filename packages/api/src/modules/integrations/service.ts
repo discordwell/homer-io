@@ -80,8 +80,11 @@ export async function createConnection(
   // Encrypt credentials
   const encryptedCreds = encrypt(JSON.stringify(input.credentials));
 
-  // Register webhooks
-  const webhookCallbackUrl = `${config.cors.origin[0]}/api/integrations/webhook/${input.platform}`;
+  // Register webhooks — use API base URL (not frontend CORS origin)
+  const apiBaseUrl = config.nodeEnv === 'production'
+    ? 'https://api.homer.io'
+    : config.cors.origin[0];
+  const webhookCallbackUrl = `${apiBaseUrl}/api/integrations/webhook/${input.platform}`;
   let webhookIds: string[] = [];
   try {
     webhookIds = await connector.registerWebhooks(input.storeUrl, input.credentials, webhookCallbackUrl);
@@ -358,27 +361,34 @@ export async function processInboundWebhook(
 
   const credentials = JSON.parse(decrypt(conn.credentials as string));
 
-  // Platform-specific signature verification
+  // Platform-specific signature verification — REQUIRED for all inbound webhooks.
+  // Reject if no signature is provided (prevents unauthenticated webhook injection).
   if (platform === 'shopify') {
     // Shopify sends HMAC-SHA256 in X-Shopify-Hmac-Sha256 header
-    if (signature && credentials.password) {
-      const computed = createHmac('sha256', credentials.password)
-        .update(JSON.stringify(body))
-        .digest('base64');
-      if (computed !== signature) {
-        throw new HttpError(401, 'Invalid webhook signature');
-      }
+    const secret = credentials.password || credentials.apiSecret;
+    if (!signature || !secret) {
+      throw new HttpError(401, 'Missing webhook signature — all inbound webhooks must be signed');
+    }
+    const computed = createHmac('sha256', secret)
+      .update(JSON.stringify(body))
+      .digest('base64');
+    if (computed !== signature) {
+      throw new HttpError(401, 'Invalid webhook signature');
     }
   } else if (platform === 'woocommerce') {
     // WooCommerce sends signature in X-WC-Webhook-Signature header
-    if (signature && credentials.consumerSecret) {
-      const computed = createHmac('sha256', credentials.consumerSecret)
-        .update(JSON.stringify(body))
-        .digest('base64');
-      if (computed !== signature) {
-        throw new HttpError(401, 'Invalid webhook signature');
-      }
+    const secret = credentials.consumerSecret;
+    if (!signature || !secret) {
+      throw new HttpError(401, 'Missing webhook signature — all inbound webhooks must be signed');
     }
+    const computed = createHmac('sha256', secret)
+      .update(JSON.stringify(body))
+      .digest('base64');
+    if (computed !== signature) {
+      throw new HttpError(401, 'Invalid webhook signature');
+    }
+  } else {
+    throw new HttpError(400, `Unsupported platform: ${platform}`);
   }
 
   // Map the webhook body to an ExternalOrder
@@ -403,69 +413,42 @@ export async function processInboundWebhook(
   }
 
   try {
-    // Build an ExternalOrder from the raw webhook body
-    // fetchOrders returns mapped orders, but for webhooks we have the raw body
-    // We use the connector's fetchOrders mapper indirectly via the raw data
-    const extOrders = await connector.fetchOrders(conn.storeUrl, credentials);
-    const targetOrder = extOrders.find(o => o.externalId === externalId);
+    // Build an ExternalOrder directly from the webhook body — never re-fetch the full catalog.
+    // Extract address from platform-specific body shapes.
+    const shippingAddr = (body.shipping_address || body.shipping || {}) as Record<string, unknown>;
+    const billingAddr = (body.billing_address || body.billing || {}) as Record<string, unknown>;
+    const addr = shippingAddr.address1 || shippingAddr.address_1 ? shippingAddr : billingAddr;
 
-    if (!targetOrder) {
-      // If we can't find the order by fetching, try building from the body directly
-      // Create a minimal mapping from the webhook payload
-      const mapped = connector.mapOrderToHomer({
-        externalId,
-        orderNumber: String(body.name || body.number || body.id || ''),
-        customerName: String(
-          (body.shipping_address as Record<string, unknown>)?.first_name ||
-          (body.shipping as Record<string, unknown>)?.first_name ||
-          (body.billing as Record<string, unknown>)?.first_name ||
-          'Unknown'
-        ),
-        customerEmail: String(body.email || (body.billing as Record<string, unknown>)?.email || ''),
-        customerPhone: String(body.phone || (body.billing as Record<string, unknown>)?.phone || ''),
-        shippingAddress: {
-          street: '',
-          city: '',
-          state: '',
-          zip: '',
-          country: 'US',
-        },
-        lineItems: [],
-        totalWeight: null,
-        notes: String(body.note || body.customer_note || ''),
-        createdAt: new Date().toISOString(),
-        rawData: body,
-      }, conn.tenantId);
+    const externalOrder = {
+      externalId,
+      orderNumber: String(body.name || body.number || body.id || ''),
+      customerName: [addr.first_name, addr.last_name].filter(Boolean).join(' ') || String(body.email || 'Unknown'),
+      customerEmail: String(body.email || billingAddr.email || '') || null,
+      customerPhone: String(body.phone || billingAddr.phone || addr.phone || '') || null,
+      shippingAddress: {
+        street: [addr.address1 || addr.address_1, addr.address2 || addr.address_2].filter(Boolean).join(', '),
+        city: String(addr.city || ''),
+        state: String(addr.province || addr.province_code || addr.state || ''),
+        zip: String(addr.zip || addr.postcode || ''),
+        country: String(addr.country_code || addr.country || 'US'),
+        ...(addr.latitude ? { lat: Number(addr.latitude) } : {}),
+        ...(addr.longitude ? { lng: Number(addr.longitude) } : {}),
+      },
+      lineItems: Array.isArray(body.line_items)
+        ? (body.line_items as Record<string, unknown>[]).map(i => ({
+            name: String(i.name || ''),
+            quantity: Number(i.quantity || 1),
+            weight: i.grams ? Number(i.grams) / 1000 : undefined,
+          }))
+        : [],
+      totalWeight: body.total_weight ? Number(body.total_weight) / 1000 : null,
+      notes: String(body.note || body.customer_note || '') || null,
+      createdAt: String(body.created_at || body.date_created || new Date().toISOString()),
+      rawData: body,
+    };
 
-      const [newOrder] = await db
-        .insert(orders)
-        .values({
-          tenantId: mapped.tenantId,
-          externalId: mapped.externalId,
-          recipientName: mapped.recipientName,
-          recipientPhone: mapped.recipientPhone,
-          recipientEmail: mapped.recipientEmail,
-          deliveryAddress: mapped.deliveryAddress,
-          packageCount: mapped.packageCount,
-          weight: mapped.weight,
-          notes: mapped.notes,
-        })
-        .returning();
+    const mapped = connector.mapOrderToHomer(externalOrder, conn.tenantId);
 
-      await db.insert(integrationOrders).values({
-        connectionId,
-        orderId: newOrder.id,
-        externalOrderId: externalId,
-        platform: conn.platform,
-        rawData: body,
-        syncStatus: 'synced',
-      });
-
-      return { status: 'imported', orderId: newOrder.id };
-    }
-
-    // Use the fetched order
-    const mapped = connector.mapOrderToHomer(targetOrder, conn.tenantId);
     const [newOrder] = await db
       .insert(orders)
       .values({
@@ -488,7 +471,7 @@ export async function processInboundWebhook(
       orderId: newOrder.id,
       externalOrderId: externalId,
       platform: conn.platform,
-      rawData: targetOrder.rawData,
+      rawData: body,
       syncStatus: 'synced',
     });
 

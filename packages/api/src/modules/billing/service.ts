@@ -7,6 +7,7 @@ import { usageRecords } from '../../lib/db/schema/usage-records.js';
 import { drivers } from '../../lib/db/schema/drivers.js';
 import { config } from '../../config.js';
 import { NotFoundError } from '../../lib/errors.js';
+import { cacheDelete } from '../../lib/cache.js';
 
 let stripe: Stripe | null = null;
 
@@ -267,6 +268,11 @@ export async function syncSeats(tenantId: string) {
   return driverCount;
 }
 
+// --- invalidate billing cache helper ---
+async function invalidateBillingCache(tenantId: string) {
+  await cacheDelete(`billing:status:${tenantId}`);
+}
+
 // --- handleWebhookEvent ---
 export async function handleWebhookEvent(event: Stripe.Event) {
   switch (event.type) {
@@ -284,6 +290,7 @@ export async function handleWebhookEvent(event: Stripe.Event) {
             updatedAt: new Date(),
           })
           .where(eq(subscriptions.tenantId, tenantId));
+        await invalidateBillingCache(tenantId);
       }
       break;
     }
@@ -326,6 +333,7 @@ export async function handleWebhookEvent(event: Stripe.Event) {
           updatedAt: new Date(),
         })
         .where(eq(subscriptions.tenantId, tenantId));
+      await invalidateBillingCache(tenantId);
       break;
     }
 
@@ -342,6 +350,7 @@ export async function handleWebhookEvent(event: Stripe.Event) {
           updatedAt: new Date(),
         })
         .where(eq(subscriptions.tenantId, tenantId));
+      await invalidateBillingCache(tenantId);
       break;
     }
 
@@ -410,6 +419,7 @@ export async function handleWebhookEvent(event: Stripe.Event) {
           .update(subscriptions)
           .set({ status: 'past_due', updatedAt: new Date() })
           .where(eq(subscriptions.tenantId, tenantId));
+        await invalidateBillingCache(tenantId);
       }
       break;
     }
