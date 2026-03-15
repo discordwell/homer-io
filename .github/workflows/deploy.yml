@@ -37,9 +37,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run -w @homer-io/shared build
-      - run: ls -la packages/shared/dist/
-      - run: npx turbo build --force
-      - run: npx turbo test --force
+      - run: npx turbo build
+      - run: npx turbo test
         env:
           DATABASE_URL: postgresql://homer:homer@localhost:5432/homer
           REDIS_URL: redis://localhost:6379
