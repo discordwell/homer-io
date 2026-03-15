@@ -23,6 +23,7 @@ function getRedis(): Redis {
 /**
  * Check if driver is within 100m of any uncompleted stop on their active route.
  * Triggers customer notification and Socket.IO broadcast on first entry.
+ * Uses Redis pipeline for batch deduplication checks (avoids N+1 round-trips).
  */
 export async function checkGeofences(
   tenantId: string,
@@ -66,39 +67,50 @@ export async function checkGeofences(
     )
     .orderBy(asc(orders.stopSequence));
 
-  const client = getRedis();
-
+  // Filter to orders within geofence radius
+  const nearbyOrders: Array<{ id: string; distance: number }> = [];
   for (const order of uncompletedOrders) {
     if (!order.deliveryLat || !order.deliveryLng) continue;
-
-    const deliveryLat = Number(order.deliveryLat);
-    const deliveryLng = Number(order.deliveryLng);
-
-    const distance = haversineDistance(lat, lng, deliveryLat, deliveryLng);
-
+    const distance = haversineDistance(lat, lng, Number(order.deliveryLat), Number(order.deliveryLng));
     if (distance <= GEOFENCE_RADIUS_KM) {
-      const redisKey = `geofence:triggered:${routeId}:${order.id}`;
-
-      // Check if already triggered (deduplication)
-      const alreadyTriggered = await client.exists(redisKey);
-      if (alreadyTriggered) continue;
-
-      // Mark as triggered with 24h TTL
-      await client.set(redisKey, '1', 'EX', GEOFENCE_TTL_SECONDS);
-
-      // Trigger customer notification
-      await enqueueCustomerNotification(tenantId, order.id, 'delivery_approaching');
-
-      // Broadcast via Socket.IO
-      broadcastToTenant(tenantId, 'delivery:approaching', {
-        orderId: order.id,
-        driverId,
-        routeId,
-      });
-
-      console.log(
-        `[geofencing] Driver ${driverId} within ${Math.round(distance * 1000)}m of order ${order.id}`,
-      );
+      nearbyOrders.push({ id: order.id, distance });
     }
+  }
+
+  if (nearbyOrders.length === 0) return;
+
+  const client = getRedis();
+
+  // Pipeline: batch EXISTS check for all nearby orders in a single round-trip
+  const redisKeys = nearbyOrders.map(o => `geofence:triggered:${routeId}:${o.id}`);
+  const pipeline = client.pipeline();
+  for (const key of redisKeys) {
+    pipeline.exists(key);
+  }
+  const existsResults = await pipeline.exec();
+
+  // Process only orders not yet triggered
+  for (let i = 0; i < nearbyOrders.length; i++) {
+    const alreadyTriggered = existsResults?.[i]?.[1] === 1;
+    if (alreadyTriggered) continue;
+
+    const order = nearbyOrders[i];
+
+    // Mark as triggered with 24h TTL
+    await client.set(redisKeys[i], '1', 'EX', GEOFENCE_TTL_SECONDS);
+
+    // Trigger customer notification
+    await enqueueCustomerNotification(tenantId, order.id, 'delivery_approaching');
+
+    // Broadcast via Socket.IO
+    broadcastToTenant(tenantId, 'delivery:approaching', {
+      orderId: order.id,
+      driverId,
+      routeId,
+    });
+
+    console.log(
+      `[geofencing] Driver ${driverId} within ${Math.round(order.distance * 1000)}m of order ${order.id}`,
+    );
   }
 }

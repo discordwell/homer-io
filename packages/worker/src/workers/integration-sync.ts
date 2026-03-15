@@ -1,6 +1,6 @@
 import { Job } from 'bullmq';
 import { eq, and, sql } from 'drizzle-orm';
-import { createHash } from 'crypto';
+import { createHash, createDecipheriv } from 'crypto';
 import { db } from '../lib/db.js';
 
 // Minimal schema definitions for worker (mirrors API schema)
@@ -64,7 +64,6 @@ function deriveKey(key: string): Buffer {
 
 function decrypt(encrypted: string, key?: string): string {
   const encKey = key || process.env.INTEGRATION_ENCRYPTION_KEY || 'homer-dev-encryption-key-do-not-use-in-prod';
-  const { createDecipheriv } = require('crypto');
   const derivedKey = deriveKey(encKey);
   const [ivB64, authTagB64, ciphertextB64] = encrypted.split(':');
   if (!ivB64 || !authTagB64 || !ciphertextB64) {
@@ -267,18 +266,26 @@ export async function processIntegrationSync(job: Job<IntegrationSyncJobData>) {
     let skipped = 0;
     let failed = 0;
 
+    // Batch-fetch existing external IDs to avoid N+1 dedup queries
+    const existingIds = new Set<string>();
+    if (externalOrders.length > 0) {
+      const extIds = externalOrders.map(o => o.externalId);
+      const existing = await db
+        .select({ externalOrderId: integrationOrders.externalOrderId })
+        .from(integrationOrders)
+        .where(and(
+          eq(integrationOrders.connectionId, connectionId),
+          sql`${integrationOrders.externalOrderId} = ANY(${extIds})`,
+        ));
+      for (const e of existing) {
+        existingIds.add(e.externalOrderId);
+      }
+    }
+
     for (const ext of externalOrders) {
       try {
-        // Deduplication check
-        const [existing] = await db.select({ id: integrationOrders.id })
-          .from(integrationOrders)
-          .where(and(
-            eq(integrationOrders.connectionId, connectionId),
-            eq(integrationOrders.externalOrderId, ext.externalId),
-          ))
-          .limit(1);
-
-        if (existing) {
+        // Dedup check against pre-fetched set
+        if (existingIds.has(ext.externalId)) {
           skipped++;
           continue;
         }

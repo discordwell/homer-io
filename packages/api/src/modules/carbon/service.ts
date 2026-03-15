@@ -83,11 +83,14 @@ export async function getCarbonOverview(
     const co2 = calculateRouteCarbonKg(distance, vType, fType);
     totalCo2Kg += co2;
 
-    // If electric or zero-emission vehicle, calculate what a gasoline equivalent would have emitted
-    if (fType === 'electric' || co2 === 0) {
+    // Track green deliveries (zero emission) and EV savings
+    if (co2 === 0) {
       greenCount++;
-      const gasolineEquivalent = calculateRouteCarbonKg(distance, vType, 'gasoline');
-      evSavingsKg += gasolineEquivalent;
+      // Only count EV savings for electric vehicles (not human-powered bikes/cargo_bikes)
+      if (fType === 'electric' && vType !== 'bike' && vType !== 'cargo_bike') {
+        const gasolineEquivalent = calculateRouteCarbonKg(distance, vType, 'gasoline');
+        evSavingsKg += gasolineEquivalent;
+      }
     }
   }
 

@@ -1,5 +1,5 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { createHmac } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
 import { db } from '../../lib/db/index.js';
 import { integrationConnections } from '../../lib/db/schema/integration-connections.js';
 import { integrationOrders } from '../../lib/db/schema/integration-orders.js';
@@ -80,18 +80,10 @@ export async function createConnection(
   // Encrypt credentials
   const encryptedCreds = encrypt(JSON.stringify(input.credentials));
 
-  // Register webhooks — use API base URL (not frontend CORS origin)
-  const apiBaseUrl = config.nodeEnv === 'production'
-    ? 'https://api.homer.io'
-    : config.cors.origin[0];
-  const webhookCallbackUrl = `${apiBaseUrl}/api/integrations/webhook/${input.platform}`;
-  let webhookIds: string[] = [];
-  try {
-    webhookIds = await connector.registerWebhooks(input.storeUrl, input.credentials, webhookCallbackUrl);
-  } catch (err) {
-    console.warn(`[integrations] Failed to register webhooks for ${input.platform}:`, err);
-  }
+  // Generate per-connection webhook secret for inbound verification
+  const webhookSecret = randomBytes(32).toString('hex');
 
+  // Insert connection first so we have the ID for the webhook callback URL
   const [created] = await db
     .insert(integrationConnections)
     .values({
@@ -99,10 +91,26 @@ export async function createConnection(
       platform: input.platform,
       storeUrl: input.storeUrl,
       credentials: encryptedCreds,
-      webhookIds,
+      webhookIds: [],
+      webhookSecret,
       autoImport: input.autoImport,
     })
     .returning();
+
+  // Register webhooks — use API base URL (not frontend CORS origin)
+  const apiBaseUrl = config.nodeEnv === 'production'
+    ? 'https://api.homer.io'
+    : config.cors.origin[0];
+  const webhookCallbackUrl = `${apiBaseUrl}/api/integrations/webhook/${input.platform}/${created.id}?secret=${webhookSecret}`;
+  let webhookIds: string[] = [];
+  try {
+    webhookIds = await connector.registerWebhooks(input.storeUrl, input.credentials, webhookCallbackUrl);
+    await db.update(integrationConnections)
+      .set({ webhookIds })
+      .where(eq(integrationConnections.id, created.id));
+  } catch (err) {
+    console.warn(`[integrations] Failed to register webhooks for ${input.platform}:`, err);
+  }
 
   await logActivity({
     tenantId,
@@ -247,19 +255,26 @@ export async function syncOrders(tenantId: string, connectionId: string, since?:
     let skipped = 0;
     let failed = 0;
 
+    // Batch-fetch existing external IDs to avoid N+1 dedup queries
+    const existingIds = new Set<string>();
+    if (externalOrders.length > 0) {
+      const extIds = externalOrders.map(o => o.externalId);
+      const existing = await db
+        .select({ externalOrderId: integrationOrders.externalOrderId })
+        .from(integrationOrders)
+        .where(and(
+          eq(integrationOrders.connectionId, connectionId),
+          sql`${integrationOrders.externalOrderId} = ANY(${extIds})`,
+        ));
+      for (const e of existing) {
+        existingIds.add(e.externalOrderId);
+      }
+    }
+
     for (const extOrder of externalOrders) {
       try {
-        // Check for deduplication — skip if we already have this external order
-        const [existingIntOrder] = await db
-          .select({ id: integrationOrders.id })
-          .from(integrationOrders)
-          .where(and(
-            eq(integrationOrders.connectionId, connectionId),
-            eq(integrationOrders.externalOrderId, extOrder.externalId),
-          ))
-          .limit(1);
-
-        if (existingIntOrder) {
+        // Check dedup against pre-fetched set
+        if (existingIds.has(extOrder.externalId)) {
           skipped++;
           continue;
         }
@@ -345,6 +360,7 @@ export async function processInboundWebhook(
   platform: string,
   body: Record<string, unknown>,
   signature: string | null,
+  querySecret: string | null,
 ) {
   const [conn] = await db
     .select()
@@ -357,6 +373,11 @@ export async function processInboundWebhook(
 
   if (!conn) {
     throw new HttpError(404, 'Integration connection not found');
+  }
+
+  // Verify per-connection webhook secret (query param ?secret=...)
+  if (conn.webhookSecret && querySecret !== conn.webhookSecret) {
+    throw new HttpError(401, 'Invalid webhook secret');
   }
 
   const credentials = JSON.parse(decrypt(conn.credentials as string));

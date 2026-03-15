@@ -16,6 +16,7 @@ export const integrationConnections = pgTable('integration_connections', {
   storeUrl: varchar('store_url', { length: 500 }).notNull(),
   credentials: jsonb('credentials').notNull(), // AES-256-GCM encrypted
   webhookIds: jsonb('webhook_ids').default([]).notNull(),
+  webhookSecret: varchar('webhook_secret', { length: 64 }), // per-connection secret for inbound webhook verification
   autoImport: boolean('auto_import').default(true).notNull(),
   syncStatus: syncStatusEnum('sync_status').default('idle').notNull(),
   lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),

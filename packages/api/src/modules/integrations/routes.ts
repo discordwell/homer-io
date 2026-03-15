@@ -139,7 +139,8 @@ export async function integrationWebhookRoutes(app: FastifyInstance) {
       signature = (headers['x-wc-webhook-signature'] as string) || null;
     }
 
-    const result = await processInboundWebhook(connectionId, platform, body, signature);
+    const querySecret = (request.query as { secret?: string })?.secret || null;
+    const result = await processInboundWebhook(connectionId, platform, body, signature, querySecret);
     reply.send(result);
   });
 }
