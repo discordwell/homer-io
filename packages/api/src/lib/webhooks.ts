@@ -38,15 +38,16 @@ export async function enqueueWebhook(tenantId: string, event: string, payload: R
       payload,
     }).returning();
 
-    await webhookQueue.add('deliver', {
-      deliveryId: delivery.id,
-      endpointId: endpoint.id,
-      tenantId,
-    }, {
-      attempts: 5,
-      backoff: {
-        type: 'custom',
-      },
-    });
+    await enqueueWebhookDelivery(delivery.id, endpoint.id, tenantId);
   }
+}
+
+export async function enqueueWebhookDelivery(deliveryId: string, endpointId: string, tenantId: string) {
+  await webhookQueue.add('deliver', {
+    deliveryId,
+    endpointId,
+    tenantId,
+  }, {
+    attempts: 1, // Worker handles its own retry logic internally
+  });
 }

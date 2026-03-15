@@ -1,5 +1,5 @@
 import { Job } from 'bullmq';
-import { eq, sql } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { createHmac } from 'crypto';
 import { db } from '../lib/db.js';
 import { webhookEndpoints, webhookDeliveries } from '../lib/schema.js';
@@ -13,15 +13,52 @@ interface WebhookDeliveryJobData {
 // Retry delays: 30s, 2m, 15m, 1h, 4h
 const RETRY_DELAYS = [30_000, 120_000, 900_000, 3_600_000, 14_400_000];
 
-export async function processWebhookDelivery(job: Job<WebhookDeliveryJobData>) {
-  const { deliveryId, endpointId } = job.data;
+// Block SSRF: reject private/internal IPs and cloud metadata endpoints
+function isBlockedUrl(urlStr: string): boolean {
+  try {
+    const url = new URL(urlStr);
+    const hostname = url.hostname.toLowerCase();
+    // Block cloud metadata endpoints
+    if (hostname === '169.254.169.254' || hostname === 'metadata.google.internal') return true;
+    // Block localhost variants
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '0.0.0.0') return true;
+    // Block private IP ranges (10.x, 172.16-31.x, 192.168.x)
+    const parts = hostname.split('.').map(Number);
+    if (parts.length === 4 && parts.every(p => !isNaN(p))) {
+      if (parts[0] === 10) return true;
+      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+      if (parts[0] === 192 && parts[1] === 168) return true;
+    }
+    return false;
+  } catch {
+    return true;
+  }
+}
 
-  // Get delivery and endpoint
-  const [delivery] = await db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, deliveryId)).limit(1);
+export async function processWebhookDelivery(job: Job<WebhookDeliveryJobData>) {
+  const { deliveryId, endpointId, tenantId } = job.data;
+
+  // Get delivery and endpoint — enforce tenant isolation
+  const [delivery] = await db.select().from(webhookDeliveries)
+    .where(and(eq(webhookDeliveries.id, deliveryId), eq(webhookDeliveries.tenantId, tenantId)))
+    .limit(1);
   if (!delivery) return;
 
-  const [endpoint] = await db.select().from(webhookEndpoints).where(eq(webhookEndpoints.id, endpointId)).limit(1);
+  const [endpoint] = await db.select().from(webhookEndpoints)
+    .where(and(eq(webhookEndpoints.id, endpointId), eq(webhookEndpoints.tenantId, tenantId)))
+    .limit(1);
   if (!endpoint) return;
+
+  // SSRF protection: block internal/private URLs
+  if (isBlockedUrl(endpoint.url)) {
+    console.error(`[webhook] Blocked SSRF attempt to ${endpoint.url}`);
+    await db.update(webhookDeliveries).set({
+      status: 'failed',
+      attempts: 5,
+      responseBody: 'Blocked: URL targets a private or internal address',
+    }).where(eq(webhookDeliveries.id, deliveryId));
+    return;
+  }
 
   const payload = JSON.stringify(delivery.payload);
 

@@ -4,13 +4,16 @@ import { createPodSchema } from '@homer-io/shared';
 import { authenticate, requireRole } from '../../plugins/auth.js';
 import { uploadPodFiles, createPod, getPod } from './service.js';
 
+// Max ~5MB per file after base64 encoding (~6.67MB base64 string)
+const MAX_BASE64_SIZE = 7 * 1024 * 1024;
+
 const uploadSchema = z.object({
   orderId: z.string().uuid(),
   files: z.array(z.object({
-    data: z.string(),
-    filename: z.string(),
-    contentType: z.string(),
-  })).min(1).max(5),
+    data: z.string().max(MAX_BASE64_SIZE, 'File exceeds 5MB limit'),
+    filename: z.string().max(255),
+    contentType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/heic']),
+  })).min(1).max(4),
 });
 
 export async function podRoutes(app: FastifyInstance) {
@@ -33,8 +36,8 @@ export async function podRoutes(app: FastifyInstance) {
     reply.code(201).send(pod);
   });
 
-  // GET /api/pod/:orderId — view POD (dispatcher+ or the capturing driver)
-  app.get('/:orderId', async (request) => {
+  // GET /api/pod/:orderId — view POD (driver+ role required)
+  app.get('/:orderId', { preHandler: [requireRole('driver')] }, async (request) => {
     const { orderId } = request.params as { orderId: string };
     const { tenantId } = request.user;
     return getPod(tenantId, orderId);

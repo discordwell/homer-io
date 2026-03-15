@@ -5,6 +5,7 @@ import { db } from '../../lib/db/index.js';
 import { notificationTemplates } from '../../lib/db/schema/notification-templates.js';
 import { customerNotificationsLog } from '../../lib/db/schema/customer-notifications-log.js';
 import { orders } from '../../lib/db/schema/orders.js';
+import { NotFoundError } from '../../lib/errors.js';
 import { config } from '../../config.js';
 
 const customerNotificationQueue = new Queue('customer-notifications', {
@@ -55,7 +56,7 @@ export async function updateTemplate(
     .returning();
 
   if (!template) {
-    throw new Error('Template not found');
+    throw new NotFoundError('Template not found');
   }
 
   return template;
@@ -73,7 +74,7 @@ export async function deleteTemplate(tenantId: string, id: string) {
     .returning({ id: notificationTemplates.id });
 
   if (result.length === 0) {
-    throw new Error('Template not found');
+    throw new NotFoundError('Template not found');
   }
 }
 
@@ -90,7 +91,7 @@ export async function sendTestNotification(tenantId: string, templateId: string)
     .limit(1);
 
   if (!template) {
-    throw new Error('Template not found');
+    throw new NotFoundError('Template not found');
   }
 
   // Sample data for variable substitution
@@ -171,11 +172,11 @@ export async function enqueueCustomerNotification(
     return;
   }
 
-  // Get order details for variable substitution
+  // Get order details for variable substitution — enforce tenant isolation
   const [order] = await db
     .select()
     .from(orders)
-    .where(eq(orders.id, orderId))
+    .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)))
     .limit(1);
 
   if (!order) {

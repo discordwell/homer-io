@@ -52,34 +52,32 @@ export async function createPod(
 
   if (!order) throw new NotFoundError('Order not found');
 
-  // Check for existing POD (unique constraint on orderId)
-  const [existing] = await db
-    .select({ id: proofOfDelivery.id })
-    .from(proofOfDelivery)
-    .where(eq(proofOfDelivery.orderId, orderId))
-    .limit(1);
+  // Insert POD — catch unique constraint violation for idempotency
+  try {
+    const [pod] = await db
+      .insert(proofOfDelivery)
+      .values({
+        tenantId,
+        orderId,
+        routeId: order.routeId,
+        driverId,
+        signatureUrl: input.signatureUrl ?? null,
+        photoUrls: input.photoUrls ?? [],
+        notes: input.notes ?? null,
+        recipientNameSigned: input.recipientNameSigned ?? null,
+        locationLat: input.locationLat?.toString() ?? null,
+        locationLng: input.locationLng?.toString() ?? null,
+      })
+      .returning();
 
-  if (existing) {
-    throw new HttpError(409, 'Proof of delivery already exists for this order');
+    return pod;
+  } catch (err: any) {
+    // Handle unique constraint violation (race condition or duplicate)
+    if (err?.message?.includes('violates') || err?.code === '23505') {
+      throw new HttpError(409, 'Proof of delivery already exists for this order');
+    }
+    throw err;
   }
-
-  const [pod] = await db
-    .insert(proofOfDelivery)
-    .values({
-      tenantId,
-      orderId,
-      routeId: order.routeId,
-      driverId,
-      signatureUrl: input.signatureUrl ?? null,
-      photoUrls: input.photoUrls ?? [],
-      notes: input.notes ?? null,
-      recipientNameSigned: input.recipientNameSigned ?? null,
-      locationLat: input.locationLat?.toString() ?? null,
-      locationLng: input.locationLng?.toString() ?? null,
-    })
-    .returning();
-
-  return pod;
 }
 
 /**

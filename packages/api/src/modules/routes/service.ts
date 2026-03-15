@@ -310,7 +310,7 @@ export async function transitionRouteStatus(
     completed: 'route.completed', cancelled: 'route.cancelled',
   };
   if (webhookEventMap[newStatus]) {
-    enqueueWebhook(tenantId, webhookEventMap[newStatus], { routeId, routeName: route.name, previousStatus: route.status, newStatus, driverId: route.driverId }).catch(() => {});
+    enqueueWebhook(tenantId, webhookEventMap[newStatus], { routeId, routeName: route.name, previousStatus: route.status, newStatus, driverId: route.driverId }).catch(err => console.error('[trigger]', err?.message || err));
   }
 
   // Customer notifications: driver_en_route for all orders when route starts
@@ -318,7 +318,7 @@ export async function transitionRouteStatus(
     const routeOrders = await db.select().from(orders)
       .where(and(eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)));
     for (const order of routeOrders) {
-      enqueueCustomerNotification(tenantId, order.id, 'driver_en_route').catch(() => {});
+      enqueueCustomerNotification(tenantId, order.id, 'driver_en_route').catch(err => console.error('[trigger]', err?.message || err));
     }
   }
 
@@ -443,11 +443,11 @@ export async function completeStop(
 
   // Webhook: delivery event
   const webhookEvent = result.status === 'delivered' ? 'delivery.completed' : 'delivery.failed';
-  enqueueWebhook(tenantId, webhookEvent, { routeId, orderId, recipientName: order.recipientName, status: result.status, failureReason: result.failureReason ?? null }).catch(() => {});
-  enqueueWebhook(tenantId, result.status === 'delivered' ? 'order.delivered' : 'order.failed', { orderId, recipientName: order.recipientName, status: result.status }).catch(() => {});
+  enqueueWebhook(tenantId, webhookEvent, { routeId, orderId, recipientName: order.recipientName, status: result.status, failureReason: result.failureReason ?? null }).catch(err => console.error('[trigger]', err?.message || err));
+  enqueueWebhook(tenantId, result.status === 'delivered' ? 'order.delivered' : 'order.failed', { orderId, recipientName: order.recipientName, status: result.status }).catch(err => console.error('[trigger]', err?.message || err));
 
   // Customer notification: delivered or failed
-  enqueueCustomerNotification(tenantId, orderId, result.status).catch(() => {});
+  enqueueCustomerNotification(tenantId, orderId, result.status).catch(err => console.error('[trigger]', err?.message || err));
 
   // Re-read route to get the actual completedStops after the atomic increment
   const [updatedRoute] = await db

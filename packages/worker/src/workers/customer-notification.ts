@@ -1,5 +1,5 @@
 import { Job } from 'bullmq';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '../lib/db.js';
 import { customerNotificationsLog } from '../lib/schema.js';
 import { config } from '../lib/config.js';
@@ -18,11 +18,11 @@ export async function processCustomerNotification(job: Job<CustomerNotificationJ
   const { tenantId, orderId, trigger, logId, templateId } = job.data;
   console.log(`[customer-notification] Processing ${trigger} for order ${orderId}`);
 
-  // Get the log entry
+  // Get the log entry — enforce tenant isolation
   const [logEntry] = await db
     .select()
     .from(customerNotificationsLog)
-    .where(eq(customerNotificationsLog.id, logId))
+    .where(and(eq(customerNotificationsLog.id, logId), eq(customerNotificationsLog.tenantId, tenantId)))
     .limit(1);
 
   if (!logEntry) {

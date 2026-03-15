@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 import type { CreateWebhookEndpointInput, UpdateWebhookEndpointInput } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
@@ -8,12 +8,12 @@ import { HttpError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
 import { enqueueWebhook } from '../../lib/webhooks.js';
 
-function formatEndpoint(ep: typeof webhookEndpoints.$inferSelect) {
+function formatEndpoint(ep: typeof webhookEndpoints.$inferSelect, showSecret = false) {
   return {
     id: ep.id,
     url: ep.url,
     events: ep.events as string[],
-    secret: ep.secret,
+    secret: showSecret ? ep.secret : `${ep.secret.slice(0, 8)}...`,
     isActive: ep.isActive,
     description: ep.description,
     failureCount: ep.failureCount,
@@ -65,7 +65,7 @@ export async function createEndpoint(
     metadata: { url: input.url, events: input.events },
   });
 
-  return formatEndpoint(created);
+  return formatEndpoint(created, true);
 }
 
 export async function listEndpoints(tenantId: string) {
@@ -75,7 +75,7 @@ export async function listEndpoints(tenantId: string) {
     .where(eq(webhookEndpoints.tenantId, tenantId))
     .orderBy(desc(webhookEndpoints.createdAt));
 
-  return endpoints.map(formatEndpoint);
+  return endpoints.map(ep => formatEndpoint(ep));
 }
 
 export async function updateEndpoint(
@@ -182,21 +182,9 @@ export async function testEndpoint(
     })
     .returning();
 
-  // Enqueue the test delivery using the shared queue
-  const { Queue } = await import('bullmq');
-  const { config } = await import('../../config.js');
-  const webhookQueue = new Queue('webhook-delivery', { connection: { url: config.redis.url } });
-
-  await webhookQueue.add('deliver', {
-    deliveryId: delivery.id,
-    endpointId: endpoint.id,
-    tenantId,
-  }, {
-    attempts: 5,
-    backoff: { type: 'custom' },
-  });
-
-  await webhookQueue.close();
+  // Enqueue the test delivery using the shared webhook queue
+  const { enqueueWebhookDelivery } = await import('../../lib/webhooks.js');
+  await enqueueWebhookDelivery(delivery.id, endpoint.id, tenantId);
 
   await logActivity({
     tenantId,
@@ -241,15 +229,15 @@ export async function listDeliveries(
     .offset(offset);
 
   // Get total count for pagination
-  const allDeliveries = await db
-    .select({ id: webhookDeliveries.id })
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)::int` })
     .from(webhookDeliveries)
     .where(and(
       eq(webhookDeliveries.endpointId, endpointId),
       eq(webhookDeliveries.tenantId, tenantId),
     ));
 
-  const total = allDeliveries.length;
+  const total = countResult?.count ?? 0;
   const totalPages = Math.ceil(total / limit);
 
   return {
