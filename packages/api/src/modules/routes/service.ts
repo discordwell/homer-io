@@ -9,6 +9,8 @@ import { users } from '../../lib/db/schema/users.js';
 import { NotFoundError, HttpError } from '../../lib/errors.js';
 import { broadcastToTenant } from '../../lib/ws/index.js';
 import { logActivity } from '../../lib/activity.js';
+import { enqueueWebhook } from '../../lib/webhooks.js';
+import { enqueueCustomerNotification } from '../customer-notifications/service.js';
 
 export async function createRoute(tenantId: string, input: CreateRouteInput) {
   const [route] = await db.transaction(async (tx) => {
@@ -302,6 +304,24 @@ export async function transitionRouteStatus(
     metadata: { previousStatus: route.status, newStatus },
   });
 
+  // Webhook: route status change
+  const webhookEventMap: Record<string, string> = {
+    planned: 'route.planned', in_progress: 'route.started',
+    completed: 'route.completed', cancelled: 'route.cancelled',
+  };
+  if (webhookEventMap[newStatus]) {
+    enqueueWebhook(tenantId, webhookEventMap[newStatus], { routeId, routeName: route.name, previousStatus: route.status, newStatus, driverId: route.driverId }).catch(() => {});
+  }
+
+  // Customer notifications: driver_en_route for all orders when route starts
+  if (newStatus === 'in_progress') {
+    const routeOrders = await db.select().from(orders)
+      .where(and(eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)));
+    for (const order of routeOrders) {
+      enqueueCustomerNotification(tenantId, order.id, 'driver_en_route').catch(() => {});
+    }
+  }
+
   // Return updated route
   return getRoute(tenantId, routeId);
 }
@@ -420,6 +440,14 @@ export async function completeStop(
     entityId: orderId,
     metadata: { routeId, status: result.status, failureReason: result.failureReason },
   });
+
+  // Webhook: delivery event
+  const webhookEvent = result.status === 'delivered' ? 'delivery.completed' : 'delivery.failed';
+  enqueueWebhook(tenantId, webhookEvent, { routeId, orderId, recipientName: order.recipientName, status: result.status, failureReason: result.failureReason ?? null }).catch(() => {});
+  enqueueWebhook(tenantId, result.status === 'delivered' ? 'order.delivered' : 'order.failed', { orderId, recipientName: order.recipientName, status: result.status }).catch(() => {});
+
+  // Customer notification: delivered or failed
+  enqueueCustomerNotification(tenantId, orderId, result.status).catch(() => {});
 
   // Re-read route to get the actual completedStops after the atomic increment
   const [updatedRoute] = await db

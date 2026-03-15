@@ -101,6 +101,14 @@ Every table has a `tenant_id` FK. All queries filter by the authenticated user's
 - **ActivityLog** — Audit trail for all mutations (action, entity, metadata)
 - **LocationHistory** — GPS breadcrumb trail per driver (lat/lng/speed/heading/accuracy)
 
+## Data Model — Phase 3 Additions
+
+- **ProofOfDelivery** — Photo/signature/GPS capture per delivered order (unique per orderId)
+- **NotificationTemplate** — Customer-facing SMS/email templates with trigger-based activation
+- **CustomerNotificationsLog** — Sent customer notification audit trail with provider tracking
+- **WebhookEndpoint** — External HTTPS webhook subscription with event filtering and HMAC signing
+- **WebhookDelivery** — Webhook delivery attempt log with retry tracking
+
 ## API Design
 
 RESTful API at `/api/*` with Swagger docs at `/api/docs`:
@@ -151,6 +159,30 @@ RESTful API at `/api/*` with Swagger docs at `/api/docs`:
 - `PATCH /api/notifications/:id/read` — Mark as read
 - `POST /api/notifications/mark-all-read` — Mark all read
 
+### Driver (Phase 3)
+- `GET /api/driver/current-route` — Active route for logged-in driver
+- `GET /api/driver/upcoming-routes` — Planned routes for driver
+- `PATCH /api/driver/status` — Toggle online/offline/on_break
+
+### Proof of Delivery (Phase 3)
+- `POST /api/pod/upload` — Upload POD files (base64) to MinIO
+- `POST /api/pod/:orderId` — Create POD record (signature, photos, GPS, notes)
+- `GET /api/pod/:orderId` — Retrieve POD data
+
+### Customer Notifications (Phase 3)
+- `CRUD /api/settings/notification-templates` — SMS/email templates (admin+)
+- `POST /api/settings/notification-templates/:id/test` — Send test notification
+- `GET /api/notifications/customer-log` — Sent notification log (dispatcher+)
+
+### AI Auto-Dispatch (Phase 3)
+- `POST /api/dispatch/auto-dispatch` — Claude-powered route assignment (dispatcher+)
+- `POST /api/dispatch/auto-dispatch/confirm` — Confirm draft routes to planned
+
+### Webhooks (Phase 3)
+- `CRUD /api/webhooks` — Webhook endpoint management (admin+)
+- `POST /api/webhooks/:id/test` — Send test webhook
+- `GET /api/webhooks/:id/deliveries` — Delivery history
+
 ### Public (No Auth)
 - `GET /api/public/track/:orderId` — Public shipment tracking
 - `POST /api/ai/chat` — AI chat with fleet context
@@ -173,20 +205,31 @@ Nested under `DashboardLayout` with sidebar navigation:
 /dashboard/routes/new     → RouteBuilderPage (Leaflet map + stop builder)
 /dashboard/routes/:id     → RouteDetailPage (map + stop list + AI optimize)
 /dashboard/analytics      → AnalyticsPage (charts + leaderboard)
-/dashboard/settings       → SettingsPage (org, team, API keys)
+/dashboard/settings       → SettingsPage (org, team, API keys, notifications, webhooks)
+```
+
+### Driver PWA Routes (Phase 3)
+Nested under `DriverLayout` with bottom tab bar (mobile-optimized):
+```
+/driver                   → DriverRoutePage (active route + stop list)
+/driver/stop/:routeId/:orderId → DriverStopDetailPage (POD capture flow)
+/driver/map               → DriverMapPage (full-screen Leaflet map)
+/driver/profile           → DriverProfilePage (status toggle, sign out)
 ```
 
 ## Component Library
 
-30+ shared components in `packages/web/src/components/`:
+45+ shared components in `packages/web/src/components/`:
 
 **Core UI:** Badge, Pill, Bar, KPICard, FormField, SelectField, Modal, DataTable, EmptyState, Toast, LoadingSpinner, ConfirmDialog
 **Layout:** Sidebar, DashboardLayout, AIChatPanel, NotificationCenter, NotificationItem
 **Maps:** RouteMap, AddressSearch, LiveFleetMap, DriverMarker, DeliveryEventFeed
 **Analytics:** TrendChart, DriverLeaderboard, RouteEfficiencyCard
-**Settings:** OrganizationTab, TeamTab, ApiKeysTab
+**Settings:** OrganizationTab, TeamTab, ApiKeysTab, NotificationsTab, NotificationTemplateEditor, CustomerNotificationLog, WebhooksTab, WebhookEndpointForm, WebhookDeliveryLog
 **Public Tracking:** StatusTimeline, TrackingMap
 **Import:** CsvImportWizard
+**Driver PWA:** DriverLayout, BottomTabBar, StopCard, NavigateButton, SignaturePad, PhotoCapture, PODFlow, DeliveryFailureFlow, PODViewer
+**Dispatch:** AutoDispatchPanel, DispatchPreview
 
 ## State Management (Zustand)
 
@@ -199,6 +242,8 @@ Nested under `DashboardLayout` with sidebar navigation:
 - `analytics.ts` — Analytics overview, driver performance, trends, route efficiency
 - `settings.ts` — Org settings, team members, API keys
 - `notifications.ts` — Notifications list, unread count, polling
+- `driver.ts` — Driver PWA state (current route, stops, GPS, POD uploads)
+- `customer-notifications.ts` — Notification templates CRUD and customer log
 
 ## Real-Time Infrastructure
 
@@ -206,6 +251,26 @@ Nested under `DashboardLayout` with sidebar navigation:
 - JWT auth middleware verifies tokens from handshake
 - Tenant room isolation (`tenant:{id}`) for multi-tenant broadcasts
 - Events: `driver:location`, `route:status`, `delivery:event`, `notification:new`
+
+## Background Workers (BullMQ)
+
+5 job queues processed by `packages/worker/`:
+
+| Queue | Concurrency | Purpose |
+|-------|-------------|---------|
+| `route-optimization` | 2 | AI-powered route optimization |
+| `notifications` | 5 | In-app notification persistence |
+| `analytics` | 1 | Aggregate analytics computation |
+| `customer-notifications` | 5 | SMS (Twilio) + email (SendGrid) delivery |
+| `webhook-delivery` | 10 | HMAC-signed webhook POST with exponential backoff (5 retries) |
+
+## Webhook System
+
+- HMAC-SHA256 signed payloads (`X-Homer-Signature` header)
+- 14 event types across orders, routes, deliveries, and drivers
+- Wildcard subscriptions (e.g., `order.*`)
+- Exponential backoff: 30s → 2m → 15m → 1h → 4h (max 5 attempts)
+- Automatic endpoint health tracking (failure count, last success/failure)
 - Frontend singleton client with auto-reconnect and token refresh
 
 ## Rate Limiting
@@ -215,6 +280,7 @@ Nested under `DashboardLayout` with sidebar navigation:
 | Global | 100/min |
 | Auth | 10/min |
 | AI | 5/min |
+| Dispatch | 5/min |
 | Tracking POST | 60/min |
 | Public tracking | 30/min/IP |
 

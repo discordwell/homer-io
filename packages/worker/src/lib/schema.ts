@@ -80,3 +80,64 @@ export const drivers = pgTable('drivers', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Customer notification templates
+export const notificationTemplates = pgTable('notification_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  trigger: varchar('trigger', { length: 50 }).notNull(),
+  channel: varchar('channel', { length: 10 }).notNull(),
+  subject: text('subject'),
+  bodyTemplate: text('body_template').notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Customer notification log
+export const customerNotificationsLog = pgTable('customer_notifications_log', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  orderId: uuid('order_id').notNull(),
+  channel: varchar('channel', { length: 10 }).notNull(),
+  trigger: varchar('trigger', { length: 50 }).notNull(),
+  recipient: varchar('recipient', { length: 255 }).notNull(),
+  subject: text('subject'),
+  body: text('body').notNull(),
+  status: varchar('status', { length: 20 }).default('queued').notNull(),
+  providerId: varchar('provider_id', { length: 255 }),
+  errorMessage: text('error_message'),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Webhook endpoints
+export const webhookEndpoints = pgTable('webhook_endpoints', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  url: text('url').notNull(),
+  events: jsonb('events').default([]).notNull(),
+  secret: varchar('secret', { length: 255 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  description: varchar('description', { length: 255 }),
+  failureCount: integer('failure_count').default(0).notNull(),
+  lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+  lastFailureAt: timestamp('last_failure_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Webhook deliveries
+export const webhookDeliveries = pgTable('webhook_deliveries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  endpointId: uuid('endpoint_id').notNull(),
+  event: varchar('event', { length: 100 }).notNull(),
+  payload: jsonb('payload').default({}).notNull(),
+  status: varchar('status', { length: 20 }).default('pending').notNull(),
+  httpStatus: integer('http_status'),
+  responseBody: text('response_body'),
+  attempts: integer('attempts').default(0).notNull(),
+  nextRetryAt: timestamp('next_retry_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});

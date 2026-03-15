@@ -2,6 +2,17 @@
 
 ## Session Summaries
 
+### 2026-03-14T03:30 UTC — Phase 3 "The Last Mile" Implementation
+- Implemented full Phase 3 using 4 parallel agents (same foundation-first strategy as Phase 2).
+- **Driver PWA (P1)**: Driver API module (current-route, upcoming-routes, status toggle), DriverLayout with BottomTabBar, 4 driver pages (DriverRoute, DriverStopDetail, DriverMap, DriverProfile), driver Zustand store, useGeoLocation hook (10s location posting), PWA manifest. Mobile-first with 44px touch targets.
+- **Proof of Delivery (P2)**: POD API module (upload via base64→MinIO, create/read), SignaturePad (canvas touch drawing), PhotoCapture (camera input, max 4), PODFlow (4-step: photo→signature→notes→confirm), DeliveryFailureFlow, PODViewer modal for dispatchers.
+- **Customer Notifications (P3)**: Notification templates API (CRUD + test), provider abstraction (Twilio SMS via REST, SendGrid email via REST — graceful degradation without keys), customer-notification BullMQ worker, trigger points in route service (driver_en_route on route start, delivered/failed on stop completion), frontend (NotificationsTab, NotificationTemplateEditor with variable picker + preview, CustomerNotificationLog).
+- **AI Auto-Dispatch (P4)**: Dispatch API (auto-dispatch + confirm), Claude prompt with full order/driver/vehicle context, creates draft routes then transitions to planned on confirm. Frontend: AutoDispatchPanel on Routes page, DispatchPreview with accept/reject per route.
+- **Webhooks (P5)**: Webhook API (CRUD + test + delivery log), webhook helper with wildcard matching (order.*), HMAC-SHA256 signed delivery worker with exponential backoff (30s→4h, 5 attempts), 14 event types, trigger points in route service. Frontend: WebhooksTab, WebhookEndpointForm (event multi-select), WebhookDeliveryLog.
+- 5 new DB schemas, 4 new shared Zod schemas, ~20 new frontend components, 2 new stores, 1 new hook, 5 new API modules, 2 new workers, 5 new test files.
+- Settings page now has 5 tabs (Organization, Team, API Keys, Notifications, Webhooks).
+- 187 tests pass (126 API + 61 shared). All 4 packages + demo build clean.
+
 ### 2026-03-14T01:15 UTC — Phase 2 Production-Ready Implementation
 - Implemented full Phase 2 using 4 parallel agents + shared foundation strategy.
 - **Real-time**: Socket.IO server on /fleet namespace with JWT auth, tenant room isolation. Tracking module (POST location, GET drivers, GET route progress). Route state machine (draft→planned→in_progress→completed), delivery completion flow with auto-transition + notifications. Frontend: LiveFleetMap with animated DriverMarkers, DeliveryEventFeed, LiveMap page (primary dispatcher view).
@@ -44,3 +55,10 @@
 - **api client**: Has get/post/put/patch/delete methods. `put` added in Phase 2 for settings.
 - **Route state machine**: draft→planned, planned→in_progress, in_progress→completed, any→cancelled. Validated in transitionRouteStatus().
 - **Notification flow**: createNotification() inserts DB + broadcasts Socket.IO `notification:new` via broadcastToTenant.
+- **Driver routes**: Under /driver with DriverLayout (no sidebar, bottom tabs). Protected by same ProtectedRoute wrapper.
+- **POD upload pattern**: Base64 JSON body (not multipart), stored in MinIO at homer-pod/{tenantId}/{orderId}/.
+- **api.upload()**: Added to api client for FormData uploads (sets no Content-Type, lets browser handle multipart boundary).
+- **Customer notification triggers**: Wired into transitionRouteStatus (driver_en_route for all orders) and completeStop (delivered/failed). Uses .catch(() => {}) to not block main flow.
+- **Webhook triggers**: Same pattern — enqueueWebhook called in transitionRouteStatus and completeStop with .catch(() => {}).
+- **Drizzle enum type casting**: When querying pgEnum columns with string variables, need `as any` cast to satisfy TypeScript.
+- **Worker queues**: Now 5 total: route-optimization(2), notifications(5), analytics(1), customer-notifications(5), webhook-delivery(10).

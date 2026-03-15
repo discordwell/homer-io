@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog.js';
 import { EmptyState } from '../components/EmptyState.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
 import { useToast } from '../components/Toast.js';
+import { AutoDispatchPanel } from '../components/dispatch/AutoDispatchPanel.js';
 import { C, F } from '../theme.js';
 
 const statusColors: Record<string, string> = {
@@ -82,6 +83,11 @@ export function RoutesPage() {
             {s.replace('_', ' ')}
           </Pill>
         ))}
+      </div>
+
+      {/* AI Auto-Dispatch Panel */}
+      <div style={{ marginBottom: 20 }}>
+        <AutoDispatchPanel />
       </div>
 
       {routes.length === 0 ? (

@@ -14,6 +14,11 @@ import { AnalyticsPage } from './pages/Analytics.js';
 import { SettingsPage } from './pages/Settings.js';
 import { PublicTrackingPage } from './pages/PublicTracking.js';
 import { DashboardLayout } from './components/DashboardLayout.js';
+import { DriverLayout } from './components/DriverLayout.js';
+import { DriverRoutePage } from './pages/driver/DriverRoute.js';
+import { DriverStopDetailPage } from './pages/driver/DriverStopDetail.js';
+import { DriverMapPage } from './pages/driver/DriverMap.js';
+import { DriverProfilePage } from './pages/driver/DriverProfile.js';
 import { C, F } from './theme.js';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -47,6 +52,15 @@ export function App() {
           <Route path="live" element={<LiveMapPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+        </Route>
+        {/* Driver PWA routes */}
+        <Route path="/driver" element={
+          <ProtectedRoute><DriverLayout /></ProtectedRoute>
+        }>
+          <Route index element={<DriverRoutePage />} />
+          <Route path="stop/:routeId/:orderId" element={<DriverStopDetailPage />} />
+          <Route path="map" element={<DriverMapPage />} />
+          <Route path="profile" element={<DriverProfilePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

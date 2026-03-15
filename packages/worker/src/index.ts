@@ -3,6 +3,8 @@ import { config } from './lib/config.js';
 import { processOptimization } from './workers/optimization.js';
 import { processNotification } from './workers/notification.js';
 import { processAnalytics } from './workers/analytics.js';
+import { processCustomerNotification } from './workers/customer-notification.js';
+import { processWebhookDelivery } from './workers/webhook-delivery.js';
 
 const connection = { url: config.redis.url };
 
@@ -10,6 +12,8 @@ const connection = { url: config.redis.url };
 export const optimizationQueue = new Queue('route-optimization', { connection });
 export const notificationQueue = new Queue('notifications', { connection });
 export const analyticsQueue = new Queue('analytics', { connection });
+export const customerNotificationQueue = new Queue('customer-notifications', { connection });
+export const webhookDeliveryQueue = new Queue('webhook-delivery', { connection });
 
 // Workers
 const optimizationWorker = new Worker('route-optimization', processOptimization, {
@@ -27,8 +31,18 @@ const analyticsWorker = new Worker('analytics', processAnalytics, {
   concurrency: 1,
 });
 
+const customerNotificationWorker = new Worker('customer-notifications', processCustomerNotification, {
+  connection,
+  concurrency: 5,
+});
+
+const webhookDeliveryWorker = new Worker('webhook-delivery', processWebhookDelivery, {
+  connection,
+  concurrency: 10,
+});
+
 // Event logging
-for (const worker of [optimizationWorker, notificationWorker, analyticsWorker]) {
+for (const worker of [optimizationWorker, notificationWorker, analyticsWorker, customerNotificationWorker, webhookDeliveryWorker]) {
   worker.on('completed', (job) => {
     console.log(`Job ${job.id} in ${worker.name} completed`);
   });
@@ -48,6 +62,8 @@ for (const signal of signals) {
       optimizationWorker.close(),
       notificationWorker.close(),
       analyticsWorker.close(),
+      customerNotificationWorker.close(),
+      webhookDeliveryWorker.close(),
     ]);
     process.exit(0);
   });

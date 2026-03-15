@@ -9,3 +9,8 @@ export * from './notifications.js';
 export * from './settings.js';
 export * from './activity-log.js';
 export * from './location-history.js';
+export * from './proof-of-delivery.js';
+export * from './notification-templates.js';
+export * from './customer-notifications-log.js';
+export * from './webhook-endpoints.js';
+export * from './webhook-deliveries.js';

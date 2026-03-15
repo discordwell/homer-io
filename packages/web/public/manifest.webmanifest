@@ -1,0 +1,14 @@
+{
+  "name": "HOMER.io Driver",
+  "short_name": "HOMER",
+  "description": "Last-mile delivery management",
+  "theme_color": "#03080F",
+  "background_color": "#03080F",
+  "display": "standalone",
+  "start_url": "/driver",
+  "scope": "/",
+  "icons": [
+    { "src": "/homer-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/homer-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

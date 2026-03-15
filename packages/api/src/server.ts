@@ -18,9 +18,14 @@ import { settingsRoutes } from './modules/settings/routes.js';
 import { teamRoutes } from './modules/team/routes.js';
 import { apiKeyRoutes } from './modules/api-keys/routes.js';
 import { notificationRoutes } from './modules/notifications/routes.js';
+import { customerNotificationTemplateRoutes, customerNotificationLogRoutes } from './modules/customer-notifications/routes.js';
+import { driverRoutes } from './modules/driver/routes.js';
+import { podRoutes } from './modules/pod/routes.js';
+import { dispatchRoutes } from './modules/dispatch/routes.js';
 import { initSocketIO } from './lib/ws/index.js';
 import { registerSwagger } from './plugins/swagger.js';
 import { publicRoutes } from './modules/public/routes.js';
+import { webhookRoutes } from './modules/webhooks/routes.js';
 
 const app = Fastify({
   logger: {
@@ -107,6 +112,16 @@ await app.register(async (api) => {
   await api.register(teamRoutes, { prefix: '/team' });
   await api.register(apiKeyRoutes, { prefix: '/api-keys' });
   await api.register(notificationRoutes, { prefix: '/notifications' });
+  await api.register(customerNotificationTemplateRoutes, { prefix: '/settings/notification-templates' });
+  await api.register(customerNotificationLogRoutes, { prefix: '/notifications/customer-log' });
+  await api.register(driverRoutes, { prefix: '/driver' });
+  await api.register(podRoutes, { prefix: '/pod' });
+  // AI-powered auto-dispatch — tighter rate limit (5/min)
+  await api.register(async (dispatchScope) => {
+    await dispatchScope.register(rateLimit, { max: 5, timeWindow: '1 minute' });
+    await dispatchScope.register(dispatchRoutes);
+  }, { prefix: '/dispatch' });
+  await api.register(webhookRoutes, { prefix: '/webhooks' });
 }, { prefix: '/api' });
 
 // Graceful shutdown
