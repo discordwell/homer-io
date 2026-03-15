@@ -49,12 +49,12 @@ export function PrivacyTab() {
 
   async function fetchData() {
     try {
-      const [exportData, deletionData] = await Promise.all([
-        api.get<ExportRequest[]>('/gdpr/exports'),
-        api.get<DeletionRequest[]>('/gdpr/deletion-requests'),
+      const [exportRes, deletionRes] = await Promise.all([
+        api.get<{ items: ExportRequest[] }>('/gdpr/exports'),
+        api.get<{ items: DeletionRequest[] }>('/gdpr/deletion-requests'),
       ]);
-      setExports(exportData);
-      setDeletions(deletionData);
+      setExports(exportRes.items);
+      setDeletions(deletionRes.items);
     } catch {
       // empty state
     } finally {
