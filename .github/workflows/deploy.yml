@@ -36,6 +36,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run -w @homer-io/shared build
       - run: npx turbo build
       - run: npx turbo test
         env:
