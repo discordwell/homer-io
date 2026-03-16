@@ -83,6 +83,7 @@ function useWidth() {
 
 const GlobalCSS = () => (
   <style>{`
+html,body{margin:0;padding:0}
 @keyframes lFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 @keyframes lPulse{0%,100%{opacity:1}50%{opacity:.45}}
 .l-slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:${C.muted};outline:none;cursor:pointer}
