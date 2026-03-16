@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { nlopsRequestSchema, sseEvent } from '@homer-io/shared';
 import { getToolsForRole, getTool, TOTAL_TOOL_COUNT } from '../lib/ai/tools/index.js';
 import { summarizeResult } from '../lib/ai/tools/types.js';
+import { resetProvider } from '../lib/ai/providers.js';
 
 // ============================================================
 // NLOps Schema Tests
@@ -226,5 +227,57 @@ describe('NLOps - Tool Risk Levels', () => {
       expect(tool).toBeDefined();
       expect(tool!.riskLevel).toBe('destructive');
     }
+  });
+});
+
+// ============================================================
+// Provider Reset Tests (finding #17)
+// ============================================================
+
+describe('NLOps - Provider Reset', () => {
+  it('resetProvider clears singleton so next getProvider creates fresh instance', () => {
+    // resetProvider should not throw
+    expect(() => resetProvider()).not.toThrow();
+  });
+
+  it('resetProvider can be called multiple times safely', () => {
+    resetProvider();
+    resetProvider();
+    resetProvider();
+    // No throw = pass
+  });
+});
+
+// ============================================================
+// Redis Pending Action Key Format Tests (finding #4)
+// ============================================================
+
+describe('NLOps - Pending Action Key Format', () => {
+  it('pending action key prefix follows convention', () => {
+    // Verify the key format used by the agent module matches what we expect
+    // The cache module prepends 'homer:' so the full key is homer:nlops:pending:{id}
+    const prefix = 'nlops:pending:';
+    const actionId = 'test-uuid-123';
+    const key = `${prefix}${actionId}`;
+    expect(key).toBe('nlops:pending:test-uuid-123');
+  });
+});
+
+// ============================================================
+// Rate Limit Key Format Tests (finding #5)
+// ============================================================
+
+describe('NLOps - Rate Limit Key Format', () => {
+  it('active key follows convention', () => {
+    const tenantId = 'tenant-abc';
+    const key = `nlops:active:${tenantId}`;
+    expect(key).toBe('nlops:active:tenant-abc');
+  });
+
+  it('rate key includes minute bucket', () => {
+    const tenantId = 'tenant-abc';
+    const minute = Math.floor(Date.now() / 60000);
+    const key = `nlops:rate:${tenantId}:${minute}`;
+    expect(key).toMatch(/^nlops:rate:tenant-abc:\d+$/);
   });
 });

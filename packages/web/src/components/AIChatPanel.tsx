@@ -423,14 +423,23 @@ function ThoughtEntry({ msg }: { msg: NLOpsMessage }) {
   );
 }
 
+// (finding #14) Inject @keyframes once at module level to avoid duplicate <style> tags
+let spinStyleInjected = false;
+function ensureSpinStyle() {
+  if (spinStyleInjected) return;
+  const style = document.createElement('style');
+  style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+  document.head.appendChild(style);
+  spinStyleInjected = true;
+}
+
 function Spinner() {
+  ensureSpinStyle();
   return (
     <span style={{
       display: 'inline-block', width: 10, height: 10,
       border: `2px solid ${C.muted}`, borderTopColor: C.accent,
       borderRadius: '50%', animation: 'spin 0.8s linear infinite',
-    }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </span>
+    }} />
   );
 }

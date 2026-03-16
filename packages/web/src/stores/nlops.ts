@@ -39,6 +39,7 @@ interface NLOpsState {
   loading: boolean;
   isOpen: boolean;
   showThought: boolean; // Full-screen thought overlay toggle
+  abortController: AbortController | null; // (finding #13) cancel in-flight requests
 
   send: (message: string) => Promise<void>;
   confirm: (actionId: string) => Promise<void>;
@@ -58,19 +59,27 @@ export const useNLOpsStore = create<NLOpsState>()((set, get) => ({
   loading: false,
   isOpen: false,
   showThought: false,
+  abortController: null,
 
   send: async (message: string) => {
+    // (finding #13) Abort any in-flight request before starting a new one
+    get().abortController?.abort();
+    const controller = new AbortController();
     const userMsg: NLOpsMessage = { id: nextId(), role: 'user', content: message, timestamp: Date.now() };
     set((s) => ({
       messages: [...s.messages, userMsg],
       loading: true,
+      abortController: controller,
     }));
 
-    await streamOps(get, set, { message, history: get().history });
+    await streamOps(get, set, { message, history: get().history }, controller.signal);
   },
 
   confirm: async (actionId: string) => {
-    set({ loading: true });
+    // (finding #13) Abort any in-flight request before confirming
+    get().abortController?.abort();
+    const controller = new AbortController();
+    set({ loading: true, abortController: controller });
     // Remove confirmation message and add a "confirming..." indicator
     set((s) => ({
       messages: s.messages.map((m) =>
@@ -79,7 +88,7 @@ export const useNLOpsStore = create<NLOpsState>()((set, get) => ({
           : m,
       ),
     }));
-    await streamOps(get, set, { message: '', history: get().history, confirm: { actionId } });
+    await streamOps(get, set, { message: '', history: get().history, confirm: { actionId } }, controller.signal);
   },
 
   deny: (actionId: string) => {
@@ -95,7 +104,10 @@ export const useNLOpsStore = create<NLOpsState>()((set, get) => ({
   toggle: () => set((s) => ({ isOpen: !s.isOpen })),
   setOpen: (open: boolean) => set({ isOpen: open }),
   toggleThought: () => set((s) => ({ showThought: !s.showThought })),
-  clear: () => set({ messages: [], history: [] }),
+  clear: () => {
+    get().abortController?.abort();
+    set({ messages: [], history: [], abortController: null });
+  },
 }));
 
 // --- SSE streaming logic ---
@@ -104,6 +116,7 @@ async function streamOps(
   get: () => NLOpsState,
   set: (partial: Partial<NLOpsState> | ((s: NLOpsState) => Partial<NLOpsState>)) => void,
   body: { message: string; history: Array<{ role: 'user' | 'assistant'; content: string }>; confirm?: { actionId: string } },
+  signal?: AbortSignal,
 ) {
   const { accessToken } = useAuthStore.getState();
 
@@ -126,6 +139,7 @@ async function streamOps(
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       },
       body: JSON.stringify(body),
+      signal,
     });
 
     if (!res.ok || !res.body) {
@@ -147,10 +161,9 @@ async function streamOps(
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
 
-      let eventType = '';
       for (const line of lines) {
         if (line.startsWith('event: ')) {
-          eventType = line.slice(7).trim();
+          // Event type is parsed from the JSON payload's `type` field (finding #15)
         } else if (line.startsWith('data: ')) {
           try {
             const event = JSON.parse(line.slice(6)) as SSEEvent;
@@ -174,9 +187,14 @@ async function streamOps(
       }));
     }
   } catch (err) {
-    updateAssistant(set, assistantMsgId, {
-      content: `Connection error: ${err instanceof Error ? err.message : 'Unknown'}`,
-    });
+    // (finding #13) Silently swallow AbortError — not a real error
+    if (err instanceof Error && err.name === 'AbortError') {
+      // Request was intentionally cancelled
+    } else {
+      updateAssistant(set, assistantMsgId, {
+        content: `Connection error: ${err instanceof Error ? err.message : 'Unknown'}`,
+      });
+    }
   }
 
   set({ loading: false });

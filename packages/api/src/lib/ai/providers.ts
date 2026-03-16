@@ -228,6 +228,11 @@ export function getProvider(): AIProvider {
   return cachedProvider;
 }
 
+/** Reset the cached provider singleton — for test setup (finding #17) */
+export function resetProvider(): void {
+  cachedProvider = null;
+}
+
 // Convert NLOpsTool[] to ProviderToolDef[]
 export function toProviderTools(tools: NLOpsTool[]): ProviderToolDef[] {
   return tools.map((t) => ({

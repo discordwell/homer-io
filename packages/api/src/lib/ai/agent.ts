@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { config } from '../../config.js';
+import { cacheGet, cacheSet, cacheDelete } from '../cache.js';
 import { getProvider, toProviderTools, type ProviderMessage, type ProviderContentBlock } from './providers.js';
 import { getToolsForRole, getTool, summarizeResult, type ToolContext } from './tools/index.js';
 import type { SSEEvent } from '@homer-io/shared';
@@ -34,14 +35,20 @@ export interface PendingAction {
   assistantContent: ProviderContentBlock[];
 }
 
-// In-memory store for pending confirmations (keyed by actionId)
-// TODO: Move to Redis for multi-instance deployments (finding #4)
-const pendingActions = new Map<string, PendingAction>();
+// Redis-backed pending confirmations (finding #4 / #10)
+const PENDING_KEY_PREFIX = 'nlops:pending:';
+const PENDING_TTL = 300; // 5 minutes
 
-// Auto-expire pending actions after 5 minutes
-function storePendingAction(action: PendingAction) {
-  pendingActions.set(action.actionId, action);
-  setTimeout(() => pendingActions.delete(action.actionId), 5 * 60 * 1000);
+async function storePendingAction(action: PendingAction): Promise<void> {
+  await cacheSet(`${PENDING_KEY_PREFIX}${action.actionId}`, action, PENDING_TTL);
+}
+
+async function getPendingAction(actionId: string): Promise<PendingAction | null> {
+  return cacheGet<PendingAction>(`${PENDING_KEY_PREFIX}${actionId}`);
+}
+
+async function deletePendingAction(actionId: string): Promise<void> {
+  await cacheDelete(`${PENDING_KEY_PREFIX}${actionId}`);
 }
 
 function buildSystemPrompt(params: AgentParams): string {
@@ -90,7 +97,7 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
 
   // --- Handle confirmation resume ---
   if (params.confirm) {
-    const pending = pendingActions.get(params.confirm.actionId);
+    const pending = await getPendingAction(params.confirm.actionId);
     if (!pending) {
       yield { type: 'error', message: 'Confirmation expired or not found. Please try the action again.' };
       yield { type: 'done' };
@@ -104,7 +111,7 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
       return;
     }
 
-    pendingActions.delete(pending.actionId);
+    await deletePendingAction(pending.actionId);
 
     // Execute the confirmed tool
     const tool = getTool(pending.toolName);
@@ -289,7 +296,7 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
         }
 
         // (finding #1) Store tenant and user with pending action
-        storePendingAction({
+        await storePendingAction({
           actionId,
           tenantId: params.tenantId,
           userId: params.userId,

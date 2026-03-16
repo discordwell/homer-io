@@ -2,6 +2,25 @@
 
 ## Session Summaries
 
+### 2026-03-16T11:25 UTC — NLOps Deferred Fixes (8 of 8)
+- Implemented all 8 deferred code review fixes from the NLOps review in a single pass.
+- **H4/M10 — Redis pending actions**: Replaced in-memory `Map<string, PendingAction>` with Redis-backed `cacheGet`/`cacheSet`/`cacheDelete`. Key: `nlops:pending:{actionId}`, TTL 300s. Removes `setTimeout` cleanup and per-process heap pressure.
+- **H5 — Per-tenant rate limiting**: Redis-backed concurrency (max 3) + rate (max 20/min) guard in `/api/ai/ops`. Keys: `nlops:active:{tenantId}` (120s TTL), `nlops:rate:{tenantId}:{minute}` (60s TTL). Returns 429 with clear message.
+- **M13 — Frontend AbortController**: Added `abortController` field to NLOps store. `send()`/`confirm()` abort previous before creating new. Signal passed to `fetch()`. AbortError silently swallowed. `clear()` also aborts.
+- **M14 — Spinner dedup**: Moved `@keyframes spin` from inline `<style>` in Spinner to module-level injection with boolean guard. No duplicate `<style>` tags.
+- **L15 — Dead eventType**: Removed unused `eventType` variable from SSE parsing (type read from JSON payload).
+- **L17 — resetProvider()**: Added one-line `resetProvider()` export to providers.ts for test setup.
+- **L18 — Pagination awareness**: Added `showing` count alongside `total` in `getOperationalSummary` routes and pendingOrders return.
+- **Tests**: 5 new tests (resetProvider, key format conventions). 380 total pass (36 files). Build clean.
+
+### 2026-03-16T10:15 UTC — Phase 6 Wet Tests + Deploy Fixes
+- **Deploy fixes**: PM2 ecosystem config was overriding PORT=3000 while .env said PORT=3030 and Caddy proxies to 3030. Fixed to fork mode + `--env-file`. Worker location_history schema had non-existent `created_at` column (table uses `timestamp`). Data-retention worker used generic `.createdAt` on location_history. Fixed both.
+- **Learning Pipeline E2E (PASS)**: Created 4 deliveries to same building (100 Broadway, Denver) across Fl 5, Apt 12, Suite 3, Unit 8. All mapped to single address hash — building-level grouping works. Running stats: 4 total, 2 success, 2 failed, 50% failure rate. Failure reasons tracked per-address. Auto-classification: "Nobody home" → not_home, "Gate locked" → access_denied.
+- **Intelligence API (PASS)**: `/insights` returns correct aggregate stats. `/address/:hash` validates hash format (400 on invalid), returns 404 for unknown. `/risk/:routeId` returns risk score 45 (high_failure_rate +30, previous_failure +15).
+- **UI Wet Test (PASS)**: Login → Dashboard (7 orders, 50% rate) → Orders (statuses correct) → Routes (progress bars, auto-dispatch). Copilot chat opened but no response (no ANTHROPIC_API_KEY in server .env — expected).
+- **Hard Wet Tests (ALL PASS)**: SQL injection in hash → 400 blocked. Double-complete stop → 422 idempotent. Risk for fake route → empty array. Tenant isolation → only own data. XSS in address → stored raw, React escapes on render.
+- GIF: homer-phase6-wet-test.gif (20 frames)
+
 ### 2026-03-16T10:30 UTC — Phase 6: The Dispatcher Brain (Learning Layer + Intelligence)
 - Implemented Phases 6A, 6C, 6D of the "Dispatcher Brain" pivot — the system that learns from every delivery.
 - **Phase 6A — Learning Layer Foundation**:

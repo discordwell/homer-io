@@ -45,9 +45,9 @@ export const getOperationalSummary: NLOpsTool = {
     return {
       today: new Date().toISOString().slice(0, 10),
       stats,
-      routes: { total: todayRoutes.total, byStatus: routesByStatus },
+      routes: { total: todayRoutes.total, showing: todayRoutes.items.length, byStatus: routesByStatus },
       drivers: driversByStatus,
-      pendingOrders: { total: pendingOrders.total, urgentCount: urgentOrders.length },
+      pendingOrders: { total: pendingOrders.total, showing: pendingOrders.items.length, urgentCount: urgentOrders.length },
     };
   },
 };

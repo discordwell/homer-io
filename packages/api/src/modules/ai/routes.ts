@@ -4,6 +4,44 @@ import { authenticate } from '../../plugins/auth.js';
 import { handleAiChat } from './service.js';
 import { runAgentLoop } from '../../lib/ai/agent.js';
 import { recordMeteredUsage } from '../billing/service.js';
+import { cacheGet, cacheSet, cacheDelete } from '../../lib/cache.js';
+
+// Per-tenant NLOps rate limiting (finding #5)
+const NLOPS_MAX_CONCURRENT = 3;
+const NLOPS_MAX_PER_MINUTE = 20;
+
+async function checkTenantRateLimit(tenantId: string): Promise<{ allowed: boolean; reason?: string }> {
+  // Concurrency check: max simultaneous requests per tenant
+  const activeKey = `nlops:active:${tenantId}`;
+  const active = await cacheGet<number>(activeKey);
+  if (active !== null && active >= NLOPS_MAX_CONCURRENT) {
+    return { allowed: false, reason: `Too many concurrent requests (max ${NLOPS_MAX_CONCURRENT}). Please wait for current operations to finish.` };
+  }
+
+  // Rate check: max requests per minute per tenant
+  const minute = Math.floor(Date.now() / 60000);
+  const rateKey = `nlops:rate:${tenantId}:${minute}`;
+  const count = await cacheGet<number>(rateKey);
+  if (count !== null && count >= NLOPS_MAX_PER_MINUTE) {
+    return { allowed: false, reason: `Rate limit exceeded (max ${NLOPS_MAX_PER_MINUTE}/minute). Please slow down.` };
+  }
+
+  // Increment counters
+  await cacheSet(activeKey, (active ?? 0) + 1, 120); // 2-min safety TTL
+  await cacheSet(rateKey, (count ?? 0) + 1, 60);
+
+  return { allowed: true };
+}
+
+async function releaseTenantConcurrency(tenantId: string): Promise<void> {
+  const activeKey = `nlops:active:${tenantId}`;
+  const active = await cacheGet<number>(activeKey);
+  if (active !== null && active > 1) {
+    await cacheSet(activeKey, active - 1, 120);
+  } else {
+    await cacheDelete(activeKey);
+  }
+}
 
 export async function aiRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
@@ -19,10 +57,24 @@ export async function aiRoutes(app: FastifyInstance) {
   app.post('/ops', async (request, reply) => {
     const { message, history, confirm } = nlopsRequestSchema.parse(request.body);
 
+    // Per-tenant rate limiting (finding #5)
+    const rateCheck = await checkTenantRateLimit(request.user.tenantId);
+    if (!rateCheck.allowed) {
+      reply.status(429).header('Content-Type', 'text/event-stream');
+      reply.header('Cache-Control', 'no-cache');
+      reply.header('Connection', 'keep-alive');
+      const raw = reply.raw;
+      raw.write(`event: error\ndata: ${JSON.stringify({ type: 'error', message: rateCheck.reason })}\n\n`);
+      raw.write(`event: done\ndata: ${JSON.stringify({ type: 'done' })}\n\n`);
+      raw.end();
+      return reply;
+    }
+
     // Meter per-interaction (not per-tool-call) — skip for confirmations (already metered)
     if (!confirm) {
       const meter = await recordMeteredUsage(request.user.tenantId, 'aiChatMessages');
       if (!meter.allowed) {
+        await releaseTenantConcurrency(request.user.tenantId);
         reply.header('Content-Type', 'text/event-stream');
         reply.header('Cache-Control', 'no-cache');
         reply.header('Connection', 'keep-alive');
@@ -84,6 +136,7 @@ export async function aiRoutes(app: FastifyInstance) {
       }
     }
 
+    await releaseTenantConcurrency(request.user.tenantId);
     raw.end();
     return reply;
   });
