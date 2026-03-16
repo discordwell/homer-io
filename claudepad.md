@@ -2,6 +2,38 @@
 
 ## Session Summaries
 
+### 2026-03-16T10:30 UTC — Phase 6: The Dispatcher Brain (Learning Layer + Intelligence)
+- Implemented Phases 6A, 6C, 6D of the "Dispatcher Brain" pivot — the system that learns from every delivery.
+- **Phase 6A — Learning Layer Foundation**:
+  - New `address_intelligence` table: per-address brain memory with running stats (avg service time, success/failure rates), hourly delivery patterns, LLM-extracted access instructions/parking notes/customer preferences, common failure reasons.
+  - New `delivery_metrics` table: per-delivery actual vs estimated (arrival times, service time, distance, ETA error), linked to address intelligence.
+  - New `failure_category` enum + column on orders table (not_home, wrong_address, access_denied, refused, damaged, business_closed, weather, vehicle_issue, other).
+  - `packages/api/src/lib/address.ts`: Address normalization (building-level grouping, strips apt/suite/unit) + SHA-256 hashing.
+  - `packages/worker/src/workers/delivery-learning.ts`: BullMQ worker (concurrency: 3). On every completed stop: records delivery metrics from GPS breadcrumbs, upserts address intelligence running averages, keyword-based failure classification, async LLM POD note extraction (Claude Haiku for access instructions, parking, preferences).
+  - Trigger: `enqueueDeliveryLearning()` wired into `completeStop()` as fire-and-forget (same pattern as webhooks/notifications).
+  - SQL migration: `drizzle/0001_add_learning_layer.sql` (idempotent with IF NOT EXISTS).
+- **Phase 6C — Intelligence Integration**:
+  - `lib/intelligence/risk-scorer.ts`: Scores deliveries 0-100 based on address failure rate (+30), bad delivery hour (+20), driver failed here (+15), tight time window (+10), no history (+5).
+  - `modules/intelligence/`: 3 API endpoints: `GET /api/intelligence/address/:hash`, `GET /api/intelligence/risk/:routeId`, `GET /api/intelligence/insights` (dashboard: top failure addresses, learning stats, 7-day metrics).
+- **Phase 6D — Copilot Upgrade**:
+  - 3 new NLOps query tools: `get_address_intelligence`, `get_intelligence_insights`, `get_route_risk`. Tool count: 19→22.
+  - Fixed pre-existing nlops test failure (empty message with confirm field).
+- **Files**: 8 new, 9 modified. Worker queues: 11→12. 374 tests pass (44 new). Zero TypeScript errors (excluding pre-existing providers.ts OpenAI type).
+
+### 2026-03-16T08:00 UTC — NLOps: Natural Language Operations
+- Implemented full NLOps feature: conversational fleet operations via agentic AI loop with tool calling.
+- **Architecture**: User message → SSE stream → agent loop (Claude Opus 4.6 / GPT-5.4) → tool_use cycling → confirmation pause for mutations → execute on confirm.
+- **Provider abstraction**: `lib/ai/providers.ts` — unified interface for Anthropic and OpenAI. Model configurable via env vars (NLOPS_PROVIDER, NLOPS_ANTHROPIC_MODEL, NLOPS_OPENAI_MODEL).
+- **Tool registry**: 19 tools (9 query, 10 mutation). All tools call existing service layer directly. Zod-schema input validation. RBAC filtering by user role.
+- **Risk tiers**: read (instant), mutate (inline confirm), destructive (full preview + confirm). All mutation tools have preview() functions.
+- **Agent loop**: `lib/ai/agent.ts` — AsyncGenerator yielding SSE events. Max 10 iterations. In-memory pending action store for confirmation resume (5min expiry).
+- **SSE endpoint**: POST /api/ai/ops. Events: thinking, tool_start, tool_result, message, confirmation, action_result, error, done. Metered per-interaction (not per-tool-call).
+- **Frontend**: Replaced AIChatPanel with NLOps-aware panel. Structured messages (tool indicators, confirmation cards, action results). Toggleable full-screen ThoughtOverlay showing agent reasoning + tool chain. Zustand store consuming SSE via ReadableStream.
+- **New files**: shared/schemas/nlops.ts, api/lib/ai/{providers.ts, agent.ts, tools/{types.ts, index.ts, query.ts, mutations.ts}}, web/stores/nlops.ts.
+- **Modified**: config.ts (OpenAI config, nlops config), ai/routes.ts (SSE endpoint), AIChatPanel.tsx (complete rewrite), shared/index.ts, ARCHITECTURE.md.
+- **Tests**: 91 new NLOps tests (schemas, tool registry, RBAC, risk levels, result summarizer). 364 total pass.
+- **Deps**: openai SDK added to api package.
+
 ### 2026-03-16T06:00 UTC — Route Optimization: Replace Claude with OSRM + VRP Solver + Google Routes
 - Replaced Claude-based route optimization, auto-dispatch, and ETA calculation with proper algorithmic routing.
 - **New routing stack**: OSRM (self-hosted, Docker) for distance/duration matrices, TypeScript VRP solver (nearest-neighbor + 2-opt for TSP, Clarke-Wright savings for CVRPTW), Google Routes API for traffic-aware customer-facing ETAs.
@@ -150,3 +182,8 @@
 - **Dispatch board**: Kanban with HTML5 DnD. Unassigned column + per-driver columns. Drop triggers batch assign API.
 - **Messages**: Cursor-based pagination (createdAt cursor). Socket.IO broadcast on message:new. Sidebar badge polls unread count.
 - **Stripe webhook**: Registered at root level (outside /api prefix) with raw body parser for HMAC verification.
+- **Worker queues**: Now 12 total (added delivery-learning with concurrency 3).
+- **Address normalization**: Building-level grouping strips apt/suite/unit/floor/# designators. SHA-256 hash of `building|city|state|zip|country` for dedup.
+- **Learning trigger pattern**: Same fire-and-forget `.catch()` as webhooks/notifications in completeStop(). Worker duplicates address normalization + haversine to avoid cross-package imports.
+- **Drizzle migration**: drizzle-kit generate fails with ESM .js imports (CJS resolution error). Workaround: hand-written SQL in drizzle/ with manual journal entries. Push via `drizzle-kit push --force` on deploy.
+- **NLOps tool count**: 22 tools (12 query, 10 mutation). Intelligence tools added in Phase 6D.

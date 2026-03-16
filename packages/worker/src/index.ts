@@ -12,6 +12,7 @@ import { processReportGeneration } from './workers/report-generation.js';
 import { processRouteTemplate } from './workers/route-template.js';
 import { processDataExport } from './workers/data-export.js';
 import { processDataRetention } from './workers/data-retention.js';
+import { processDeliveryLearning } from './workers/delivery-learning.js';
 
 const connection = { url: config.redis.url };
 
@@ -27,6 +28,7 @@ export const reportGenerationQueue = new Queue('report-generation', { connection
 export const routeTemplateQueue = new Queue('route-template', { connection });
 export const dataExportQueue = new Queue('data-export', { connection });
 export const dataRetentionQueue = new Queue('data-retention', { connection });
+export const deliveryLearningQueue = new Queue('delivery-learning', { connection });
 
 // Workers
 const optimizationWorker = new Worker('route-optimization', processOptimization, {
@@ -72,6 +74,7 @@ const reportGenerationWorker = new Worker('report-generation', processReportGene
 const routeTemplateWorker = new Worker('route-template', processRouteTemplate, { connection, concurrency: 1 });
 const dataExportWorker = new Worker('data-export', processDataExport, { connection, concurrency: 1 });
 const dataRetentionWorker = new Worker('data-retention', processDataRetention, { connection, concurrency: 1 });
+const deliveryLearningWorker = new Worker('delivery-learning', processDeliveryLearning, { connection, concurrency: 3 });
 
 // Event logging
 const allWorkers = [
@@ -79,6 +82,7 @@ const allWorkers = [
   customerNotificationWorker, webhookDeliveryWorker,
   billingUsageWorker, integrationSyncWorker, reportGenerationWorker,
   routeTemplateWorker, dataExportWorker, dataRetentionWorker,
+  deliveryLearningWorker,
 ];
 
 for (const worker of allWorkers) {
@@ -97,7 +101,7 @@ await reportGenerationQueue.upsertJobScheduler('report-generation-daily', { patt
 await routeTemplateQueue.upsertJobScheduler('route-template-periodic', { every: 300000 }, { name: 'route-template-cron' });
 await dataRetentionQueue.upsertJobScheduler('data-retention-daily', { pattern: '0 3 * * *' }, { name: 'data-retention-cron' });
 
-logger.info('HOMER.io Worker started', { queues: 11 });
+logger.info('HOMER.io Worker started', { queues: 12 });
 
 // Graceful shutdown
 const signals = ['SIGINT', 'SIGTERM'] as const;

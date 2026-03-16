@@ -1,0 +1,9 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {},
+  "enums": {},
+  "schemas": {},
+  "id": "0001_add_learning_layer",
+  "prevId": "0000000000000"
+}

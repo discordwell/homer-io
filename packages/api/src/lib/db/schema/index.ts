@@ -24,3 +24,5 @@ export * from './password-reset-tokens.js';
 export * from './route-templates.js';
 export * from './messages.js';
 export * from './data-requests.js';
+export * from './address-intelligence.js';
+export * from './delivery-metrics.js';
