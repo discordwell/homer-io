@@ -40,6 +40,40 @@ export async function cacheDelete(key: string): Promise<void> {
   }
 }
 
+/** Atomic increment. Returns the new value. Sets TTL on first creation. */
+export async function cacheIncr(key: string, ttlSeconds: number): Promise<number> {
+  try {
+    const r = getRedis();
+    const fullKey = `${KEY_PREFIX}${key}`;
+    const val = await r.incr(fullKey);
+    if (val === 1) {
+      // First increment — set TTL
+      await r.expire(fullKey, ttlSeconds);
+    }
+    return val;
+  } catch (err) {
+    console.error(`[cache] INCR error for key "${key}":`, err);
+    return 0;
+  }
+}
+
+/** Atomic decrement. Returns the new value. Deletes key if result <= 0. */
+export async function cacheDecr(key: string): Promise<number> {
+  try {
+    const r = getRedis();
+    const fullKey = `${KEY_PREFIX}${key}`;
+    const val = await r.decr(fullKey);
+    if (val <= 0) {
+      await r.del(fullKey);
+      return 0;
+    }
+    return val;
+  } catch (err) {
+    console.error(`[cache] DECR error for key "${key}":`, err);
+    return 0;
+  }
+}
+
 export async function cacheDeletePattern(pattern: string): Promise<void> {
   try {
     const r = getRedis();

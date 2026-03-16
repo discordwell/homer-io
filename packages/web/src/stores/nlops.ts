@@ -145,7 +145,7 @@ async function streamOps(
     if (!res.ok || !res.body) {
       const err = await res.text().catch(() => 'Request failed');
       updateAssistant(set, assistantMsgId, { content: `Error: ${err}` });
-      set({ loading: false });
+      if (!signal?.aborted) set({ loading: false });
       return;
     }
 
@@ -189,15 +189,15 @@ async function streamOps(
   } catch (err) {
     // (finding #13) Silently swallow AbortError — not a real error
     if (err instanceof Error && err.name === 'AbortError') {
-      // Request was intentionally cancelled
-    } else {
-      updateAssistant(set, assistantMsgId, {
-        content: `Connection error: ${err instanceof Error ? err.message : 'Unknown'}`,
-      });
+      return; // Don't touch loading state — new request owns it now
     }
+    updateAssistant(set, assistantMsgId, {
+      content: `Connection error: ${err instanceof Error ? err.message : 'Unknown'}`,
+    });
   }
 
-  set({ loading: false });
+  // Only clear loading if this request wasn't superseded by a newer one
+  if (!signal?.aborted) set({ loading: false });
 }
 
 function handleSSEEvent(

@@ -4,43 +4,35 @@ import { authenticate } from '../../plugins/auth.js';
 import { handleAiChat } from './service.js';
 import { runAgentLoop } from '../../lib/ai/agent.js';
 import { recordMeteredUsage } from '../billing/service.js';
-import { cacheGet, cacheSet, cacheDelete } from '../../lib/cache.js';
+import { cacheIncr, cacheDecr } from '../../lib/cache.js';
 
 // Per-tenant NLOps rate limiting (finding #5)
 const NLOPS_MAX_CONCURRENT = 3;
 const NLOPS_MAX_PER_MINUTE = 20;
 
 async function checkTenantRateLimit(tenantId: string): Promise<{ allowed: boolean; reason?: string }> {
-  // Concurrency check: max simultaneous requests per tenant
+  // Atomic concurrency check: INCR first, then check limit
   const activeKey = `nlops:active:${tenantId}`;
-  const active = await cacheGet<number>(activeKey);
-  if (active !== null && active >= NLOPS_MAX_CONCURRENT) {
+  const active = await cacheIncr(activeKey, 120); // 2-min safety TTL
+  if (active > NLOPS_MAX_CONCURRENT) {
+    await cacheDecr(activeKey); // Roll back
     return { allowed: false, reason: `Too many concurrent requests (max ${NLOPS_MAX_CONCURRENT}). Please wait for current operations to finish.` };
   }
 
-  // Rate check: max requests per minute per tenant
+  // Atomic rate check: INCR first, then check limit
   const minute = Math.floor(Date.now() / 60000);
   const rateKey = `nlops:rate:${tenantId}:${minute}`;
-  const count = await cacheGet<number>(rateKey);
-  if (count !== null && count >= NLOPS_MAX_PER_MINUTE) {
+  const count = await cacheIncr(rateKey, 60);
+  if (count > NLOPS_MAX_PER_MINUTE) {
+    await cacheDecr(activeKey); // Roll back concurrency
     return { allowed: false, reason: `Rate limit exceeded (max ${NLOPS_MAX_PER_MINUTE}/minute). Please slow down.` };
   }
-
-  // Increment counters
-  await cacheSet(activeKey, (active ?? 0) + 1, 120); // 2-min safety TTL
-  await cacheSet(rateKey, (count ?? 0) + 1, 60);
 
   return { allowed: true };
 }
 
 async function releaseTenantConcurrency(tenantId: string): Promise<void> {
-  const activeKey = `nlops:active:${tenantId}`;
-  const active = await cacheGet<number>(activeKey);
-  if (active !== null && active > 1) {
-    await cacheSet(activeKey, active - 1, 120);
-  } else {
-    await cacheDelete(activeKey);
-  }
+  await cacheDecr(`nlops:active:${tenantId}`);
 }
 
 export async function aiRoutes(app: FastifyInstance) {
@@ -60,14 +52,8 @@ export async function aiRoutes(app: FastifyInstance) {
     // Per-tenant rate limiting (finding #5)
     const rateCheck = await checkTenantRateLimit(request.user.tenantId);
     if (!rateCheck.allowed) {
-      reply.status(429).header('Content-Type', 'text/event-stream');
-      reply.header('Cache-Control', 'no-cache');
-      reply.header('Connection', 'keep-alive');
-      const raw = reply.raw;
-      raw.write(`event: error\ndata: ${JSON.stringify({ type: 'error', message: rateCheck.reason })}\n\n`);
-      raw.write(`event: done\ndata: ${JSON.stringify({ type: 'done' })}\n\n`);
-      raw.end();
-      return reply;
+      reply.status(429);
+      return { error: rateCheck.reason };
     }
 
     // Meter per-interaction (not per-tool-call) — skip for confirmations (already metered)
