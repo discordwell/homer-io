@@ -77,7 +77,7 @@ export async function processOptimization(job: Job<OptimizationJobData>) {
     matrix = osrmResult.durations;
     usedOsrm = true;
   } catch (err) {
-    log.warn('OSRM unavailable, using haversine fallback', { routeId, error: (err as Error).message });
+    log.error('ROUTING FALLBACK: OSRM unreachable, using haversine — route quality degraded', { routeId, error: (err as Error).message });
     matrix = buildHaversineMatrix(coords);
   }
 

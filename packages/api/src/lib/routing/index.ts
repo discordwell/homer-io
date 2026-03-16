@@ -10,6 +10,23 @@ import type { CVRPTWInput, CVRPTWResult, VehicleCapacity, OrderDemand, TimeWindo
 import { computeRouteETAs } from './google-routes.js';
 import { haversineDistance, estimateEtaMinutes } from '../geo.js';
 import { dwellTimesMinutes } from '@homer-io/shared';
+import { cacheGet, cacheSet } from '../cache.js';
+
+// ---- Fallback tracking ----
+// Every haversine fallback gets a loud log and a Redis counter so degradation is never silent.
+
+const FALLBACK_COUNTER_KEY = 'routing:haversine_fallbacks';
+const FALLBACK_COUNTER_TTL = 86400; // 24h rolling window
+
+async function trackFallback(context: string, error?: unknown) {
+  const msg = error instanceof Error ? error.message : String(error ?? 'unknown');
+  console.error(`[ROUTING FALLBACK] ${context} — OSRM unreachable, using haversine. Error: ${msg}`);
+  try {
+    // Increment Redis counter for monitoring/alerting
+    const count = await cacheGet<number>(FALLBACK_COUNTER_KEY) ?? 0;
+    await cacheSet(FALLBACK_COUNTER_KEY, count + 1, FALLBACK_COUNTER_TTL);
+  } catch { /* Redis failure shouldn't block the fallback */ }
+}
 
 // ---- Types ----
 
@@ -131,8 +148,8 @@ export async function optimizeRouteStops(
     const osrmResult = await getDistanceMatrix(coords);
     matrix = osrmResult.durations;
     usedOsrm = true;
-  } catch {
-    // Fallback: build haversine-based duration matrix (seconds)
+  } catch (err) {
+    await trackFallback('optimizeRouteStops', err);
     matrix = buildHaversineMatrix(coords);
   }
 
@@ -222,7 +239,8 @@ export async function dispatchOrders(
     const osrmResult = await getDistanceMatrix(coords);
     matrix = osrmResult.durations;
     usedOsrm = true;
-  } catch {
+  } catch (err) {
+    await trackFallback('dispatchOrders', err);
     matrix = buildHaversineMatrix(coords);
   }
 
@@ -305,8 +323,8 @@ export async function getTrafficAwareETAs(
     }
 
     return buildEtaResult(routeId, stops, legs, dwell, now, 'osrm');
-  } catch {
-    // Fall through to haversine
+  } catch (err) {
+    await trackFallback('getTrafficAwareETAs/osrm', err);
   }
 
   // Haversine fallback
@@ -358,8 +376,8 @@ export async function getOsrmETAs(
     }
 
     return buildEtaResult(routeId, stops, legs, dwell, now, 'osrm');
-  } catch {
-    // Haversine fallback
+  } catch (err) {
+    await trackFallback('getOsrmETAs', err);
     const legs = [];
     let prevLat = origin[0];
     let prevLng = origin[1];

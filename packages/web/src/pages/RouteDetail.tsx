@@ -8,6 +8,7 @@ import { KPICard } from '../components/KPICard.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
 import { MessagePanel } from '../components/MessagePanel.js';
 import { useToast } from '../components/Toast.js';
+import { DegradedRoutingBanner } from '../components/DegradedRoutingBanner.js';
 import { C, F } from '../theme.js';
 
 const statusColors: Record<string, string> = {
@@ -95,10 +96,15 @@ export function RouteDetailPage() {
           </button>
           <button onClick={handleOptimize} disabled={optimizing || (route.orders?.length || 0) < 2}
             style={primaryBtnStyle}>
-            {optimizing ? 'Optimizing...' : 'AI Optimize'}
+            {optimizing ? 'Optimizing...' : 'Optimize Route'}
           </button>
         </div>
       </div>
+
+      {/* Degraded routing warning */}
+      {route.optimizationNotes?.includes('approximate') && (
+        <DegradedRoutingBanner context="optimization" />
+      )}
 
       {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>

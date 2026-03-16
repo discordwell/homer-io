@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DegradedRoutingBanner } from '../DegradedRoutingBanner.js';
 import { C, F } from '../../theme.js';
 import { api } from '../../api/client.js';
 
@@ -107,8 +108,12 @@ export function DispatchPreview({
     );
   }
 
+  const isDegraded = routes.some(r => r.reasoning?.includes('approximate'));
+
   return (
     <div style={containerStyle}>
+      {isDegraded && <DegradedRoutingBanner context="dispatch" />}
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>

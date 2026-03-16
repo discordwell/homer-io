@@ -57,6 +57,7 @@ export async function calculateRouteETAs(
     stops: result.stops,
     totalEtaMinutes: result.totalEtaMinutes,
     calculatedAt: result.calculatedAt,
+    source: result.source,
   };
 }
 
@@ -104,6 +105,7 @@ export async function recalculateFromDriverPosition(
     stops: result.stops,
     totalEtaMinutes: result.totalEtaMinutes,
     calculatedAt: result.calculatedAt,
+    source: result.source,
   };
 }
 

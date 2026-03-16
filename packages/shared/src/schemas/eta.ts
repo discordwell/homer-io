@@ -18,6 +18,9 @@ export const dwellTimesMinutes = {
   truck: 5,
 } as const;
 
+export const etaSourceEnum = z.enum(['google', 'osrm', 'haversine']);
+export type EtaSource = z.infer<typeof etaSourceEnum>;
+
 export const etaResponseSchema = z.object({
   routeId: z.string(),
   stops: z.array(z.object({
@@ -29,5 +32,7 @@ export const etaResponseSchema = z.object({
   })),
   totalEtaMinutes: z.number(),
   calculatedAt: z.string(),
+  /** Which routing engine produced these ETAs. 'haversine' = degraded fallback. */
+  source: etaSourceEnum.optional(),
 });
 export type EtaResponse = z.infer<typeof etaResponseSchema>;
