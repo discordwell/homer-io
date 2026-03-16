@@ -59,7 +59,7 @@ export const config = {
   },
 
   nlops: {
-    provider: (process.env.NLOPS_PROVIDER || 'anthropic') as 'anthropic' | 'openai',
+    provider: (['anthropic', 'openai'].includes(process.env.NLOPS_PROVIDER || '') ? process.env.NLOPS_PROVIDER : 'anthropic') as 'anthropic' | 'openai',
     anthropicModel: process.env.NLOPS_ANTHROPIC_MODEL || 'claude-opus-4-6',
     openaiModel: process.env.NLOPS_OPENAI_MODEL || 'gpt-5.4',
     maxLoopIterations: Number(process.env.NLOPS_MAX_ITERATIONS) || 10,
