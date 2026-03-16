@@ -190,10 +190,9 @@ export const locationHistory = pgTable('location_history', {
   lat: numeric('lat', { precision: 10, scale: 7 }).notNull(),
   lng: numeric('lng', { precision: 10, scale: 7 }).notNull(),
   speed: numeric('speed', { precision: 6, scale: 2 }),
-  heading: numeric('heading', { precision: 6, scale: 2 }),
+  heading: integer('heading'),
   accuracy: numeric('accuracy', { precision: 8, scale: 2 }),
   timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Tenants
