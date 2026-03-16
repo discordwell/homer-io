@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.js';
 import { C, F } from '../theme.js';
 
@@ -24,10 +24,10 @@ const plans = [
 
 const migrationNames = ['Tookan', 'Onfleet', 'OptimoRoute', 'SpeedyRoute', 'GetSwift', 'Circuit'];
 
-function bestPlan(drivers: number) {
-  if (drivers <= 10) return { name: 'Standard', price: 149 };
-  if (drivers <= 30) return { name: 'Growth', price: 349 };
-  return { name: 'Scale', price: 699 };
+function bestPlan(drivers: number, annual: boolean) {
+  if (drivers <= 10) return { name: 'Standard', price: annual ? 119 : 149 };
+  if (drivers <= 30) return { name: 'Growth', price: annual ? 279 : 349 };
+  return { name: 'Scale', price: annual ? 559 : 699 };
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -69,9 +69,10 @@ function useFadeIn(): { ref: React.RefObject<HTMLDivElement | null>; style: Reac
 function useWidth() {
   const [w, set] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   useEffect(() => {
-    const fn = () => set(window.innerWidth);
+    let timer: ReturnType<typeof setTimeout>;
+    const fn = () => { clearTimeout(timer); timer = setTimeout(() => set(window.innerWidth), 100); };
     window.addEventListener('resize', fn);
-    return () => window.removeEventListener('resize', fn);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', fn); };
   }, []);
   return w;
 }
@@ -143,7 +144,7 @@ function Nav() {
 
 function FleetMap() {
   return (
-    <svg viewBox="0 0 520 360" style={{ width: '100%', height: '100%', display: 'block' }}>
+    <svg viewBox="0 0 520 360" aria-hidden="true" style={{ width: '100%', height: '100%', display: 'block' }}>
       <rect width="520" height="360" fill={C.bg2} />
       {/* grid */}
       {Array.from({ length: 8 }, (_, i) => (
@@ -477,7 +478,7 @@ function PricingSection({ w }: { w: number }) {
 
   const comp = competitorPricing[compIdx];
   const currentCost = drivers * comp.perDriver;
-  const homer = bestPlan(drivers);
+  const homer = bestPlan(drivers, annual);
   const savings = currentCost - homer.price;
 
   return (
@@ -502,6 +503,7 @@ function PricingSection({ w }: { w: number }) {
             </div>
             <input
               type="range" className="l-slider" min={5} max={50} value={drivers}
+              aria-label="Number of drivers"
               onChange={e => setDrivers(+e.target.value)}
             />
           </div>
@@ -510,6 +512,7 @@ function PricingSection({ w }: { w: number }) {
             <select
               value={compIdx}
               onChange={e => setCompIdx(+e.target.value)}
+              aria-label="Current delivery tool"
               style={{
                 width: '100%', background: C.bg3, color: C.text, border: `1px solid ${C.border}`,
                 borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: F.body, outline: 'none', cursor: 'pointer',
@@ -615,7 +618,7 @@ function PricingSection({ w }: { w: number }) {
         </div>
 
         <p style={{ textAlign: 'center', color: C.dim, fontSize: 14, marginTop: 24 }}>
-          Need more? <span style={{ color: C.accent, cursor: 'pointer' }}>Talk to us.</span>
+          Need more? <a href="mailto:hello@homer.io" style={{ color: C.accent, textDecoration: 'none' }}>Talk to us.</a>
         </p>
       </div>
     </div>
@@ -677,8 +680,8 @@ function Footer() {
       <div style={{ ...mx(), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <span style={{ fontFamily: F.display, fontWeight: 700, color: C.accent, fontSize: 16 }}>HOMER.io</span>
         <div style={{ display: 'flex', gap: 20, fontSize: 13, color: C.dim }}>
-          <a href="/login" style={{ color: C.dim, textDecoration: 'none' }}>Login</a>
-          <a href="/register" style={{ color: C.dim, textDecoration: 'none' }}>Register</a>
+          <Link to="/login" style={{ color: C.dim, textDecoration: 'none' }}>Login</Link>
+          <Link to="/register" style={{ color: C.dim, textDecoration: 'none' }}>Register</Link>
           <a href="https://homer.discordwell.com" target="_blank" rel="noopener noreferrer" style={{ color: C.dim, textDecoration: 'none' }}>Demo</a>
         </div>
         <span style={{ fontSize: 12, color: C.muted }}>© 2026 HOMER.io</span>
