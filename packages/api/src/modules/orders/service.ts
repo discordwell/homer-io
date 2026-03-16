@@ -59,7 +59,9 @@ export async function listOrders(
     conditions.push(gte(orders.createdAt, new Date(dateFrom)));
   }
   if (dateTo) {
-    conditions.push(lte(orders.createdAt, new Date(dateTo)));
+    // If dateTo is a bare date (YYYY-MM-DD), set to end of that day so the full day is included
+    const dateToVal = dateTo.length === 10 ? new Date(dateTo + 'T23:59:59.999Z') : new Date(dateTo);
+    conditions.push(lte(orders.createdAt, dateToVal));
   }
 
   const where = and(...conditions);
