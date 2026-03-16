@@ -24,12 +24,18 @@ import { DriverStopDetailPage } from './pages/driver/DriverStopDetail.js';
 import { DriverMapPage } from './pages/driver/DriverMap.js';
 import { DriverProfilePage } from './pages/driver/DriverProfile.js';
 import { MigrationPage } from './pages/Migration.js';
+import { LandingPage } from './pages/Landing.js';
 import { C, F } from './theme.js';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
+}
+
+function CatchAllRedirect() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/'} replace />;
 }
 
 export function App() {
@@ -41,6 +47,7 @@ export function App() {
       fontFamily: F.body,
     }}>
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -72,7 +79,7 @@ export function App() {
           <Route path="map" element={<DriverMapPage />} />
           <Route path="profile" element={<DriverProfilePage />} />
         </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<CatchAllRedirect />} />
       </Routes>
     </div>
   );
