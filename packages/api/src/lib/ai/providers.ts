@@ -166,13 +166,14 @@ class OpenAIProvider implements AIProvider {
     }
 
     // Convert tools to OpenAI function format
+    // strict: false because our tool schemas have optional parameters (empty required array)
+    // and OpenAI strict mode requires all properties in required
     const openaiTools: OpenAI.Chat.ChatCompletionTool[] = params.tools.map((t) => ({
       type: 'function',
       function: {
         name: t.name,
         description: t.description,
         parameters: t.input_schema,
-        strict: true,
       },
     }));
 
