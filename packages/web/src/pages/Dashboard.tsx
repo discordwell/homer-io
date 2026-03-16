@@ -6,6 +6,7 @@ import { DataTable, type Column } from '../components/DataTable.js';
 import { Badge } from '../components/Badge.js';
 import { EmptyState } from '../components/EmptyState.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
+import { IntelligenceWidget } from '../components/IntelligenceWidget.js';
 import { C, F } from '../theme.js';
 
 const statusColors: Record<string, string> = {
@@ -63,6 +64,11 @@ export function DashboardPage() {
         <KPICard icon="👤" label="Active Drivers" value={stats?.activeDrivers ?? 0} color={C.yellow} />
         <KPICard icon="✅" label="Delivery Rate" value={stats?.deliveryRate != null ? `${stats.deliveryRate}%` : '—'} color={C.purple}
           sub={stats?.totalVehicles ? `${stats.totalVehicles} vehicles in fleet` : undefined} />
+      </div>
+
+      {/* Intelligence Widget */}
+      <div style={{ marginBottom: 32 }}>
+        <IntelligenceWidget />
       </div>
 
       {/* Recent orders or empty state */}

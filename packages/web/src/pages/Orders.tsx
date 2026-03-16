@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOrdersStore } from '../stores/orders.js';
 import { DataTable, type Column } from '../components/DataTable.js';
 import { Badge } from '../components/Badge.js';
@@ -12,7 +12,25 @@ import { LoadingSpinner } from '../components/LoadingSpinner.js';
 import { CsvImportWizard } from '../components/CsvImportWizard.js';
 import { useToast } from '../components/Toast.js';
 import { api } from '../api/client.js';
+import { hashAddressBrowser } from '../utils/address-hash.js';
 import { C, F } from '../theme.js';
+
+interface AddressIntelligence {
+  addressHash: string;
+  totalDeliveries: number;
+  successfulDeliveries: number;
+  failedDeliveries: number;
+  avgServiceTimeSeconds: number | null;
+  accessInstructions: string | null;
+  parkingNotes: string | null;
+  commonFailureReasons: Array<{ reason: string; count: number }>;
+  recentMetrics: Array<{
+    deliveryStatus: string;
+    failureCategory: string | null;
+    serviceTimeSeconds: number | null;
+    completedAt: string;
+  }>;
+}
 
 const statusColors: Record<string, string> = {
   received: 'blue', assigned: 'purple', in_transit: 'yellow', delivered: 'green', failed: 'red', returned: 'orange',
@@ -43,9 +61,37 @@ export function OrdersPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchStatus, setBatchStatus] = useState('');
   const [batchLoading, setBatchLoading] = useState(false);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [intelData, setIntelData] = useState<AddressIntelligence | null>(null);
+  const [intelLoading, setIntelLoading] = useState(false);
 
   useEffect(() => { fetchOrders(); }, [statusFilter]);
   useEffect(() => { setSelectedIds(new Set()); }, [orders]);
+
+  const intelRequestRef = React.useRef(0);
+
+  async function toggleOrderExpand(order: typeof orders[0]) {
+    if (expandedOrderId === order.id) {
+      setExpandedOrderId(null);
+      setIntelData(null);
+      return;
+    }
+    const requestId = ++intelRequestRef.current;
+    setExpandedOrderId(order.id);
+    setIntelData(null);
+    setIntelLoading(true);
+    try {
+      const hash = await hashAddressBrowser(order.deliveryAddress);
+      if (intelRequestRef.current !== requestId) return; // stale
+      const data = await api.get<AddressIntelligence>(`/intelligence/address/${hash}`);
+      if (intelRequestRef.current !== requestId) return; // stale
+      setIntelData(data);
+    } catch {
+      if (intelRequestRef.current === requestId) setIntelData(null);
+    } finally {
+      if (intelRequestRef.current === requestId) setIntelLoading(false);
+    }
+  }
 
   function handleSearch() {
     setSearch(searchInput);
@@ -237,7 +283,18 @@ export function OrdersPage() {
       ) : (
         <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
           <DataTable columns={columns} data={orders}
+            onRowClick={toggleOrderExpand}
             pagination={{ page, totalPages, onPageChange: fetchOrders }} />
+
+          {/* Expandable address intelligence panel */}
+          {expandedOrderId && (
+            <AddressIntelligencePanel
+              orderId={expandedOrderId}
+              data={intelData}
+              loading={intelLoading}
+              onClose={() => { setExpandedOrderId(null); setIntelData(null); }}
+            />
+          )}
         </div>
       )}
 
@@ -292,3 +349,102 @@ const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,
   border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
 };
+
+function AddressIntelligencePanel({ orderId, data, loading, onClose }: {
+  orderId: string;
+  data: AddressIntelligence | null;
+  loading: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div style={{
+      marginTop: 12, background: C.bg3, borderRadius: 10,
+      border: `1px solid ${C.muted}`, padding: 16,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontFamily: F.display, fontSize: 14, fontWeight: 600, color: C.text }}>
+          Address Intelligence
+        </div>
+        <button onClick={onClose} style={{
+          background: 'none', border: 'none', color: C.dim, cursor: 'pointer', fontSize: 16,
+        }}>&times;</button>
+      </div>
+
+      {loading && (
+        <div style={{ color: C.dim, fontSize: 13, padding: 12, textAlign: 'center' }}>Loading intelligence...</div>
+      )}
+
+      {!loading && !data && (
+        <div style={{ color: C.dim, fontSize: 13, padding: 12, textAlign: 'center' }}>
+          No intelligence yet for this address
+        </div>
+      )}
+
+      {!loading && data && (
+        <div>
+          {/* Stats row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+            <StatBox label="Deliveries" value={data.totalDeliveries} />
+            <StatBox
+              label="Success Rate"
+              value={data.totalDeliveries > 0 ? `${Math.round((data.successfulDeliveries / data.totalDeliveries) * 100)}%` : '\u2014'}
+              color={data.totalDeliveries > 0 && (data.successfulDeliveries / data.totalDeliveries) < 0.7 ? C.red : C.green}
+            />
+            <StatBox
+              label="Avg Service"
+              value={data.avgServiceTimeSeconds ? `${(data.avgServiceTimeSeconds / 60).toFixed(1)} min` : '\u2014'}
+            />
+            <StatBox label="Failures" value={data.failedDeliveries} color={data.failedDeliveries > 0 ? C.orange : undefined} />
+          </div>
+
+          {/* Access instructions / parking */}
+          {(data.accessInstructions || data.parkingNotes) && (
+            <div style={{ marginBottom: 12 }}>
+              {data.accessInstructions && (
+                <div style={{ fontSize: 12, color: C.dim, marginBottom: 4 }}>
+                  <span style={{ color: C.text, fontWeight: 600 }}>Access:</span> {String(data.accessInstructions)}
+                </div>
+              )}
+              {data.parkingNotes && (
+                <div style={{ fontSize: 12, color: C.dim }}>
+                  <span style={{ color: C.text, fontWeight: 600 }}>Parking:</span> {String(data.parkingNotes)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Failure reasons */}
+          {data.commonFailureReasons.length > 0 && (
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 6 }}>Common Failure Reasons</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {data.commonFailureReasons.map((r, i) => (
+                  <span key={i} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '2px 8px', borderRadius: 999, fontSize: 11,
+                    fontWeight: 600, fontFamily: F.body,
+                    background: `${C.red}18`, color: C.red,
+                    border: `1px solid ${C.red}30`,
+                  }}>
+                    {r.reason.replace(/_/g, ' ')} ({r.count})
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatBox({ label, value, color }: { label: string; value: string | number; color?: string }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: 18, fontWeight: 700, fontFamily: F.mono, color: color || C.text }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}

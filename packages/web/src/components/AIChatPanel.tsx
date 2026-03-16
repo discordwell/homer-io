@@ -23,6 +23,9 @@ const TOOL_LABELS: Record<string, string> = {
   cancel_route: 'Cancelling route',
   transition_route_status: 'Updating route status',
   send_customer_notification: 'Sending notification',
+  get_address_intelligence: 'Looking up address history',
+  get_intelligence_insights: 'Analyzing delivery intelligence',
+  get_route_risk: 'Assessing delivery risks',
 };
 
 export function AIChatPanel() {

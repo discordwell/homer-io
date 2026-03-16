@@ -9,7 +9,15 @@ import { LoadingSpinner } from '../components/LoadingSpinner.js';
 import { MessagePanel } from '../components/MessagePanel.js';
 import { useToast } from '../components/Toast.js';
 import { DegradedRoutingBanner } from '../components/DegradedRoutingBanner.js';
+import { RiskBadge, riskSummary } from '../components/RiskBadge.js';
+import { api } from '../api/client.js';
 import { C, F } from '../theme.js';
+
+interface RiskScore {
+  orderId: string;
+  score: number;
+  factors: Array<{ name: string; points: number; detail: string }>;
+}
 
 const statusColors: Record<string, string> = {
   draft: 'dim', planned: 'blue', in_progress: 'yellow', completed: 'green', cancelled: 'red',
@@ -24,6 +32,7 @@ export function RouteDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showMessages, setShowMessages] = useState(false);
+  const [riskScores, setRiskScores] = useState<RiskScore[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -37,6 +46,16 @@ export function RouteDetailPage() {
         });
     }
   }, [id]);
+
+  // Fetch risk scores for planned/in_progress routes
+  useEffect(() => {
+    if (!id || !currentRoute) return;
+    const { status } = currentRoute;
+    if (status !== 'planned' && status !== 'in_progress') return;
+    api.get<RiskScore[]>(`/intelligence/risk/${id}`)
+      .then(setRiskScores)
+      .catch(() => {}); // Silently fail — intelligence is optional
+  }, [id, currentRoute?.status]);
 
   if (loading) return <LoadingSpinner />;
 
@@ -145,6 +164,23 @@ export function RouteDetailPage() {
         </div>
       )}
 
+      {/* Risk summary banner */}
+      {(() => {
+        const summary = riskScores.length > 0 ? riskSummary(riskScores) : null;
+        return summary ? (
+          <div style={{
+            background: `${C.orange}12`, border: `1px solid ${C.orange}40`,
+            borderRadius: 10, padding: '12px 16px', marginBottom: 16,
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span style={{ fontSize: 18 }}>&#9888;</span>
+            <span style={{ fontSize: 13, color: C.orange, fontWeight: 600 }}>
+              {summary}
+            </span>
+          </div>
+        ) : null;
+      })()}
+
       {/* Order list */}
       <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
         <h3 style={{ fontFamily: F.display, fontSize: 15, marginBottom: 16 }}>Stops ({route.orders?.length || 0})</h3>
@@ -152,22 +188,26 @@ export function RouteDetailPage() {
           <p style={{ color: C.dim, fontSize: 14, textAlign: 'center', padding: 24 }}>No stops assigned</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {(route.orders || []).map((order, i) => (
-              <div key={order.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
-                background: C.bg3, borderRadius: 8,
-              }}>
-                <span style={{ color: C.accent, fontWeight: 600, fontSize: 16, width: 28, textAlign: 'center' }}>{i + 1}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{order.recipientName}</div>
-                  <div style={{ color: C.dim, fontSize: 12 }}>{order.deliveryAddress.street}, {order.deliveryAddress.city}</div>
+            {(route.orders || []).map((order, i) => {
+              const risk = riskScores.find(r => r.orderId === order.id);
+              return (
+                <div key={order.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+                  background: C.bg3, borderRadius: 8,
+                }}>
+                  <span style={{ color: C.accent, fontWeight: 600, fontSize: 16, width: 28, textAlign: 'center' }}>{i + 1}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500, fontSize: 14 }}>{order.recipientName}</div>
+                    <div style={{ color: C.dim, fontSize: 12 }}>{order.deliveryAddress.street}, {order.deliveryAddress.city}</div>
+                  </div>
+                  {risk && <RiskBadge score={risk.score} factors={risk.factors} />}
+                  <Badge color={order.status === 'delivered' ? 'green' : order.status === 'failed' ? 'red' : 'blue'}>
+                    {order.status.replace('_', ' ')}
+                  </Badge>
+                  <span style={{ color: C.dim, fontSize: 12 }}>{order.packageCount} pkg</span>
                 </div>
-                <Badge color={order.status === 'delivered' ? 'green' : order.status === 'failed' ? 'red' : 'blue'}>
-                  {order.status.replace('_', ' ')}
-                </Badge>
-                <span style={{ color: C.dim, fontSize: 12 }}>{order.packageCount} pkg</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -2,6 +2,17 @@
 
 ## Session Summaries
 
+### 2026-03-16T15:20 UTC — Phase 6E: Frontend Intelligence Polish
+- Surfaced intelligence data in the UI across 5 pages/components. 3 new files, 5 modified.
+- **RiskBadge component**: Reusable risk indicator pill (0-100 score, color-coded: green/yellow/orange/red). Click expands to show risk factors popover. `riskSummary()` helper for aggregate display.
+- **Route Detail**: Fetches `/intelligence/risk/{routeId}` for planned/in_progress routes. Risk badges next to each stop, route-level risk summary banner above stops list.
+- **Dispatch Preview**: Fetches risk scores for each proposed route. RiskBadge on each route card, high-risk count in header with warning indicator.
+- **IntelligenceWidget**: Dashboard widget fetching `/intelligence/insights`. 3 KPI cards (addresses learned, deliveries tracked, avg service time) + top failure addresses list with fail rate and reason.
+- **Orders — Address Intelligence Panel**: Click order row → fetches intelligence by browser-hashed address. Shows delivery count, success rate, avg service time, failures, access instructions, parking notes, failure reasons.
+- **Address hash utility**: Browser-compatible `hashAddressBrowser()` using Web Crypto API (`crypto.subtle.digest('SHA-256')`). Produces identical output to server-side `hashAddress`. Uses shared `normalizeAddress` (pure string ops).
+- **Copilot tool labels**: Added 3 missing intelligence tool labels to AIChatPanel.
+- **Tests**: 10 new tests (5 address hash parity, 5 riskSummary logic). All pass. Build clean.
+
 ### 2026-03-16T11:25 UTC — NLOps Deferred Fixes (8 of 8)
 - Implemented all 8 deferred code review fixes from the NLOps review in a single pass.
 - **H4/M10 — Redis pending actions**: Replaced in-memory `Map<string, PendingAction>` with Redis-backed `cacheGet`/`cacheSet`/`cacheDelete`. Key: `nlops:pending:{actionId}`, TTL 300s. Removes `setTimeout` cleanup and per-process heap pressure.

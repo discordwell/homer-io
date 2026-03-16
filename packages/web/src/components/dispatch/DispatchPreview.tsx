@@ -1,7 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DegradedRoutingBanner } from '../DegradedRoutingBanner.js';
+import { RiskBadge } from '../RiskBadge.js';
 import { C, F } from '../../theme.js';
 import { api } from '../../api/client.js';
+
+interface RiskScore {
+  orderId: string;
+  score: number;
+  factors: Array<{ name: string; points: number; detail: string }>;
+}
+
+interface RouteRisk {
+  routeId: string;
+  maxScore: number;
+  scores: RiskScore[];
+}
 
 interface DispatchRoute {
   id: string;
@@ -38,8 +51,33 @@ export function DispatchPreview({
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [routeRisks, setRouteRisks] = useState<Map<string, RouteRisk>>(new Map());
 
   const routeColors = [C.accent, C.green, C.yellow, C.purple, C.orange, C.red];
+
+  // Fetch risk scores for each proposed route
+  useEffect(() => {
+    if (routes.length === 0) return;
+    Promise.all(
+      routes.map(async (r) => {
+        try {
+          const scores = await api.get<RiskScore[]>(`/intelligence/risk/${r.id}`);
+          const maxScore = scores.length > 0 ? Math.max(...scores.map(s => s.score)) : 0;
+          return { routeId: r.id, maxScore, scores } as RouteRisk;
+        } catch {
+          return null;
+        }
+      })
+    ).then((results) => {
+      const map = new Map<string, RouteRisk>();
+      for (const r of results) {
+        if (r) map.set(r.routeId, r);
+      }
+      setRouteRisks(map);
+    });
+  }, [routes]);
+
+  const highRiskRouteCount = Array.from(routeRisks.values()).filter(r => r.maxScore >= 60).length;
 
   function toggleRoute(routeId: string) {
     setSelectedRouteIds(prev => {
@@ -122,6 +160,11 @@ export function DispatchPreview({
           </h3>
           <p style={{ color: C.dim, fontSize: 13, margin: '4px 0 0' }}>
             {routes.length} route{routes.length !== 1 ? 's' : ''} proposed for {totalOrders} order{totalOrders !== 1 ? 's' : ''} across {totalDrivers} driver{totalDrivers !== 1 ? 's' : ''}
+            {highRiskRouteCount > 0 && (
+              <span style={{ color: C.yellow, marginLeft: 8 }}>
+                &#9888; {highRiskRouteCount} high-risk route{highRiskRouteCount !== 1 ? 's' : ''}
+              </span>
+            )}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -177,9 +220,14 @@ export function DispatchPreview({
                     <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 14, color: C.text }}>
                       {route.driverName}
                     </div>
-                    <div style={{ fontSize: 12, color: C.dim, marginTop: 2 }}>
-                      {route.totalStops} stop{route.totalStops !== 1 ? 's' : ''}
-                      {route.estimatedDistance != null && ` \u00B7 ~${route.estimatedDistance.toFixed(1)} km`}
+                    <div style={{ fontSize: 12, color: C.dim, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>
+                        {route.totalStops} stop{route.totalStops !== 1 ? 's' : ''}
+                        {route.estimatedDistance != null && ` \u00B7 ~${route.estimatedDistance.toFixed(1)} km`}
+                      </span>
+                      {routeRisks.get(route.id) && (
+                        <RiskBadge score={routeRisks.get(route.id)!.maxScore} factors={routeRisks.get(route.id)!.scores.flatMap(s => s.factors)} />
+                      )}
                     </div>
                   </div>
                 </div>
