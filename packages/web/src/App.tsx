@@ -23,6 +23,7 @@ import { DriverRoutePage } from './pages/driver/DriverRoute.js';
 import { DriverStopDetailPage } from './pages/driver/DriverStopDetail.js';
 import { DriverMapPage } from './pages/driver/DriverMap.js';
 import { DriverProfilePage } from './pages/driver/DriverProfile.js';
+import { MigrationPage } from './pages/Migration.js';
 import { C, F } from './theme.js';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -59,6 +60,7 @@ export function App() {
           <Route path="dispatch" element={<DispatchPage />} />
           <Route path="live" element={<LiveMapPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="migrate" element={<MigrationPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
         {/* Driver PWA routes */}

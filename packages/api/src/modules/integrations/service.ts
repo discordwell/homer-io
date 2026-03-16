@@ -4,6 +4,7 @@ import { db } from '../../lib/db/index.js';
 import { integrationConnections } from '../../lib/db/schema/integration-connections.js';
 import { integrationOrders } from '../../lib/db/schema/integration-orders.js';
 import { orders } from '../../lib/db/schema/orders.js';
+import type { IntegrationPlatform } from '@homer-io/shared';
 import { HttpError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
 import { encrypt, decrypt, getConnector, getAvailablePlatforms as getPlatforms } from '../../lib/integrations/index.js';
@@ -67,7 +68,7 @@ export async function getConnection(tenantId: string, id: string) {
 export async function createConnection(
   tenantId: string,
   userId: string,
-  input: { platform: 'shopify' | 'woocommerce'; storeUrl: string; credentials: Record<string, string>; autoImport: boolean },
+  input: { platform: IntegrationPlatform; storeUrl: string; credentials: Record<string, string>; autoImport: boolean },
 ) {
   const connector = getConnector(input.platform);
 

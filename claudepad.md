@@ -2,6 +2,17 @@
 
 ## Session Summaries
 
+### 2026-03-16T17:30 UTC — Phase 7B: Migration API, Worker & UI
+- Implemented CSV-based migration pipeline: API endpoints, BullMQ worker, and 5-step wizard UI.
+- **Shared schema**: Added `migrationCsvDataSchema` (orders max 5000, drivers max 500, vehicles max 200) and `csvData` field to `createMigrationJobSchema`.
+- **API module** (`packages/api/src/modules/migration/`): 5 routes (POST create, GET list paginated, GET by id, POST cancel, DELETE). Admin-only. 10MB body limit. Service encrypts apiKey, strips sensitive fields from response, enqueues BullMQ job.
+- **Worker** (`packages/worker/src/workers/migration.ts`): Batch CSV processor (50 rows/batch). Processes orders (resolveCsvAliases), drivers, vehicles. Progress tracking per-entity. Cancellation check between batches. Error log capped at 100 entries. Fatal errors set status=failed.
+- **Frontend**: Zustand store (migration.ts), MigrationPage with 5-step wizard (select platform → upload CSVs with papaparse → review summary → progress with polling → complete with results). Migration history table. FileDropZone with drag-and-drop. Platform cards for 6 competitors.
+- **Routing**: `/dashboard/migrate` route in App.tsx, "Migrate" nav item in Sidebar (before Settings).
+- **Tests**: 14 new tests covering schema validation (csvData limits, platform enum, API-key path) and service logic (apiKey encryption, cancel rejects wrong status, delete rejects active, BullMQ enqueue, activity logging).
+- **Worker queues**: 12→13 (added migration with concurrency 1).
+- Build: zero TS errors. 14/14 migration tests pass. 82/82 shared tests pass.
+
 ### 2026-03-16T15:20 UTC — Phase 6E: Frontend Intelligence Polish
 - Surfaced intelligence data in the UI across 5 pages/components. 3 new files, 5 modified.
 - **RiskBadge component**: Reusable risk indicator pill (0-100 score, color-coded: green/yellow/orange/red). Click expands to show risk factors popover. `riskSummary()` helper for aggregate display.

@@ -26,3 +26,6 @@ export * from './messages.js';
 export * from './data-requests.js';
 export * from './address-intelligence.js';
 export * from './delivery-metrics.js';
+export * from './migration-jobs.js';
+export * from './integration-drivers.js';
+export * from './integration-vehicles.js';

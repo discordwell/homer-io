@@ -18,6 +18,7 @@ const navItems = [
   { label: 'Dispatch', path: '/dashboard/dispatch', icon: '\u2699' },
   { label: 'Messages', path: '/dashboard/messages', icon: '💬', badge: true },
   { label: 'Analytics', path: '/dashboard/analytics', icon: '📈' },
+  { label: 'Migrate', path: '/dashboard/migrate', icon: '🔄' },
   { label: 'Settings', path: '/dashboard/settings', icon: '⚙️' },
 ];
 

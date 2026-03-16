@@ -21,6 +21,7 @@ export async function createVehicle(tenantId: string, input: CreateVehicleInput)
       capacityVolume: input.capacityVolume?.toString(),
       capacityCount: input.capacityCount,
       evRange: input.evRange?.toString(),
+      externalId: input.externalId,
     })
     .returning();
   logActivity({ tenantId, action: 'vehicle_created', entityType: 'vehicle', entityId: vehicle.id });
@@ -93,6 +94,7 @@ export async function createDriver(tenantId: string, input: CreateDriverInput) {
       licenseNumber: input.licenseNumber,
       userId: input.userId,
       skillTags: input.skillTags,
+      externalId: input.externalId,
     })
     .returning();
   logActivity({ tenantId, action: 'driver_created', entityType: 'driver', entityId: driver.id });

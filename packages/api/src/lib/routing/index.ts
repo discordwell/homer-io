@@ -35,6 +35,8 @@ export interface StopData {
   lat: number;
   lng: number;
   timeWindow?: TimeWindow;
+  /** Per-stop service duration override (minutes). Falls back to vehicle-type default. */
+  serviceDurationMinutes?: number;
 }
 
 export interface DepotData {
@@ -285,7 +287,7 @@ export async function dispatchOrders(
 export async function getTrafficAwareETAs(
   routeId: string,
   origin: [number, number],
-  stops: { orderId: string; sequence: number; lat: number; lng: number }[],
+  stops: { orderId: string; sequence: number; lat: number; lng: number; serviceDurationMinutes?: number }[],
   vehicleType: string,
 ): Promise<EtaResult> {
   const now = new Date();
@@ -352,7 +354,7 @@ export async function getTrafficAwareETAs(
 export async function getOsrmETAs(
   routeId: string,
   origin: [number, number],
-  stops: { orderId: string; sequence: number; lat: number; lng: number }[],
+  stops: { orderId: string; sequence: number; lat: number; lng: number; serviceDurationMinutes?: number }[],
   vehicleType: string,
 ): Promise<EtaResult> {
   const now = new Date();
@@ -401,7 +403,7 @@ export async function getOsrmETAs(
 
 function buildEtaResult(
   routeId: string,
-  stops: { orderId: string; sequence: number; lat: number; lng: number }[],
+  stops: { orderId: string; sequence: number; lat: number; lng: number; serviceDurationMinutes?: number }[],
   legs: { durationSeconds: number; distanceMeters: number }[],
   dwellMinutes: number,
   now: Date,
@@ -422,7 +424,8 @@ function buildEtaResult(
     }
 
     const travelMinutes = leg.durationSeconds / 60;
-    cumulativeMinutes += travelMinutes + dwellMinutes;
+    const stopDwell = stop.serviceDurationMinutes ?? dwellMinutes;
+    cumulativeMinutes += travelMinutes + stopDwell;
     const etaTimestamp = new Date(now.getTime() + cumulativeMinutes * 60_000);
 
     return {

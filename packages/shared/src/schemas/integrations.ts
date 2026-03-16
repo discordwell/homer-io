@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-export const integrationPlatformEnum = z.enum(['shopify', 'woocommerce']);
+export const integrationPlatformEnum = z.enum([
+  'shopify', 'woocommerce',
+  'tookan', 'onfleet', 'optimoroute', 'speedyroute', 'getswift', 'circuit',
+]);
 export type IntegrationPlatform = z.infer<typeof integrationPlatformEnum>;
 
 export const createConnectionSchema = z.object({

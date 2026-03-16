@@ -181,6 +181,9 @@ describe('B6: Activity logging on createOrder', () => {
       deliveryAddress: { street: '123 Main St', city: 'NY', state: 'NY', zip: '10001', country: 'US' },
       packageCount: 1,
       priority: 'normal' as const,
+      orderType: 'delivery' as const,
+      barcodes: [],
+      customFields: {},
       requiresSignature: false,
       requiresPhoto: false,
     });

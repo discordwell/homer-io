@@ -39,6 +39,7 @@ import { requireActiveSubscription } from './plugins/billing.js';
 import { gdprRoutes } from './modules/gdpr/routes.js';
 import { adminHealthRoutes } from './modules/health/routes.js';
 import { intelligenceRoutes } from './modules/intelligence/routes.js';
+import { migrationRoutes } from './modules/migration/routes.js';
 
 const app = Fastify({
   logger: {
@@ -152,6 +153,7 @@ await app.register(async (api) => {
   await api.register(gdprRoutes, { prefix: '/gdpr' });
   await api.register(adminHealthRoutes, { prefix: '/admin/health' });
   await api.register(intelligenceRoutes, { prefix: '/intelligence' });
+  await api.register(migrationRoutes, { prefix: '/migrations' });
 }, { prefix: '/api' });
 
 // Graceful shutdown

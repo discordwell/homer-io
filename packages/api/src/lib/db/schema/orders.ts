@@ -11,6 +11,10 @@ export const orderPriorityEnum = pgEnum('order_priority', [
   'low', 'normal', 'high', 'urgent',
 ]);
 
+export const orderTypeEnum = pgEnum('order_type', [
+  'delivery', 'pickup', 'pickup_and_delivery',
+]);
+
 export const orders = pgTable('orders', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }).notNull(),
@@ -29,6 +33,10 @@ export const orders = pgTable('orders', {
   volume: numeric('volume', { precision: 10, scale: 2 }),
   timeWindowStart: timestamp('time_window_start', { withTimezone: true }),
   timeWindowEnd: timestamp('time_window_end', { withTimezone: true }),
+  serviceDurationMinutes: integer('service_duration_minutes'),
+  orderType: orderTypeEnum('order_type').default('delivery').notNull(),
+  barcodes: jsonb('barcodes').default([]).notNull(),
+  customFields: jsonb('custom_fields').default({}).notNull(),
   notes: text('notes'),
   requiresSignature: boolean('requires_signature').default(false).notNull(),
   requiresPhoto: boolean('requires_photo').default(false).notNull(),

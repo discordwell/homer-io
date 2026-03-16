@@ -17,6 +17,7 @@ export const drivers = pgTable('drivers', {
   licenseNumber: varchar('license_number', { length: 50 }),
   status: driverStatusEnum('status').default('offline').notNull(),
   currentVehicleId: uuid('current_vehicle_id').references(() => vehicles.id, { onDelete: 'set null' }),
+  externalId: varchar('external_id', { length: 255 }),
   skillTags: jsonb('skill_tags').default([]).notNull(),
   currentLat: numeric('current_lat', { precision: 10, scale: 7 }),
   currentLng: numeric('current_lng', { precision: 10, scale: 7 }),

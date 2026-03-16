@@ -9,6 +9,9 @@ export type OrderStatus = z.infer<typeof orderStatusEnum>;
 export const orderPriorityEnum = z.enum(['low', 'normal', 'high', 'urgent']);
 export type OrderPriority = z.infer<typeof orderPriorityEnum>;
 
+export const orderTypeEnum = z.enum(['delivery', 'pickup', 'pickup_and_delivery']);
+export type OrderType = z.infer<typeof orderTypeEnum>;
+
 export const createOrderSchema = z.object({
   externalId: z.string().max(255).optional(),
   recipientName: z.string().min(1).max(255),
@@ -24,6 +27,10 @@ export const createOrderSchema = z.object({
     (tw) => !tw || new Date(tw.start) < new Date(tw.end),
     { message: 'Time window start must be before end' },
   ),
+  serviceDurationMinutes: z.number().int().min(1).max(480).optional(),
+  orderType: orderTypeEnum.default('delivery'),
+  barcodes: z.array(z.string().max(100)).max(50).default([]),
+  customFields: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
   notes: z.string().max(1000).optional(),
   requiresSignature: z.boolean().default(false),
   requiresPhoto: z.boolean().default(false),

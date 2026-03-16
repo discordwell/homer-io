@@ -19,6 +19,7 @@ export const createVehicleSchema = z.object({
   capacityVolume: z.number().positive().optional(),
   capacityCount: z.number().int().positive().optional(),
   evRange: z.number().positive().optional(),
+  externalId: z.string().max(255).optional(),
 });
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 
@@ -29,6 +30,7 @@ export const createDriverSchema = z.object({
   phone: z.string().max(20).optional(),
   licenseNumber: z.string().max(50).optional(),
   skillTags: z.array(z.string()).default([]),
+  externalId: z.string().max(255).optional(),
 });
 export type CreateDriverInput = z.infer<typeof createDriverSchema>;
 

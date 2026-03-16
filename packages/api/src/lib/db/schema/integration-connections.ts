@@ -3,6 +3,7 @@ import { tenants } from './tenants.js';
 
 export const integrationPlatformEnum = pgEnum('integration_platform', [
   'shopify', 'woocommerce',
+  'tookan', 'onfleet', 'optimoroute', 'speedyroute', 'getswift', 'circuit',
 ]);
 
 export const syncStatusEnum = pgEnum('sync_status', [

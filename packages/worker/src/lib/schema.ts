@@ -248,6 +248,51 @@ export const webhookDeliveries = pgTable('webhook_deliveries', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Migration jobs
+export const migrationJobs = pgTable('migration_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  sourcePlatform: varchar('source_platform', { length: 50 }).notNull(),
+  status: varchar('status', { length: 20 }).default('pending').notNull(),
+  config: jsonb('config').default({}).notNull(),
+  progress: jsonb('progress').default({}).notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  errorLog: jsonb('error_log').default([]),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Integration drivers (migration tracking)
+export const integrationDrivers = pgTable('integration_drivers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  migrationJobId: uuid('migration_job_id').notNull(),
+  driverId: uuid('driver_id'),
+  externalDriverId: varchar('external_driver_id', { length: 255 }).notNull(),
+  platform: varchar('platform', { length: 50 }).notNull(),
+  rawData: jsonb('raw_data').default({}).notNull(),
+  syncStatus: varchar('sync_status', { length: 20 }).default('pending').notNull(),
+  syncError: varchar('sync_error', { length: 1000 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('uq_integration_driver_dedup').on(table.migrationJobId, table.externalDriverId),
+]);
+
+// Integration vehicles (migration tracking)
+export const integrationVehicles = pgTable('integration_vehicles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  migrationJobId: uuid('migration_job_id').notNull(),
+  vehicleId: uuid('vehicle_id'),
+  externalVehicleId: varchar('external_vehicle_id', { length: 255 }).notNull(),
+  platform: varchar('platform', { length: 50 }).notNull(),
+  rawData: jsonb('raw_data').default({}).notNull(),
+  syncStatus: varchar('sync_status', { length: 20 }).default('pending').notNull(),
+  syncError: varchar('sync_error', { length: 1000 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('uq_integration_vehicle_dedup').on(table.migrationJobId, table.externalVehicleId),
+]);
+
 // Address intelligence — the brain's memory per delivery address
 export const addressIntelligence = pgTable('address_intelligence', {
   id: uuid('id').primaryKey().defaultRandom(),

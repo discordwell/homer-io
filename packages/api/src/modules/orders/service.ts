@@ -1,5 +1,6 @@
 import { eq, and, sql, ilike, gte, lte, desc, asc, inArray } from 'drizzle-orm';
 import type { CreateOrderInput, UpdateOrderStatusInput, PaginationInput } from '@homer-io/shared';
+import { resolveCsvAliases } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { orders, orderStatusEnum } from '../../lib/db/schema/orders.js';
 import { routes } from '../../lib/db/schema/routes.js';
@@ -26,6 +27,10 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
       timeWindowStart: input.timeWindow?.start ? new Date(input.timeWindow.start) : undefined,
       timeWindowEnd: input.timeWindow?.end ? new Date(input.timeWindow.end) : undefined,
       notes: input.notes,
+      serviceDurationMinutes: input.serviceDurationMinutes,
+      orderType: input.orderType,
+      barcodes: input.barcodes,
+      customFields: input.customFields,
       requiresSignature: input.requiresSignature,
       requiresPhoto: input.requiresPhoto,
     })
@@ -134,10 +139,15 @@ export async function importOrdersCsv(tenantId: string, rows: Array<Record<strin
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
+        const aliases = resolveCsvAliases(row);
+        const coords = aliases.latitude && aliases.longitude
+          ? { lat: aliases.latitude, lng: aliases.longitude }
+          : undefined;
         const [order] = await tx
           .insert(orders)
           .values({
             tenantId,
+            externalId: aliases.externalId,
             recipientName: row.recipient_name || row.name || 'Unknown',
             recipientPhone: row.phone,
             recipientEmail: row.email || undefined,
@@ -147,8 +157,18 @@ export async function importOrdersCsv(tenantId: string, rows: Array<Record<strin
               state: row.state || '',
               zip: row.zip || row.postal_code || '',
               country: row.country || 'US',
+              ...(coords ? { coords } : {}),
             },
+            deliveryLat: aliases.latitude?.toString() ?? null,
+            deliveryLng: aliases.longitude?.toString() ?? null,
             packageCount: row.packages ? parseInt(row.packages) || 1 : 1,
+            weight: aliases.weight?.toString() ?? null,
+            volume: aliases.volume?.toString() ?? null,
+            timeWindowStart: aliases.timeWindowStart ? new Date(aliases.timeWindowStart) : undefined,
+            timeWindowEnd: aliases.timeWindowEnd ? new Date(aliases.timeWindowEnd) : undefined,
+            serviceDurationMinutes: aliases.serviceDurationMinutes,
+            orderType: aliases.orderType ?? 'delivery',
+            barcodes: aliases.barcodes,
             notes: row.notes,
             priority: row.priority === 'high' || row.priority === 'urgent' ? row.priority : 'normal',
           })
