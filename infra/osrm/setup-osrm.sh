@@ -10,7 +10,7 @@ set -euo pipefail
 REGION="${1:-us/new-york}"
 DATA_DIR="/opt/osrm-data"
 CONTAINER_NAME="osrm-homer"
-OSRM_IMAGE="osrm/osrm-backend:v5.27.1"
+OSRM_IMAGE="osrm/osrm-backend:latest"
 PORT=5000
 
 echo "=== OSRM Setup for Homer.io ==="
