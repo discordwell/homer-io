@@ -62,4 +62,5 @@ jobs:
             npx turbo build
             npx drizzle-kit migrate --config packages/api/drizzle.config.ts
             pm2 reload ecosystem.config.cjs
+            curl -sf http://localhost:5000/ > /dev/null && echo "OSRM: healthy" || echo "OSRM: not running (routing will use haversine fallback)"
             echo "Deployed $(git rev-parse --short HEAD) at $(date)"

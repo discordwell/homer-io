@@ -2,6 +2,16 @@
 
 ## Session Summaries
 
+### 2026-03-16T06:00 UTC — Route Optimization: Replace Claude with OSRM + VRP Solver + Google Routes
+- Replaced Claude-based route optimization, auto-dispatch, and ETA calculation with proper algorithmic routing.
+- **New routing stack**: OSRM (self-hosted, Docker) for distance/duration matrices, TypeScript VRP solver (nearest-neighbor + 2-opt for TSP, Clarke-Wright savings for CVRPTW), Google Routes API for traffic-aware customer-facing ETAs.
+- **New files**: `packages/api/src/lib/routing/` (osrm.ts, vrp-solver.ts, google-routes.ts, index.ts), `infra/osrm/` (setup-osrm.sh, refresh-osrm.sh), worker lib files (vrp-solver.ts, osrm.ts, geo.ts).
+- **Modified**: routes/service.ts (optimizeRoute now uses OSRM+VRP), dispatch/service.ts (autoDispatch uses CVRPTW solver), eta/service.ts (Google→OSRM→haversine fallback chain), worker/optimization.ts (VRP solver), config.ts (OSRM_URL, GOOGLE_ROUTES_API_KEY).
+- **Graceful degradation**: If OSRM is down, falls back to haversine-based distance matrix. If Google Routes fails, falls back to OSRM durations, then haversine.
+- **Tests**: 28 new routing tests (VRP solver determinism, TSP correctness, capacity/priority constraints, OSRM coord flipping, Google Routes caching). 424/425 total pass (1 pre-existing nlops failure).
+- Removed `@anthropic-ai/sdk` from worker package (Claude still used for AI chat in API package).
+- Fixed pre-existing worker schema bug: location_history table missing driverId, lat, lng, timestamp fields.
+
 ### 2026-03-16T04:15 UTC — Pricing Restructure: Per-Order Model
 - Full competitive audit completed (10+ competitors researched, market sizing, SWOT analysis).
 - Pricing restructured from per-driver ($49-65/driver/mo) to per-order model inspired by Routific.

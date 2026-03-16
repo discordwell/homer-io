@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, numeric, integer, boolean, text, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, numeric, integer, boolean, text, jsonb, pgEnum, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // Enums
 export const orderStatusEnum = pgEnum('order_status', [
@@ -18,6 +18,11 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'driver_offline', 'system', 'team_invite', 'order_received',
 ]);
 
+export const failureCategoryEnum = pgEnum('failure_category', [
+  'not_home', 'wrong_address', 'access_denied', 'refused',
+  'damaged', 'business_closed', 'weather', 'vehicle_issue', 'other',
+]);
+
 // Minimal table definitions needed by workers
 export const orders = pgTable('orders', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -29,6 +34,11 @@ export const orders = pgTable('orders', {
   deliveryLng: numeric('delivery_lng', { precision: 10, scale: 7 }),
   routeId: uuid('route_id'),
   stopSequence: integer('stop_sequence'),
+  failureReason: text('failure_reason'),
+  failureCategory: failureCategoryEnum('failure_category'),
+  timeWindowStart: timestamp('time_window_start', { withTimezone: true }),
+  timeWindowEnd: timestamp('time_window_end', { withTimezone: true }),
+  notes: text('notes'),
   completedAt: timestamp('completed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -40,6 +50,8 @@ export const routes = pgTable('routes', {
   name: varchar('name', { length: 255 }).notNull(),
   status: routeStatusEnum('status').default('draft').notNull(),
   driverId: uuid('driver_id'),
+  depotLat: numeric('depot_lat', { precision: 10, scale: 7 }),
+  depotLng: numeric('depot_lng', { precision: 10, scale: 7 }),
   totalStops: integer('total_stops').default(0).notNull(),
   completedStops: integer('completed_stops').default(0).notNull(),
   optimizationNotes: text('optimization_notes'),
@@ -170,10 +182,17 @@ export const dataExportRequests = pgTable('data_export_requests', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-// Location history (for retention)
+// Location history (for retention + delivery learning)
 export const locationHistory = pgTable('location_history', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull(),
+  driverId: uuid('driver_id').notNull(),
+  lat: numeric('lat', { precision: 10, scale: 7 }).notNull(),
+  lng: numeric('lng', { precision: 10, scale: 7 }).notNull(),
+  speed: numeric('speed', { precision: 6, scale: 2 }),
+  heading: numeric('heading', { precision: 6, scale: 2 }),
+  accuracy: numeric('accuracy', { precision: 8, scale: 2 }),
+  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -227,5 +246,62 @@ export const webhookDeliveries = pgTable('webhook_deliveries', {
   responseBody: text('response_body'),
   attempts: integer('attempts').default(0).notNull(),
   nextRetryAt: timestamp('next_retry_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Address intelligence — the brain's memory per delivery address
+export const addressIntelligence = pgTable('address_intelligence', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  addressHash: varchar('address_hash', { length: 64 }).notNull(),
+  addressNormalized: jsonb('address_normalized').notNull(),
+  deliveryLat: numeric('delivery_lat', { precision: 10, scale: 7 }),
+  deliveryLng: numeric('delivery_lng', { precision: 10, scale: 7 }),
+  avgServiceTimeSeconds: numeric('avg_service_time_seconds', { precision: 10, scale: 2 }),
+  successfulDeliveries: integer('successful_deliveries').default(0).notNull(),
+  failedDeliveries: integer('failed_deliveries').default(0).notNull(),
+  totalDeliveries: integer('total_deliveries').default(0).notNull(),
+  bestDeliveryHours: jsonb('best_delivery_hours').default([]).notNull(),
+  accessInstructions: jsonb('access_instructions'),
+  parkingNotes: jsonb('parking_notes'),
+  customerPreferences: jsonb('customer_preferences'),
+  commonFailureReasons: jsonb('common_failure_reasons').default([]).notNull(),
+  lastDeliveryAt: timestamp('last_delivery_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('idx_address_intelligence_tenant_hash').on(table.tenantId, table.addressHash),
+]);
+
+// Delivery metrics — per-delivery actual vs estimated
+export const deliveryMetrics = pgTable('delivery_metrics', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  orderId: uuid('order_id').notNull(),
+  routeId: uuid('route_id'),
+  addressIntelligenceId: uuid('address_intelligence_id'),
+  estimatedArrivalAt: timestamp('estimated_arrival_at', { withTimezone: true }),
+  actualArrivalAt: timestamp('actual_arrival_at', { withTimezone: true }),
+  serviceTimeSeconds: integer('service_time_seconds'),
+  etaErrorMinutes: numeric('eta_error_minutes', { precision: 8, scale: 2 }),
+  estimatedDistanceKm: numeric('estimated_distance_km', { precision: 10, scale: 3 }),
+  actualDistanceKm: numeric('actual_distance_km', { precision: 10, scale: 3 }),
+  deliveryStatus: varchar('delivery_status', { length: 20 }).notNull(),
+  failureCategory: failureCategoryEnum('failure_category'),
+  completedAt: timestamp('completed_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Proof of delivery (needed by learning worker for notes extraction)
+export const proofOfDelivery = pgTable('proof_of_delivery', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  orderId: uuid('order_id').notNull(),
+  routeId: uuid('route_id'),
+  driverId: uuid('driver_id'),
+  notes: text('notes'),
+  locationLat: numeric('location_lat', { precision: 10, scale: 7 }),
+  locationLng: numeric('location_lng', { precision: 10, scale: 7 }),
+  capturedAt: timestamp('captured_at', { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });

@@ -1,10 +1,12 @@
 import type { Job } from 'bullmq';
 import { eq, and } from 'drizzle-orm';
-import Anthropic from '@anthropic-ai/sdk';
 import { db } from '../lib/db.js';
 import { config } from '../lib/config.js';
 import { orders, routes } from '../lib/schema.js';
 import { logger } from '../lib/logger.js';
+import { solveTSP, tourDuration } from './lib/vrp-solver.js';
+import { getDistanceMatrix } from './lib/osrm.js';
+import { haversineDistance } from './lib/geo.js';
 
 interface OptimizationJobData {
   tenantId: string;
@@ -40,82 +42,82 @@ export async function processOptimization(job: Job<OptimizationJobData>) {
     return { optimized: false, routeId, message: 'No orders to optimize' };
   }
 
-  // Build stop addresses for the prompt
-  const stops = routeOrders.map((order, idx) => {
-    const addr = order.deliveryAddress as Record<string, string> | null;
-    const addressStr = addr
-      ? [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(', ')
-      : `Stop ${idx + 1}`;
-    return `${idx}: ${addressStr}`;
-  });
+  // Build coordinate array: [depot?, ...orders]
+  const coords: [number, number][] = [];
+  let depotIndex: number | undefined;
 
-  const prompt =
-    `I have a delivery route with the following stops (index: address):\n${stops.join('\n')}\n\n` +
-    `Please determine the optimal order to visit these stops to minimize total travel distance. ` +
-    `Return ONLY a JSON array of the stop indices in optimal order, e.g. [2, 0, 1, 3]. No other text.`;
-
-  if (!config.anthropic.apiKey) {
-    log.info('No Anthropic API key, skipping AI optimization', { routeId });
-    return { optimized: false, routeId, message: 'No API key configured' };
+  if (route.depotLat && route.depotLng) {
+    depotIndex = 0;
+    coords.push([Number(route.depotLat), Number(route.depotLng)]);
   }
+
+  const orderStartIndex = coords.length;
+  const validOrders: typeof routeOrders = [];
+
+  for (const order of routeOrders) {
+    if (order.deliveryLat && order.deliveryLng) {
+      coords.push([Number(order.deliveryLat), Number(order.deliveryLng)]);
+      validOrders.push(order);
+    }
+  }
+
+  if (validOrders.length < 2) {
+    log.info('Not enough geocoded orders to optimize', { routeId });
+    return { optimized: false, routeId, message: 'Not enough geocoded orders' };
+  }
+
+  const stopMatrixIndices = validOrders.map((_, i) => orderStartIndex + i);
+
+  // Get distance matrix (OSRM with haversine fallback)
+  let matrix: number[][];
+  let usedOsrm = false;
 
   try {
-    const anthropic = new Anthropic({ apiKey: config.anthropic.apiKey });
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: 'You are a route optimization assistant. Return only valid JSON arrays of indices.',
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const responseText = message.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('');
-
-    const jsonMatch = responseText.match(/\[[\d,\s]+\]/);
-    if (!jsonMatch) {
-      log.warn('Could not parse AI response', { routeId });
-      return { optimized: false, routeId, message: 'Could not parse optimization result' };
-    }
-
-    const orderedIndices: number[] = JSON.parse(jsonMatch[0]);
-
-    // Validate indices
-    const uniqueIndices = new Set(orderedIndices);
-    if (
-      orderedIndices.length !== routeOrders.length ||
-      uniqueIndices.size !== orderedIndices.length ||
-      !orderedIndices.every((i) => i >= 0 && i < routeOrders.length)
-    ) {
-      log.warn('Invalid indices from AI', { routeId });
-      return { optimized: false, routeId, message: 'Invalid optimization result from AI' };
-    }
-
-    // Update stopSequence on orders
-    for (let newSeq = 0; newSeq < orderedIndices.length; newSeq++) {
-      const originalIdx = orderedIndices[newSeq];
-      const order = routeOrders[originalIdx];
-      await db
-        .update(orders)
-        .set({ stopSequence: newSeq + 1, updatedAt: new Date() })
-        .where(and(eq(orders.id, order.id), eq(orders.tenantId, tenantId)));
-    }
-
-    // Update route optimization notes
-    await db
-      .update(routes)
-      .set({
-        optimizationNotes: `Worker-optimized on ${new Date().toISOString()}. Order: ${orderedIndices.join(' -> ')}`,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
-
-    log.info('Route optimized successfully', { routeId, order: orderedIndices });
-    return { optimized: true, routeId, order: orderedIndices };
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    log.error('Optimization failed', { routeId, error: msg });
-    throw error;
+    const osrmResult = await getDistanceMatrix(coords);
+    matrix = osrmResult.durations;
+    usedOsrm = true;
+  } catch (err) {
+    log.warn('OSRM unavailable, using haversine fallback', { routeId, error: (err as Error).message });
+    matrix = buildHaversineMatrix(coords);
   }
+
+  // Solve TSP
+  const optimizedOrder = solveTSP(matrix, stopMatrixIndices, depotIndex);
+  const orderedIndices = optimizedOrder.map(mi => mi - orderStartIndex);
+
+  // Update stopSequence on orders
+  for (let newSeq = 0; newSeq < orderedIndices.length; newSeq++) {
+    const order = validOrders[orderedIndices[newSeq]];
+    await db
+      .update(orders)
+      .set({ stopSequence: newSeq + 1, updatedAt: new Date() })
+      .where(and(eq(orders.id, order.id), eq(orders.tenantId, tenantId)));
+  }
+
+  const method = usedOsrm ? 'OSRM+VRP' : 'VRP (approximate)';
+  await db
+    .update(routes)
+    .set({
+      optimizationNotes: `Worker ${method} optimized on ${new Date().toISOString()}. Sequence: ${orderedIndices.join(' → ')}`,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
+
+  log.info('Route optimized successfully', { routeId, method, order: orderedIndices });
+  return { optimized: true, routeId, order: orderedIndices, method };
+}
+
+function buildHaversineMatrix(coords: [number, number][]): number[][] {
+  const n = coords.length;
+  const matrix: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+  const speedKmh = 30;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      const dist = haversineDistance(coords[i][0], coords[i][1], coords[j][0], coords[j][1]);
+      matrix[i][j] = (dist * 1.3 / speedKmh) * 3600;
+    }
+  }
+  return matrix;
 }

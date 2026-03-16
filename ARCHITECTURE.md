@@ -75,7 +75,11 @@ homer-io/
 | Frontend | React 19 + Vite 8 | SPA with HMR |
 | State | Zustand | Lightweight client state management |
 | Validation | Zod | Shared schemas (API + client) |
-| AI | Anthropic Claude API | Route optimization + copilot |
+| Routing | OSRM (self-hosted) | Distance matrices + road-network routing |
+| VRP Solver | TypeScript (NN + 2-opt) | Route optimization + multi-vehicle dispatch |
+| ETAs | Google Routes API | Traffic-aware customer-facing ETAs (cached) |
+| AI (NLOps) | Claude Opus 4.6 / GPT-5.4 | Natural language fleet operations |
+| AI (Legacy) | Claude Sonnet 4 | Simple chat copilot (backward compat) |
 | Build | Turborepo | Monorepo task orchestration |
 | Deploy | PM2 + Caddy | Process management + reverse proxy |
 
@@ -136,7 +140,7 @@ RESTful API at `/api/*` with Swagger docs at `/api/docs`:
 
 ### Routes & Tracking
 - `CRUD /api/routes` — Route management
-- `POST /api/routes/:id/optimize` — AI route optimization (Claude-powered)
+- `POST /api/routes/:id/optimize` — Route optimization (OSRM distance matrix + VRP solver)
 - `POST /api/routes/:id/transition` — Route status state machine (draft→planned→in_progress→completed)
 - `POST /api/routes/:id/stops/:orderId/complete` — Mark delivery delivered/failed
 - `POST /api/tracking/location` — Driver GPS update (driver role)
@@ -295,7 +299,7 @@ Nested under `DriverLayout` with bottom tab bar (mobile-optimized):
 
 | Queue | Concurrency | Purpose |
 |-------|-------------|---------|
-| `route-optimization` | 2 | AI-powered route optimization |
+| `route-optimization` | 2 | OSRM + VRP route optimization |
 | `notifications` | 5 | In-app notification persistence |
 | `analytics` | 1 | Aggregate analytics computation |
 | `customer-notifications` | 5 | SMS (Twilio) + email (SendGrid) delivery |
@@ -359,8 +363,8 @@ Each tenant gets a free monthly quota. Beyond that, enable "Pay-as-you-go" toggl
 
 | Feature | Free Quota | At-Cost Rate |
 |---------|-----------|-------------|
-| AI Route Optimization | 10/mo | $0.05/run |
-| AI Auto-Dispatch | 5/mo | $0.15/batch |
+| Route Optimization | 10/mo | $0.05/run |
+| Auto-Dispatch | 5/mo | $0.15/batch |
 | AI Chat Messages | 50/mo | $0.02/msg |
 | SMS Notifications | 50/mo | $0.01/SMS |
 | Email Notifications | 500/mo | Free |
@@ -432,6 +436,134 @@ Each tenant gets a free monthly quota. Beyond that, enable "Pay-as-you-go" toggl
 
 ### Worker Queues (Phase 5)
 11 total queues (was 8): + `route-template`, `data-export`, `data-retention`
+
+## Natural Language Operations (NLOps)
+
+### Overview
+
+NLOps transforms HOMER from a traditional UI-driven platform into a conversational operations interface. Users can control fleet operations through natural language: "Marcus called in sick, reassign his route" — and HOMER executes multi-step operations with tool calling.
+
+### Architecture
+
+```
+User types command
+        │
+        ▼
+┌─ AIChatPanel (frontend) ──────────────┐
+│ POST /api/ai/ops (SSE stream)          │
+└───────────────┬────────────────────────┘
+                │
+                ▼
+┌─ Agent Loop (lib/ai/agent.ts) ─────────┐
+│ Provider abstraction (Anthropic/OpenAI) │
+│                                         │
+│ Loop: send messages + tools → model     │
+│   ├─ stop_reason=tool_use → execute     │
+│   │   ├─ read tool → run immediately    │
+│   │   └─ mutate tool → pause + confirm  │
+│   └─ stop_reason=end_turn → respond     │
+│                                         │
+│ Max 10 iterations safety valve          │
+└─────────────────────────────────────────┘
+                │
+     SSE events stream to frontend:
+     thinking, tool_start, tool_result,
+     message, confirmation, action_result,
+     error, done
+```
+
+### Models
+
+- **Primary:** Claude Opus 4.6 (`claude-opus-4-6`) via Anthropic API
+- **Alternative:** GPT-5.4 via OpenAI API
+- Configurable via `NLOPS_PROVIDER`, `NLOPS_ANTHROPIC_MODEL`, `NLOPS_OPENAI_MODEL` env vars
+
+### Tool Registry (19 tools)
+
+**Query Tools (read-only, no confirmation):**
+- `get_operational_summary` — Fleet snapshot: routes, drivers, pending orders
+- `search_orders` — Search by customer, status, date range
+- `get_order_details` — Full order with POD, tracking
+- `get_route_details` — Route with all stops and progress
+- `list_routes` — Filtered route listing
+- `find_driver` — Search driver by name
+- `get_available_drivers` — All available drivers with vehicles
+- `get_driver_performance` — Driver metrics (7d/30d/90d)
+- `get_analytics` — Fleet KPIs (7d/30d/90d)
+
+**Mutation Tools (require confirmation):**
+- `assign_order_to_route` — Add orders to route (mutate)
+- `update_order_status` — Change order status (mutate)
+- `change_driver_status` — Set available/on_break/offline (mutate)
+- `create_route` — Create new route (mutate)
+- `optimize_route` — AI-optimize stop order (mutate)
+- `transition_route_status` — draft→planned→in_progress→completed (mutate)
+- `send_customer_notification` — Trigger SMS/email (mutate)
+- `reassign_orders` — Move orders between routes (destructive)
+- `auto_dispatch` — Generate routes for all unassigned orders (destructive)
+- `cancel_route` — Cancel route, unassign orders (destructive)
+
+### Confirmation Tiers
+
+| Tier | Risk Level | UX | Example |
+|------|-----------|-----|---------|
+| 1 | read | Instant execution | "Where is Marcus?" |
+| 2 | mutate | Inline confirm card | "Mark #4521 as delivered" |
+| 3 | destructive | Full preview + confirm | "Reassign Marcus's route" |
+
+### RBAC
+
+Tools are filtered by user role before being sent to the model. The model cannot attempt actions the user isn't authorized for.
+
+| Role | Tools Available |
+|------|----------------|
+| owner | All 19 |
+| admin | All 19 |
+| dispatcher | All 19 |
+| driver | 2 (operational summary, route details) |
+
+### SSE Protocol
+
+`POST /api/ai/ops` returns a `text/event-stream` with typed events:
+
+```
+event: thinking     → Agent reasoning text
+event: tool_start   → Tool call initiated (name, input)
+event: tool_result  → Tool call completed (summary, duration)
+event: message      → Final text response
+event: confirmation → Mutation needs user approval (preview data)
+event: action_result → Confirmed action executed (success/failure)
+event: error        → Something went wrong
+event: done         → Stream complete
+```
+
+### Frontend: Thought Overlay
+
+The AIChatPanel includes a toggleable full-screen "thought overlay" that shows:
+- Every tool call with inputs, outputs, and timing
+- Agent reasoning text
+- Confirmation states
+- Execution results
+
+Users control visibility with a `{ }` toggle button. When hidden, the panel shows only the final response with compact tool activity indicators.
+
+### File Structure
+
+```
+packages/api/src/lib/ai/
+├── claude.ts           # Legacy text-in/text-out (kept)
+├── providers.ts        # Multi-model abstraction (Anthropic + OpenAI)
+├── agent.ts            # Agentic loop engine
+└── tools/
+    ├── types.ts         # Tool interface + result summarizer
+    ├── index.ts         # Registry + RBAC filtering
+    ├── query.ts         # 9 read-only tools
+    └── mutations.ts     # 10 mutation tools
+```
+
+### Metering
+
+One "NLOps interaction" = one user message, regardless of internal tool calls. Metered as `aiChatMessages` (50/mo free, $0.02/msg pay-as-you-go). Confirmations don't consume quota.
 
 ## Deployment
 

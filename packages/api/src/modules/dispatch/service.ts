@@ -3,7 +3,7 @@ import { db } from '../../lib/db/index.js';
 import { orders } from '../../lib/db/schema/orders.js';
 import { drivers } from '../../lib/db/schema/drivers.js';
 import { vehicles } from '../../lib/db/schema/vehicles.js';
-import { chatWithClaude } from '../../lib/ai/claude.js';
+import { dispatchOrders } from '../../lib/routing/index.js';
 import { createRoute, transitionRouteStatus } from '../routes/service.js';
 import { broadcastToTenant } from '../../lib/ws/index.js';
 import { logActivity } from '../../lib/activity.js';
@@ -11,7 +11,7 @@ import { recordMeteredUsage } from '../billing/service.js';
 import type { AutoDispatchRequest } from '@homer-io/shared';
 
 export async function autoDispatch(tenantId: string, input: AutoDispatchRequest, userId?: string) {
-  // Check metered quota for AI dispatch
+  // Metered billing — feature key is 'aiDispatches' for legacy reasons (now OSRM+VRP powered)
   const meter = await recordMeteredUsage(tenantId, 'aiDispatches');
   if (!meter.allowed) {
     return {
@@ -19,10 +19,11 @@ export async function autoDispatch(tenantId: string, input: AutoDispatchRequest,
       unassignedOrderIds: [],
       totalOrders: 0,
       totalDrivers: 0,
-      message: meter.reason || 'AI dispatch quota exceeded. Enable Pay-as-you-go in Settings > Billing.',
+      message: meter.reason || 'Dispatch quota exceeded. Enable Pay-as-you-go in Settings > Billing.',
     };
   }
-  // 1. Get unassigned orders (status='received', no routeId)
+
+  // 1. Get unassigned orders
   const unassignedOrders = await db.select().from(orders)
     .where(and(
       eq(orders.tenantId, tenantId),
@@ -51,7 +52,7 @@ export async function autoDispatch(tenantId: string, input: AutoDispatchRequest,
     };
   }
 
-  // 3. Get vehicles for drivers that have one assigned
+  // 3. Get vehicles for capacity constraints
   const vehicleIds = availableDrivers
     .map(d => d.currentVehicleId)
     .filter((id): id is string => id !== null);
@@ -60,120 +61,77 @@ export async function autoDispatch(tenantId: string, input: AutoDispatchRequest,
     : [];
   const vehicleMap = new Map(driverVehicles.map(v => [v.id, v]));
 
-  // 4. Build Claude prompt with order and driver data
-  const orderData = unassignedOrders.map(o => {
-    const addr = o.deliveryAddress as Record<string, string> | null;
-    return {
-      id: o.id,
-      address: addr ? [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(', ') : 'Unknown',
-      lat: o.deliveryLat,
-      lng: o.deliveryLng,
-      weight: o.weight,
-      volume: o.volume,
-      priority: o.priority,
-      packageCount: o.packageCount,
-      timeWindow: o.timeWindowStart && o.timeWindowEnd
-        ? `${new Date(o.timeWindowStart).toLocaleTimeString()} - ${new Date(o.timeWindowEnd).toLocaleTimeString()}`
-        : null,
-    };
-  });
+  // 4. Build routing input
+  const driverData = availableDrivers
+    .filter(d => d.currentLat && d.currentLng)
+    .map(d => {
+      const vehicle = d.currentVehicleId ? vehicleMap.get(d.currentVehicleId) : null;
+      return {
+        id: d.id,
+        name: d.name,
+        lat: Number(d.currentLat),
+        lng: Number(d.currentLng),
+        capacity: {
+          weight: vehicle?.capacityWeight ? Number(vehicle.capacityWeight) : 0,
+          volume: vehicle?.capacityVolume ? Number(vehicle.capacityVolume) : 0,
+          count: vehicle?.capacityCount ?? 0,
+        },
+        vehicleId: d.currentVehicleId,
+      };
+    });
 
-  const driverData = availableDrivers.map(d => {
-    const vehicle = d.currentVehicleId ? vehicleMap.get(d.currentVehicleId) : null;
-    return {
-      id: d.id,
-      name: d.name,
-      lat: d.currentLat,
-      lng: d.currentLng,
-      skillTags: d.skillTags,
-      vehicle: vehicle ? {
-        type: vehicle.type,
-        maxWeight: vehicle.capacityWeight,
-        maxVolume: vehicle.capacityVolume,
-        maxPackages: vehicle.capacityCount,
-      } : null,
-    };
-  });
-
-  const systemPrompt = `You are an AI dispatch optimizer for a delivery company. Given a set of unassigned orders and available drivers, create optimal route assignments. Consider:
-- Geographic proximity (cluster nearby deliveries)
-- Vehicle capacity constraints
-- Time windows
-- Order priority (urgent orders should be assigned first)
-- Driver location relative to delivery areas
-- Balance workload across drivers
-
-Return ONLY valid JSON matching this format:
-{
-  "routes": [
-    {
-      "driverId": "uuid",
-      "driverName": "name",
-      "orderIds": ["uuid1", "uuid2"],
-      "estimatedDistance": 15.5,
-      "reasoning": "Brief explanation"
-    }
-  ],
-  "unassignedOrderIds": ["uuid of orders that couldn't be assigned"]
-}`;
-
-  const userMessage = `Please create optimal delivery routes.
-
-ORDERS (${orderData.length} total):
-${JSON.stringify(orderData, null, 2)}
-
-DRIVERS (${driverData.length} available):
-${JSON.stringify(driverData, null, 2)}
-
-CONSTRAINTS:
-- Max orders per route: ${input.maxOrdersPerRoute}
-- Prioritize urgent: ${input.prioritizeUrgent}`;
-
-  const response = await chatWithClaude(systemPrompt, [{ role: 'user', content: userMessage }]);
-
-  // Check for no-API-key message
-  if (response.includes('AI features require an Anthropic API key')) {
+  if (driverData.length === 0) {
     return {
       routes: [],
       unassignedOrderIds: unassignedOrders.map(o => o.id),
       totalOrders: unassignedOrders.length,
       totalDrivers: availableDrivers.length,
-      message: 'Auto-dispatch requires an Anthropic API key. Set ANTHROPIC_API_KEY to enable.',
+      message: 'No drivers with known locations',
     };
   }
 
-  // 5. Parse Claude's response
+  const orderData = unassignedOrders
+    .filter(o => o.deliveryLat && o.deliveryLng)
+    .map(o => ({
+      id: o.id,
+      lat: Number(o.deliveryLat),
+      lng: Number(o.deliveryLng),
+      demand: {
+        weight: o.weight ? Number(o.weight) : 0,
+        volume: o.volume ? Number(o.volume) : 0,
+        count: o.packageCount ?? 1,
+      },
+      priority: o.priority || 'normal',
+      timeWindow: o.timeWindowStart && o.timeWindowEnd
+        ? { start: new Date(o.timeWindowStart), end: new Date(o.timeWindowEnd) }
+        : undefined,
+    }));
+
+  // 5. Run OSRM + VRP solver
   try {
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No JSON in response');
+    const result = await dispatchOrders(driverData, orderData, {
+      maxOrdersPerRoute: input.maxOrdersPerRoute,
+    });
 
-    const parsed = JSON.parse(jsonMatch[0]);
-
-    // 6. Create draft routes from AI output
+    // 6. Create draft routes from solver output
     const createdRoutes = [];
-    for (const routePlan of parsed.routes) {
-      // Validate driver exists in our available set
-      const driver = availableDrivers.find(d => d.id === routePlan.driverId);
-      if (!driver) continue;
-
-      // Validate order IDs exist in the unassigned set
-      const validOrderIds = routePlan.orderIds.filter((oid: string) =>
-        unassignedOrders.some(o => o.id === oid)
-      );
-      if (validOrderIds.length === 0) continue;
+    for (const assignment of result.assignments) {
+      const driver = driverData.find(d => d.id === assignment.driverId);
+      if (!driver || assignment.orderedOrderIds.length === 0) continue;
 
       const route = await createRoute(tenantId, {
         name: `Auto-dispatch: ${driver.name} (${new Date().toLocaleDateString()})`,
         driverId: driver.id,
-        vehicleId: driver.currentVehicleId || undefined,
-        orderIds: validOrderIds,
+        vehicleId: driver.vehicleId || undefined,
+        orderIds: assignment.orderedOrderIds,
       });
 
+      const durationMin = Math.round(assignment.totalDuration / 60);
       createdRoutes.push({
         ...route,
         driverName: driver.name,
-        estimatedDistance: routePlan.estimatedDistance,
-        reasoning: routePlan.reasoning,
+        estimatedDistance: null,
+        reasoning: `Assigned ${assignment.orderedOrderIds.length} orders. Est. duration: ${durationMin} min.${result.usedOsrm ? '' : ' (approximate distances)'}`,
       });
     }
 
@@ -188,6 +146,7 @@ CONSTRAINTS:
         ordersAssigned: createdRoutes.reduce((sum, r) => sum + r.totalStops, 0),
         totalOrders: unassignedOrders.length,
         totalDrivers: availableDrivers.length,
+        usedOsrm: result.usedOsrm,
       },
     });
 
@@ -199,7 +158,7 @@ CONSTRAINTS:
 
     return {
       routes: createdRoutes,
-      unassignedOrderIds: parsed.unassignedOrderIds || [],
+      unassignedOrderIds: result.unassignedOrderIds,
       totalOrders: unassignedOrders.length,
       totalDrivers: availableDrivers.length,
     };
@@ -209,7 +168,7 @@ CONSTRAINTS:
       unassignedOrderIds: unassignedOrders.map(o => o.id),
       totalOrders: unassignedOrders.length,
       totalDrivers: availableDrivers.length,
-      message: 'Failed to parse AI dispatch result: ' + (error instanceof Error ? error.message : 'Unknown error'),
+      message: 'Dispatch optimization failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
     };
   }
 }

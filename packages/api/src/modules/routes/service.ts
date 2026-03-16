@@ -11,6 +11,7 @@ import { broadcastToTenant } from '../../lib/ws/index.js';
 import { logActivity } from '../../lib/activity.js';
 import { enqueueWebhook } from '../../lib/webhooks.js';
 import { enqueueCustomerNotification } from '../customer-notifications/service.js';
+import { enqueueDeliveryLearning } from '../../lib/delivery-learning.js';
 
 export async function createRoute(tenantId: string, input: CreateRouteInput) {
   const [route] = await db.transaction(async (tx) => {
@@ -138,93 +139,63 @@ export async function deleteRoute(tenantId: string, id: string) {
 }
 
 export async function optimizeRoute(tenantId: string, routeId: string) {
-  // Check metered quota for AI optimization
+  // Metered billing — feature key is 'aiOptimizations' for legacy reasons (now OSRM+VRP powered)
   const { recordMeteredUsage } = await import('../billing/service.js');
   const meter = await recordMeteredUsage(tenantId, 'aiOptimizations');
   if (!meter.allowed) {
-    throw new Error(meter.reason || 'AI optimization quota exceeded. Enable Pay-as-you-go in Settings > Billing.');
+    throw new Error(meter.reason || 'Route optimization quota exceeded. Enable Pay-as-you-go in Settings > Billing.');
   }
 
-  // Get route with orders
   const routeData = await getRoute(tenantId, routeId);
 
   if (routeData.orders.length === 0) {
-    return { message: 'No orders to optimize', route: routeData };
+    return { message: 'No orders to optimize', route: routeData, optimized: false };
   }
 
-  // Build a prompt with stop addresses
-  const stops = routeData.orders.map((order, idx) => {
-    const addr = order.deliveryAddress as Record<string, string> | null;
-    const addressStr = addr
-      ? [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(', ')
-      : `Stop ${idx + 1}`;
-    return `${idx}: ${addressStr}`;
-  });
+  // Build stop data from orders with valid coordinates
+  const { optimizeRouteStops } = await import('../../lib/routing/index.js');
 
-  const prompt =
-    `I have a delivery route with the following stops (index: address):\n${stops.join('\n')}\n\n` +
-    `Please determine the optimal order to visit these stops to minimize total travel distance. ` +
-    `Return ONLY a JSON array of the stop indices in optimal order, e.g. [2, 0, 1, 3]. No other text.`;
+  const stops = routeData.orders
+    .map((order, idx) => ({
+      id: order.id,
+      lat: order.deliveryLat ? Number(order.deliveryLat) : NaN,
+      lng: order.deliveryLng ? Number(order.deliveryLng) : NaN,
+      originalIndex: idx,
+    }))
+    .filter(s => !isNaN(s.lat) && !isNaN(s.lng));
+
+  if (stops.length < 2) {
+    return { message: 'Not enough geocoded orders to optimize', route: routeData, optimized: false };
+  }
+
+  const depot = routeData.depotLat && routeData.depotLng
+    ? { lat: Number(routeData.depotLat), lng: Number(routeData.depotLng) }
+    : undefined;
 
   try {
-    const { chatWithClaude } = await import('../../lib/ai/claude.js');
-    const response = await chatWithClaude(
-      'You are a route optimization assistant. Return only valid JSON arrays of indices.',
-      [{ role: 'user', content: prompt }],
-    );
-
-    // Check if the response is the "no API key" message
-    if (response.includes('AI features require an Anthropic API key')) {
-      return {
-        message: 'Route optimization requires an Anthropic API key. Set ANTHROPIC_API_KEY to enable.',
-        route: routeData,
-        optimized: false,
-      };
-    }
-
-    // Parse the response to get ordered stop indices
-    const jsonMatch = response.match(/\[[\d,\s]+\]/);
-    if (!jsonMatch) {
-      return {
-        message: 'Could not parse optimization result',
-        route: routeData,
-        optimized: false,
-      };
-    }
-
-    const orderedIndices: number[] = JSON.parse(jsonMatch[0]);
-
-    // Validate indices — check length, range, and no duplicates
-    const uniqueIndices = new Set(orderedIndices);
-    if (orderedIndices.length !== routeData.orders.length ||
-        uniqueIndices.size !== orderedIndices.length ||
-        !orderedIndices.every((i) => i >= 0 && i < routeData.orders.length)) {
-      return {
-        message: 'Invalid optimization result from AI',
-        route: routeData,
-        optimized: false,
-      };
-    }
+    const result = await optimizeRouteStops(stops, depot);
 
     // Update stopSequence on orders in a transaction
     await db.transaction(async (tx) => {
-      for (let newSeq = 0; newSeq < orderedIndices.length; newSeq++) {
-        const originalIdx = orderedIndices[newSeq];
-        const order = routeData.orders[originalIdx];
+      for (let newSeq = 0; newSeq < result.orderedStopIds.length; newSeq++) {
+        const orderId = result.orderedStopIds[newSeq];
         await tx.update(orders)
           .set({ stopSequence: newSeq + 1, updatedAt: new Date() })
-          .where(and(eq(orders.id, order.id), eq(orders.tenantId, tenantId)));
+          .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
       }
 
+      const method = result.usedOsrm ? 'OSRM+VRP' : 'VRP (approximate distances)';
       await tx.update(routes)
         .set({
-          optimizationNotes: `AI-optimized on ${new Date().toISOString()}. Order: ${orderedIndices.join(' -> ')}`,
+          optimizationNotes: `${method} optimized on ${new Date().toISOString()}. Sequence: ${result.orderedIndices.join(' → ')}`,
+          totalDistance: String(Math.round(result.totalDistance / 1000 * 100) / 100), // meters → km
+          totalDuration: Math.round(result.totalDuration / 60), // seconds → minutes
+          waypoints: result.geometry ? [result.geometry] : [],
           updatedAt: new Date(),
         })
         .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
     });
 
-    // Re-fetch the updated route
     const updatedRoute = await getRoute(tenantId, routeId);
     return {
       message: 'Route optimized successfully',
@@ -478,6 +449,9 @@ export async function completeStop(
 
   // Customer notification: delivered or failed
   enqueueCustomerNotification(tenantId, orderId, result.status).catch(err => console.error('[trigger]', err?.message || err));
+
+  // Delivery learning: record metrics + build address intelligence
+  enqueueDeliveryLearning(tenantId, orderId, routeId, result.status, result.failureReason, now).catch(err => console.error('[trigger]', err?.message || err));
 
   // Re-read route to get the actual completedStops after the atomic increment
   const [updatedRoute] = await db
