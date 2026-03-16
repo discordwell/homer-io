@@ -1,15 +1,16 @@
 import type { Job } from 'bullmq';
+import type { PgColumn } from 'drizzle-orm/pg-core';
 import { lt, sql } from 'drizzle-orm';
 import { db } from '../lib/db.js';
 import { locationHistory, activityLog, customerNotificationsLog, webhookDeliveries, passwordResetTokens } from '../lib/schema.js';
 import { logger } from '../lib/logger.js';
 
 const POLICIES = [
-  { name: 'location_history', table: locationHistory, days: 90 },
-  { name: 'activity_log', table: activityLog, days: 365 },
-  { name: 'customer_notifications_log', table: customerNotificationsLog, days: 180 },
-  { name: 'webhook_deliveries', table: webhookDeliveries, days: 90 },
-  { name: 'password_reset_tokens', table: passwordResetTokens, days: 7 },
+  { name: 'location_history', table: locationHistory, days: 90, dateColumn: locationHistory.timestamp as PgColumn },
+  { name: 'activity_log', table: activityLog, days: 365, dateColumn: activityLog.createdAt as PgColumn },
+  { name: 'customer_notifications_log', table: customerNotificationsLog, days: 180, dateColumn: customerNotificationsLog.createdAt as PgColumn },
+  { name: 'webhook_deliveries', table: webhookDeliveries, days: 90, dateColumn: webhookDeliveries.createdAt as PgColumn },
+  { name: 'password_reset_tokens', table: passwordResetTokens, days: 7, dateColumn: passwordResetTokens.createdAt as PgColumn },
 ];
 
 const log = logger.child({ worker: 'data-retention' });
@@ -24,12 +25,12 @@ export async function processDataRetention(job: Job) {
       // Count before delete to avoid loading all IDs into memory
       const [countResult] = await db.select({ count: sql<number>`count(*)` })
         .from(policy.table)
-        .where(lt(policy.table.createdAt, cutoff));
+        .where(lt(policy.dateColumn, cutoff));
       const toDelete = Number(countResult.count);
 
       if (toDelete > 0) {
         await db.delete(policy.table)
-          .where(lt(policy.table.createdAt, cutoff));
+          .where(lt(policy.dateColumn, cutoff));
       }
 
       results[policy.name] = toDelete;
