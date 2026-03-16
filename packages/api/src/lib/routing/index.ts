@@ -238,7 +238,7 @@ export async function dispatchOrders(
       id: o.id,
       matrixIndex: orderStartIndex + i,
       demand: o.demand,
-      priority: typeof o.priority === 'string' ? priorityToNum(o.priority) : o.priority,
+      priority: typeof o.priority === 'number' ? o.priority : ({ urgent: 3, high: 2, normal: 1, low: 0 }[o.priority as string] ?? 1),
       timeWindow: o.timeWindow,
     })),
     depotIndex,
@@ -460,12 +460,3 @@ function estimateTotalDistance(
   return Math.round(total);
 }
 
-function priorityToNum(p: string): number {
-  switch (p) {
-    case 'urgent': return 4;
-    case 'high': return 3;
-    case 'normal': return 2;
-    case 'low': return 1;
-    default: return 2;
-  }
-}

@@ -53,7 +53,7 @@ docker run -d \
   -p "127.0.0.1:${PORT}:5000" \
   -v "${DATA_DIR}:/data" \
   "${OSRM_IMAGE}" \
-  osrm-routed --algorithm mld /data/region.osrm --max-table-size 200
+  osrm-routed --algorithm mld /data/region.osrm --max-table-size 10000
 
 # Health check
 echo "Waiting for OSRM to start..."

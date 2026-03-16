@@ -165,18 +165,10 @@ function twoOptDelta(
   depotIndex?: number,
 ): number {
   const n = tour.length;
-  const a = i === 0 && depotIndex !== undefined ? depotIndex : (i === 0 ? tour[n - 1] : tour[i - 1]);
-  const prevA = i === 0 && depotIndex !== undefined ? depotIndex : tour[i === 0 ? n - 1 : i - 1];
-  const nodeA = tour[i];
-  const nodeB = tour[j];
-
-  // For open path (depot → stops), the "previous" of first stop is depot
   const beforeI = i === 0 && depotIndex !== undefined ? depotIndex : tour[i > 0 ? i - 1 : n - 1];
   const afterJ = j < n - 1 ? tour[j + 1] : (depotIndex !== undefined ? depotIndex : tour[0]);
 
-  // Cost of old edges
   const oldCost = matrix[beforeI][tour[i]] + matrix[tour[j]][afterJ];
-  // Cost of new edges after reversing segment [i..j]
   const newCost = matrix[beforeI][tour[j]] + matrix[tour[i]][afterJ];
 
   return newCost - oldCost;
@@ -295,20 +287,29 @@ export function solveCVRPTW(input: CVRPTWInput): CVRPTWResult {
     if (driverOrderIndices.length === 0) continue;
 
     const driver = drivers[di];
-    const stopMatrixIndices = driverOrderIndices.map(oi => orders[oi].matrixIndex);
 
-    // Solve TSP for this driver's stops
-    const optimizedMatrixOrder = solveTSP(matrix, stopMatrixIndices, driver.matrixIndex);
-
-    // Map back from matrix indices to order indices
-    const matrixToOrder = new Map<number, number>();
+    // Map matrix indices to order indices, handling duplicates
+    // (multiple orders at the same coordinates share a matrix index).
+    const matrixToOrders = new Map<number, number[]>();
     for (const oi of driverOrderIndices) {
-      matrixToOrder.set(orders[oi].matrixIndex, oi);
+      const mi = orders[oi].matrixIndex;
+      const existing = matrixToOrders.get(mi);
+      if (existing) existing.push(oi);
+      else matrixToOrders.set(mi, [oi]);
     }
 
-    const orderedOrderIndices = optimizedMatrixOrder
-      .map(mi => matrixToOrder.get(mi)!)
-      .filter(oi => oi !== undefined);
+    // Deduplicate matrix indices for TSP (it operates on unique locations)
+    const uniqueStopMatrixIndices = [...matrixToOrders.keys()];
+
+    // Solve TSP for unique locations
+    const optimizedMatrixOrder = solveTSP(matrix, uniqueStopMatrixIndices, driver.matrixIndex);
+
+    // Expand back: each unique matrix index maps to one or more orders
+    const orderedOrderIndices: number[] = [];
+    for (const mi of optimizedMatrixOrder) {
+      const ois = matrixToOrders.get(mi);
+      if (ois) orderedOrderIndices.push(...ois);
+    }
 
     const totalDur = tourDuration(matrix, optimizedMatrixOrder, driver.matrixIndex);
 

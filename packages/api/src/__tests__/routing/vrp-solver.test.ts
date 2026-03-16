@@ -149,6 +149,32 @@ describe('solveCVRPTW', () => {
     expect(d1Assignment?.orderIndices).toEqual([1]); // order 1
   });
 
+  it('handles multiple orders at same coordinates', () => {
+    // Two orders go to the same building (same matrix index)
+    const matrix = [
+      [0, 10],
+      [10, 0],
+    ];
+
+    const result = solveCVRPTW({
+      matrix,
+      drivers: [
+        { id: 'd0', matrixIndex: 0, capacity: { weight: 100, volume: 100, count: 100 } },
+      ],
+      orders: [
+        { id: 'o0', matrixIndex: 1, demand: { weight: 1, volume: 1, count: 1 }, priority: 2 },
+        { id: 'o1', matrixIndex: 1, demand: { weight: 1, volume: 1, count: 1 }, priority: 2 },
+      ],
+      maxOrdersPerRoute: 50,
+    });
+
+    // Both orders should be assigned — not silently dropped
+    const allAssigned = result.assignments.flatMap(a => a.orderIndices);
+    expect(allAssigned).toHaveLength(2);
+    expect(new Set(allAssigned)).toEqual(new Set([0, 1]));
+    expect(result.unassignedOrderIndices).toEqual([]);
+  });
+
   it('respects capacity constraints', () => {
     const matrix = [
       [0, 5, 5],

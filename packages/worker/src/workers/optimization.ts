@@ -85,23 +85,25 @@ export async function processOptimization(job: Job<OptimizationJobData>) {
   const optimizedOrder = solveTSP(matrix, stopMatrixIndices, depotIndex);
   const orderedIndices = optimizedOrder.map(mi => mi - orderStartIndex);
 
-  // Update stopSequence on orders
-  for (let newSeq = 0; newSeq < orderedIndices.length; newSeq++) {
-    const order = validOrders[orderedIndices[newSeq]];
-    await db
-      .update(orders)
-      .set({ stopSequence: newSeq + 1, updatedAt: new Date() })
-      .where(and(eq(orders.id, order.id), eq(orders.tenantId, tenantId)));
-  }
-
+  // Update stopSequence on orders atomically
   const method = usedOsrm ? 'OSRM+VRP' : 'VRP (approximate)';
-  await db
-    .update(routes)
-    .set({
-      optimizationNotes: `Worker ${method} optimized on ${new Date().toISOString()}. Sequence: ${orderedIndices.join(' → ')}`,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
+  await db.transaction(async (tx) => {
+    for (let newSeq = 0; newSeq < orderedIndices.length; newSeq++) {
+      const order = validOrders[orderedIndices[newSeq]];
+      await tx
+        .update(orders)
+        .set({ stopSequence: newSeq + 1, updatedAt: new Date() })
+        .where(and(eq(orders.id, order.id), eq(orders.tenantId, tenantId)));
+    }
+
+    await tx
+      .update(routes)
+      .set({
+        optimizationNotes: `Worker ${method} optimized on ${new Date().toISOString()}. Sequence: ${orderedIndices.join(' → ')}`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(routes.id, routeId), eq(routes.tenantId, tenantId)));
+  });
 
   log.info('Route optimized successfully', { routeId, method, order: orderedIndices });
   return { optimized: true, routeId, order: orderedIndices, method };

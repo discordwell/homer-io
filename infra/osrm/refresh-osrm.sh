@@ -55,11 +55,19 @@ docker run -d \
   -p "127.0.0.1:${PORT}:5000" \
   -v "${DATA_DIR}:/data" \
   "${OSRM_IMAGE}" \
-  osrm-routed --algorithm mld /data/region.osrm --max-table-size 200
+  osrm-routed --algorithm mld /data/region.osrm --max-table-size 10000
 
-# Verify
-sleep 3
-if curl -sf "http://localhost:${PORT}/" > /dev/null 2>&1; then
+# Verify with retry loop
+STARTED=false
+for i in $(seq 1 30); do
+  if curl -sf "http://localhost:${PORT}/" > /dev/null 2>&1; then
+    STARTED=true
+    break
+  fi
+  sleep 1
+done
+
+if [ "$STARTED" = true ]; then
   echo "[$(date)] OSRM refresh complete — running on port ${PORT}"
   sudo rm -rf "${DATA_DIR}.old"
 else
@@ -75,6 +83,6 @@ else
     -p "127.0.0.1:${PORT}:5000" \
     -v "${DATA_DIR}:/data" \
     "${OSRM_IMAGE}" \
-    osrm-routed --algorithm mld /data/region.osrm --max-table-size 200
+    osrm-routed --algorithm mld /data/region.osrm --max-table-size 10000
   exit 1
 fi
