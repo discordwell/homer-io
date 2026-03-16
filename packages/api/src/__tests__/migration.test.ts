@@ -4,6 +4,7 @@ import {
   migrationJobResponseSchema,
   migrationPlatformEnum,
   migrationCsvDataSchema,
+  validateMigrationCredentialsSchema,
 } from '@homer-io/shared';
 
 // ─── Mock DB ──────────────────────────────────────────────────────────────────
@@ -76,8 +77,8 @@ vi.mock('../lib/integrations/crypto.js', () => ({
   encrypt: (v: string) => `enc:${v}`,
 }));
 
-vi.mock('../../config.js', () => ({
-  config: { redis: { url: 'redis://localhost:6379' } },
+vi.mock('../config.js', () => ({
+  config: { redis: { url: 'redis://localhost:6379' }, integrations: { encryptionKey: 'test-key' }, nodeEnv: 'test' },
 }));
 
 // Mock BullMQ Queue
@@ -96,6 +97,24 @@ vi.mock('../lib/errors.js', () => ({
       this.statusCode = statusCode;
     }
   },
+}));
+
+const mockValidateCredentials = vi.fn().mockResolvedValue(true);
+const mockGetCounts = vi.fn().mockResolvedValue({ orders: 42, drivers: 5 });
+vi.mock('../lib/migration-connectors/index.js', () => ({
+  getMigrationConnector: (platform: string) => {
+    if (platform === 'speedyroute') return undefined;
+    return { platform, validateCredentials: mockValidateCredentials, getCounts: mockGetCounts };
+  },
+  apiMigrationPlatforms: ['tookan', 'onfleet', 'optimoroute', 'getswift', 'circuit'],
+  getMigrationPlatformInfo: () => [
+    { platform: 'tookan', name: 'Tookan', supportsApi: true, supportsVehicles: false, credentialHint: 'hint' },
+    { platform: 'onfleet', name: 'Onfleet', supportsApi: true, supportsVehicles: true, credentialHint: 'hint' },
+    { platform: 'optimoroute', name: 'OptimoRoute', supportsApi: true, supportsVehicles: false, credentialHint: 'hint' },
+    { platform: 'speedyroute', name: 'SpeedyRoute', supportsApi: false, supportsVehicles: false, credentialHint: 'CSV only' },
+    { platform: 'getswift', name: 'GetSwift', supportsApi: true, supportsVehicles: false, credentialHint: 'hint' },
+    { platform: 'circuit', name: 'Circuit', supportsApi: true, supportsVehicles: false, credentialHint: 'hint' },
+  ],
 }));
 
 beforeEach(() => {
@@ -279,5 +298,60 @@ describe('Migration service', () => {
       entityId: 'mig-1',
       metadata: { sourcePlatform: 'tookan' },
     });
+  });
+});
+
+// ─── Credential Validation Tests ─────────────────────────────────────────────
+
+describe('Migration credential validation', () => {
+  it('returns valid with counts on success', async () => {
+    mockValidateCredentials.mockResolvedValueOnce(true);
+    mockGetCounts.mockResolvedValueOnce({ orders: 42, drivers: 5 });
+
+    const { validateMigrationCredentials } = await import('../modules/migration/service.js');
+    const result = await validateMigrationCredentials('tookan', 'test-key');
+    expect(result.valid).toBe(true);
+    expect(result.counts).toEqual({ orders: 42, drivers: 5 });
+  });
+
+  it('returns invalid with message on bad credentials', async () => {
+    mockValidateCredentials.mockResolvedValueOnce(false);
+
+    const { validateMigrationCredentials } = await import('../modules/migration/service.js');
+    const result = await validateMigrationCredentials('onfleet', 'bad-key');
+    expect(result.valid).toBe(false);
+    expect(result.message).toBe('Invalid API credentials');
+  });
+
+  it('rejects CSV-only platform (speedyroute)', async () => {
+    const { validateMigrationCredentials } = await import('../modules/migration/service.js');
+    await expect(validateMigrationCredentials('speedyroute', 'any-key')).rejects.toThrow(
+      "Platform 'speedyroute' does not support API import",
+    );
+  });
+
+  it('getMigrationPlatformInfo returns all platforms', async () => {
+    const { getMigrationPlatformInfo } = await import('../modules/migration/service.js');
+    const info = getMigrationPlatformInfo();
+    expect(info).toHaveLength(6);
+    expect(info.find((p: any) => p.platform === 'speedyroute')?.supportsApi).toBe(false);
+  });
+});
+
+// ─── Shared schema: validateMigrationCredentialsSchema ───────────────────────
+
+describe('validateMigrationCredentialsSchema', () => {
+  it('validates valid input', () => {
+    const result = validateMigrationCredentialsSchema.parse({ platform: 'tookan', apiKey: 'my-key' });
+    expect(result.platform).toBe('tookan');
+    expect(result.apiKey).toBe('my-key');
+  });
+
+  it('rejects empty apiKey', () => {
+    expect(() => validateMigrationCredentialsSchema.parse({ platform: 'tookan', apiKey: '' })).toThrow();
+  });
+
+  it('rejects invalid platform', () => {
+    expect(() => validateMigrationCredentialsSchema.parse({ platform: 'uber', apiKey: 'key' })).toThrow();
   });
 });

@@ -1,10 +1,16 @@
 import { create } from 'zustand';
 import { api } from '../api/client.js';
-import type { MigrationJobResponse, CreateMigrationJobInput } from '@homer-io/shared';
+import type { MigrationJobResponse, CreateMigrationJobInput, MigrationPlatformInfo } from '@homer-io/shared';
 
 interface PaginatedJobs {
   data: MigrationJobResponse[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+interface ValidationResult {
+  valid: boolean;
+  message?: string;
+  counts?: { orders?: number; drivers?: number; vehicles?: number };
 }
 
 interface MigrationState {
@@ -12,6 +18,7 @@ interface MigrationState {
   currentJob: MigrationJobResponse | null;
   loading: boolean;
   creating: boolean;
+  platformInfo: MigrationPlatformInfo[];
 
   loadJobs: (page?: number, limit?: number) => Promise<PaginatedJobs>;
   createJob: (input: CreateMigrationJobInput) => Promise<MigrationJobResponse>;
@@ -19,6 +26,8 @@ interface MigrationState {
   pollJob: (id: string) => Promise<MigrationJobResponse>;
   cancelJob: (id: string) => Promise<void>;
   deleteJob: (id: string) => Promise<void>;
+  validateCredentials: (platform: string, apiKey: string) => Promise<ValidationResult>;
+  loadPlatforms: () => Promise<void>;
 }
 
 export const useMigrationStore = create<MigrationState>()((set, get) => ({
@@ -26,6 +35,7 @@ export const useMigrationStore = create<MigrationState>()((set, get) => ({
   currentJob: null,
   loading: false,
   creating: false,
+  platformInfo: [],
 
   loadJobs: async (page = 1, limit = 20) => {
     set({ loading: true });
@@ -64,12 +74,31 @@ export const useMigrationStore = create<MigrationState>()((set, get) => ({
 
   cancelJob: async (id) => {
     await api.post(`/migrations/${id}/cancel`);
-    set({ currentJob: null });
+    // Re-fetch instead of clearing to preserve UI state
+    try {
+      const job = await api.get<MigrationJobResponse>(`/migrations/${id}`);
+      set({ currentJob: job });
+    } catch {
+      // Job may have been cleaned up
+    }
     await get().loadJobs();
   },
 
   deleteJob: async (id) => {
     await api.delete(`/migrations/${id}`);
     await get().loadJobs();
+  },
+
+  validateCredentials: async (platform, apiKey) => {
+    return await api.post<ValidationResult>('/migrations/validate', { platform, apiKey });
+  },
+
+  loadPlatforms: async () => {
+    try {
+      const info = await api.get<MigrationPlatformInfo[]>('/migrations/platforms');
+      set({ platformInfo: info });
+    } catch {
+      // Non-critical, platform cards still work without API info
+    }
   },
 }));

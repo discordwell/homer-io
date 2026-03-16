@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Papa from 'papaparse';
 import { useMigrationStore } from '../stores/migration.js';
-import type { MigrationJobResponse, CreateMigrationJobInput, MigrationPlatform } from '@homer-io/shared';
+import type { MigrationJobResponse, CreateMigrationJobInput, MigrationPlatform, MigrationPlatformInfo } from '@homer-io/shared';
 import { C, F } from '../theme.js';
 
 type WizardStep = 'select' | 'configure' | 'review' | 'progress' | 'complete';
+type ImportMode = 'api' | 'csv';
 
 const platforms: { id: MigrationPlatform; name: string; description: string; color: string }[] = [
   { id: 'tookan', name: 'Tookan', description: 'Jungleworks delivery management', color: '#FF6B35' },
@@ -27,15 +28,21 @@ function statusColor(status: string) {
 }
 
 export function MigrationPage() {
-  const { jobs, currentJob, loading, creating, loadJobs, createJob, pollJob, cancelJob, deleteJob } = useMigrationStore();
+  const { jobs, currentJob, loading, creating, loadJobs, createJob, pollJob, cancelJob, deleteJob, validateCredentials, loadPlatforms, platformInfo } = useMigrationStore();
   const [step, setStep] = useState<WizardStep>('select');
   const [selectedPlatform, setSelectedPlatform] = useState<MigrationPlatform | null>(null);
+  const [importMode, setImportMode] = useState<ImportMode>('api');
   const [orderRows, setOrderRows] = useState<Record<string, string>[]>([]);
   const [driverRows, setDriverRows] = useState<Record<string, string>[]>([]);
   const [vehicleRows, setVehicleRows] = useState<Record<string, string>[]>([]);
   const [importOrders, setImportOrders] = useState(true);
   const [importDrivers, setImportDrivers] = useState(true);
   const [importVehicles, setImportVehicles] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [dateRangeStart, setDateRangeStart] = useState('');
+  const [dateRangeEnd, setDateRangeEnd] = useState('');
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{ valid: boolean; message?: string; counts?: { orders?: number; drivers?: number; vehicles?: number } } | null>(null);
   const [error, setError] = useState('');
   const [showErrors, setShowErrors] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -43,12 +50,28 @@ export function MigrationPage() {
   const driverFileRef = useRef<HTMLInputElement>(null);
   const vehicleFileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadJobs(); }, []);
+  useEffect(() => { loadJobs(); loadPlatforms(); }, []);
 
   // Cleanup polling on unmount
   useEffect(() => {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
+
+  // Determine if selected platform supports API
+  const selectedPlatformInfo = platformInfo.find(p => p.platform === selectedPlatform);
+  const platformSupportsApi = selectedPlatformInfo?.supportsApi ?? false;
+  const platformSupportsVehicles = selectedPlatformInfo?.supportsVehicles ?? false;
+
+  // When platform changes, set mode accordingly
+  useEffect(() => {
+    if (selectedPlatform) {
+      const info = platformInfo.find(p => p.platform === selectedPlatform);
+      setImportMode(info?.supportsApi ? 'api' : 'csv');
+      setImportVehicles(info?.supportsVehicles ?? false);
+      setValidationResult(null);
+      setApiKey('');
+    }
+  }, [selectedPlatform, platformInfo]);
 
   const parseFile = useCallback((file: File, setter: (rows: Record<string, string>[]) => void) => {
     setError('');
@@ -85,6 +108,24 @@ export function MigrationPage() {
     }, 2000);
   }
 
+  async function handleTestConnection() {
+    if (!selectedPlatform || !apiKey) return;
+    setValidating(true);
+    setValidationResult(null);
+    setError('');
+    try {
+      const result = await validateCredentials(selectedPlatform, apiKey);
+      setValidationResult(result);
+      if (!result.valid) {
+        setError(result.message || 'Invalid credentials');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Connection test failed');
+    } finally {
+      setValidating(false);
+    }
+  }
+
   async function handleCreateJob() {
     if (!selectedPlatform) return;
     setError('');
@@ -95,12 +136,17 @@ export function MigrationPage() {
           importOrders,
           importDrivers,
           importVehicles,
+          ...(importMode === 'api' && apiKey ? { apiKey } : {}),
+          ...(importMode === 'api' && dateRangeStart ? { dateRangeStart: new Date(dateRangeStart).toISOString() } : {}),
+          ...(importMode === 'api' && dateRangeEnd ? { dateRangeEnd: new Date(dateRangeEnd).toISOString() } : {}),
         },
-        csvData: {
-          orders: importOrders && orderRows.length > 0 ? orderRows : undefined,
-          drivers: importDrivers && driverRows.length > 0 ? driverRows : undefined,
-          vehicles: importVehicles && vehicleRows.length > 0 ? vehicleRows : undefined,
-        },
+        ...(importMode === 'csv' ? {
+          csvData: {
+            orders: importOrders && orderRows.length > 0 ? orderRows : undefined,
+            drivers: importDrivers && driverRows.length > 0 ? driverRows : undefined,
+            vehicles: importVehicles && vehicleRows.length > 0 ? vehicleRows : undefined,
+          },
+        } : {}),
       };
       const job = await createJob(input);
       setStep('progress');
@@ -113,15 +159,25 @@ export function MigrationPage() {
   function resetWizard() {
     setStep('select');
     setSelectedPlatform(null);
+    setImportMode('api');
     setOrderRows([]);
     setDriverRows([]);
     setVehicleRows([]);
     setImportOrders(true);
     setImportDrivers(true);
     setImportVehicles(false);
+    setApiKey('');
+    setDateRangeStart('');
+    setDateRangeEnd('');
+    setValidationResult(null);
     setError('');
     setShowErrors(false);
   }
+
+  // Review counts: from CSV rows or API validation counts
+  const reviewOrderCount = importMode === 'api' ? (validationResult?.counts?.orders ?? 0) : orderRows.length;
+  const reviewDriverCount = importMode === 'api' ? (validationResult?.counts?.drivers ?? 0) : driverRows.length;
+  const reviewVehicleCount = importMode === 'api' ? (validationResult?.counts?.vehicles ?? 0) : vehicleRows.length;
 
   const progress = currentJob?.progress as {
     orders: { total: number; imported: number; failed: number };
@@ -130,6 +186,11 @@ export function MigrationPage() {
   } | undefined;
 
   const errorLogEntries = (currentJob?.errorLog ?? []) as Array<{ entity: string; externalId: string; error: string; timestamp: string }>;
+
+  // Can proceed to review?
+  const canReview = importMode === 'api'
+    ? validationResult?.valid === true
+    : ((importOrders && orderRows.length > 0) || (importDrivers && driverRows.length > 0) || (importVehicles && vehicleRows.length > 0));
 
   // ─── Styles ─────────────────────────────────────────────────────────────────
 
@@ -149,13 +210,19 @@ export function MigrationPage() {
     fontSize: 14,
   };
 
+  const inputStyle: React.CSSProperties = {
+    padding: '10px 14px', borderRadius: 8, border: `1px solid ${C.muted}`,
+    background: C.bg2, color: C.text, fontFamily: F.body, fontSize: 14, width: '100%',
+    boxSizing: 'border-box',
+  };
+
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div style={{ padding: 32, maxWidth: 1100, margin: '0 auto' }}>
       <h1 style={{ fontFamily: F.display, fontSize: 28, marginBottom: 8 }}>Migrate Data</h1>
       <p style={{ color: C.dim, fontSize: 14, marginBottom: 32 }}>
-        Import your orders, drivers, and vehicles from another platform via CSV export.
+        Import your orders, drivers, and vehicles from another platform via API or CSV export.
       </p>
 
       {error && (
@@ -170,29 +237,35 @@ export function MigrationPage() {
         <div style={cardStyle}>
           <h2 style={{ fontSize: 18, marginBottom: 16 }}>Select Source Platform</h2>
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280, 1fr))',
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
             gap: 16,
           }}>
-            {platforms.map((p) => (
-              <div
-                key={p.id}
-                onClick={() => { setSelectedPlatform(p.id); setStep('configure'); }}
-                style={{
-                  padding: 20, borderRadius: 10, cursor: 'pointer',
-                  border: `2px solid ${selectedPlatform === p.id ? C.accent : C.border}`,
-                  background: selectedPlatform === p.id ? 'rgba(91,164,245,0.05)' : C.bg2,
-                  transition: 'border-color 0.15s, background 0.15s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  <div style={{
-                    width: 12, height: 12, borderRadius: '50%', background: p.color,
-                  }} />
-                  <span style={{ fontSize: 16, fontWeight: 600 }}>{p.name}</span>
+            {platforms.map((p) => {
+              const info = platformInfo.find(pi => pi.platform === p.id);
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => { setSelectedPlatform(p.id); setStep('configure'); }}
+                  style={{
+                    padding: 20, borderRadius: 10, cursor: 'pointer',
+                    border: `2px solid ${selectedPlatform === p.id ? C.accent : C.border}`,
+                    background: selectedPlatform === p.id ? 'rgba(91,164,245,0.05)' : C.bg2,
+                    transition: 'border-color 0.15s, background 0.15s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    <div style={{
+                      width: 12, height: 12, borderRadius: '50%', background: p.color,
+                    }} />
+                    <span style={{ fontSize: 16, fontWeight: 600 }}>{p.name}</span>
+                    {info?.supportsApi && (
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(52,211,153,0.15)', color: C.green, fontWeight: 600 }}>API</span>
+                    )}
+                  </div>
+                  <p style={{ color: C.dim, fontSize: 13 }}>{p.description}</p>
                 </div>
-                <p style={{ color: C.dim, fontSize: 13 }}>{p.description}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -203,74 +276,174 @@ export function MigrationPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
             <button onClick={() => setStep('select')} style={btnSecondary}>Back</button>
             <h2 style={{ fontSize: 18, margin: 0 }}>
-              Upload CSV Files from {platforms.find(p => p.id === selectedPlatform)?.name}
+              Import from {platforms.find(p => p.id === selectedPlatform)?.name}
             </h2>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Orders CSV */}
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
-                <input type="checkbox" checked={importOrders} onChange={e => setImportOrders(e.target.checked)} />
-                <span style={{ fontSize: 14, fontWeight: 500 }}>Import Orders</span>
-              </label>
-              {importOrders && (
-                <FileDropZone
-                  label="Orders CSV"
-                  hint="Columns: name, phone, email, address/street, city, state, zip, notes"
-                  fileRef={orderFileRef}
-                  rowCount={orderRows.length}
-                  onFile={(f) => parseFile(f, setOrderRows)}
-                  onClear={() => setOrderRows([])}
-                />
-              )}
+          {/* Mode toggle — only show if platform supports API */}
+          {platformSupportsApi && (
+            <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.muted}`, width: 'fit-content' }}>
+              <button
+                onClick={() => { setImportMode('api'); setValidationResult(null); }}
+                style={{
+                  padding: '8px 20px', border: 'none', cursor: 'pointer', fontFamily: F.body, fontSize: 13, fontWeight: 600,
+                  background: importMode === 'api' ? C.accent : C.bg2,
+                  color: importMode === 'api' ? '#fff' : C.dim,
+                }}
+              >
+                API Import
+              </button>
+              <button
+                onClick={() => { setImportMode('csv'); setValidationResult(null); }}
+                style={{
+                  padding: '8px 20px', border: 'none', cursor: 'pointer', fontFamily: F.body, fontSize: 13, fontWeight: 600,
+                  background: importMode === 'csv' ? C.accent : C.bg2,
+                  color: importMode === 'csv' ? '#fff' : C.dim,
+                }}
+              >
+                CSV Import
+              </button>
             </div>
+          )}
 
-            {/* Drivers CSV */}
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
-                <input type="checkbox" checked={importDrivers} onChange={e => setImportDrivers(e.target.checked)} />
-                <span style={{ fontSize: 14, fontWeight: 500 }}>Import Drivers</span>
-              </label>
-              {importDrivers && (
-                <FileDropZone
-                  label="Drivers CSV"
-                  hint="Columns: name, email, phone, driver_id/external_id"
-                  fileRef={driverFileRef}
-                  rowCount={driverRows.length}
-                  onFile={(f) => parseFile(f, setDriverRows)}
-                  onClear={() => setDriverRows([])}
+          {/* ── API Mode Form ──────────────────────────────────────────── */}
+          {importMode === 'api' && platformSupportsApi && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div>
+                <label style={{ fontSize: 14, fontWeight: 500, marginBottom: 6, display: 'block' }}>API Key</label>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={e => { setApiKey(e.target.value); setValidationResult(null); }}
+                  placeholder={selectedPlatformInfo?.credentialHint || 'Enter your API key'}
+                  style={inputStyle}
                 />
-              )}
-            </div>
+              </div>
 
-            {/* Vehicles CSV */}
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
-                <input type="checkbox" checked={importVehicles} onChange={e => setImportVehicles(e.target.checked)} />
-                <span style={{ fontSize: 14, fontWeight: 500 }}>Import Vehicles</span>
-              </label>
-              {importVehicles && (
-                <FileDropZone
-                  label="Vehicles CSV"
-                  hint="Columns: name, type, license_plate, vehicle_id/external_id"
-                  fileRef={vehicleFileRef}
-                  rowCount={vehicleRows.length}
-                  onFile={(f) => parseFile(f, setVehicleRows)}
-                  onClear={() => setVehicleRows([])}
-                />
-              )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={{ fontSize: 14, fontWeight: 500, marginBottom: 6, display: 'block' }}>Date Range Start (optional)</label>
+                  <input type="date" value={dateRangeStart} onChange={e => setDateRangeStart(e.target.value)} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 14, fontWeight: 500, marginBottom: 6, display: 'block' }}>Date Range End (optional)</label>
+                  <input type="date" value={dateRangeEnd} onChange={e => setDateRangeEnd(e.target.value)} style={inputStyle} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 16 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={importOrders} onChange={e => setImportOrders(e.target.checked)} />
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>Orders</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={importDrivers} onChange={e => setImportDrivers(e.target.checked)} />
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>Drivers</span>
+                </label>
+                {platformSupportsVehicles && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={importVehicles} onChange={e => setImportVehicles(e.target.checked)} />
+                    <span style={{ fontSize: 14, fontWeight: 500 }}>Vehicles</span>
+                  </label>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <button
+                  onClick={handleTestConnection}
+                  disabled={!apiKey || validating}
+                  style={{
+                    ...btnSecondary,
+                    opacity: !apiKey || validating ? 0.5 : 1,
+                    cursor: !apiKey || validating ? 'wait' : 'pointer',
+                  }}
+                >
+                  {validating ? 'Testing...' : 'Test Connection'}
+                </button>
+                {validationResult?.valid && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.green, fontSize: 14 }}>
+                    <span style={{ fontSize: 18 }}>&#10003;</span>
+                    <span>Connected</span>
+                    {validationResult.counts && (
+                      <span style={{ color: C.dim, marginLeft: 8 }}>
+                        {validationResult.counts.orders !== undefined && `${validationResult.counts.orders} orders`}
+                        {validationResult.counts.drivers !== undefined && `, ${validationResult.counts.drivers} drivers`}
+                        {validationResult.counts.vehicles !== undefined && `, ${validationResult.counts.vehicles} vehicles`}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* ── CSV Mode Form ──────────────────────────────────────────── */}
+          {(importMode === 'csv' || !platformSupportsApi) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* Orders CSV */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={importOrders} onChange={e => setImportOrders(e.target.checked)} />
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>Import Orders</span>
+                </label>
+                {importOrders && (
+                  <FileDropZone
+                    label="Orders CSV"
+                    hint="Columns: name, phone, email, address/street, city, state, zip, notes"
+                    fileRef={orderFileRef}
+                    rowCount={orderRows.length}
+                    onFile={(f) => parseFile(f, setOrderRows)}
+                    onClear={() => setOrderRows([])}
+                  />
+                )}
+              </div>
+
+              {/* Drivers CSV */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={importDrivers} onChange={e => setImportDrivers(e.target.checked)} />
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>Import Drivers</span>
+                </label>
+                {importDrivers && (
+                  <FileDropZone
+                    label="Drivers CSV"
+                    hint="Columns: name, email, phone, driver_id/external_id"
+                    fileRef={driverFileRef}
+                    rowCount={driverRows.length}
+                    onFile={(f) => parseFile(f, setDriverRows)}
+                    onClear={() => setDriverRows([])}
+                  />
+                )}
+              </div>
+
+              {/* Vehicles CSV */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={importVehicles} onChange={e => setImportVehicles(e.target.checked)} />
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>Import Vehicles</span>
+                </label>
+                {importVehicles && (
+                  <FileDropZone
+                    label="Vehicles CSV"
+                    hint="Columns: name, type, license_plate, vehicle_id/external_id"
+                    fileRef={vehicleFileRef}
+                    rowCount={vehicleRows.length}
+                    onFile={(f) => parseFile(f, setVehicleRows)}
+                    onClear={() => setVehicleRows([])}
+                  />
+                )}
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
             <button onClick={() => setStep('select')} style={btnSecondary}>Back</button>
             <button
               onClick={() => setStep('review')}
-              disabled={!importOrders && !importDrivers && !importVehicles}
+              disabled={!canReview}
               style={{
                 ...btnPrimary,
-                opacity: (!importOrders && !importDrivers && !importVehicles) ? 0.5 : 1,
+                opacity: canReview ? 1 : 0.5,
               }}
             >
               Review
@@ -284,19 +457,31 @@ export function MigrationPage() {
         <div style={cardStyle}>
           <h2 style={{ fontSize: 18, marginBottom: 20 }}>Review Migration</h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
-            <SummaryCard label="Orders" count={importOrders ? orderRows.length : 0} active={importOrders} />
-            <SummaryCard label="Drivers" count={importDrivers ? driverRows.length : 0} active={importDrivers} />
-            <SummaryCard label="Vehicles" count={importVehicles ? vehicleRows.length : 0} active={importVehicles} />
+          <div style={{ marginBottom: 16, fontSize: 13, color: C.dim }}>
+            Source: <strong style={{ color: C.text }}>{platforms.find(p => p.id === selectedPlatform)?.name}</strong>
+            {' '}&middot;{' '}Mode: <strong style={{ color: C.text }}>{importMode === 'api' ? 'API Import' : 'CSV Import'}</strong>
           </div>
 
-          {/* Preview first 10 order rows */}
-          {importOrders && orderRows.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+            <SummaryCard label="Orders" count={importOrders ? reviewOrderCount : 0} active={importOrders} />
+            <SummaryCard label="Drivers" count={importDrivers ? reviewDriverCount : 0} active={importDrivers} />
+            <SummaryCard label="Vehicles" count={importVehicles ? reviewVehicleCount : 0} active={importVehicles} />
+          </div>
+
+          {/* Preview first 10 order rows (CSV mode only) */}
+          {importMode === 'csv' && importOrders && orderRows.length > 0 && (
             <div style={{ marginBottom: 20 }}>
               <h3 style={{ fontSize: 14, color: C.dim, marginBottom: 8 }}>Order Preview (first 10 rows)</h3>
               <PreviewTable rows={orderRows.slice(0, 10)} />
               {orderRows.length > 10 && <p style={{ color: C.dim, fontSize: 12, marginTop: 4 }}>...and {orderRows.length - 10} more</p>}
             </div>
+          )}
+
+          {importMode === 'api' && (
+            <p style={{ color: C.dim, fontSize: 13, marginBottom: 20 }}>
+              Records will be fetched from the {platforms.find(p => p.id === selectedPlatform)?.name} API during migration.
+              {dateRangeStart && ` From ${dateRangeStart}`}{dateRangeEnd && ` to ${dateRangeEnd}`}.
+            </p>
           )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
@@ -414,7 +599,7 @@ export function MigrationPage() {
               </thead>
               <tbody>
                 {jobs.map((job) => {
-                  const p = job.progress as { orders: { imported: number; failed: number }; drivers: { imported: number; failed: number }; vehicles: { imported: number; failed: number } };
+                  const p = job.progress as { orders: { total: number; imported: number; failed: number }; drivers: { total: number; imported: number; failed: number }; vehicles: { total: number; imported: number; failed: number } };
                   return (
                     <tr key={job.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                       <td style={tdStyle}>
@@ -433,9 +618,9 @@ export function MigrationPage() {
                           {job.status}
                         </span>
                       </td>
-                      <td style={tdStyle}>{p?.orders ? `${p.orders.imported}/${p.orders.imported + p.orders.failed}` : '-'}</td>
-                      <td style={tdStyle}>{p?.drivers ? `${p.drivers.imported}/${p.drivers.imported + p.drivers.failed}` : '-'}</td>
-                      <td style={tdStyle}>{p?.vehicles ? `${p.vehicles.imported}/${p.vehicles.imported + p.vehicles.failed}` : '-'}</td>
+                      <td style={tdStyle}>{p?.orders ? `${p.orders.imported}/${p.orders.total}` : '-'}</td>
+                      <td style={tdStyle}>{p?.drivers ? `${p.drivers.imported}/${p.drivers.total}` : '-'}</td>
+                      <td style={tdStyle}>{p?.vehicles ? `${p.vehicles.imported}/${p.vehicles.total}` : '-'}</td>
                       <td style={tdStyle}>{new Date(job.createdAt).toLocaleDateString()}</td>
                       <td style={tdStyle}>
                         {['completed', 'failed', 'cancelled'].includes(job.status) && (
@@ -553,7 +738,7 @@ function ProgressBar({ label, current, total, failed }: { label: string; current
         <div style={{
           height: '100%', borderRadius: 4,
           width: `${pct}%`,
-          background: failed > 0 ? `linear-gradient(90deg, ${C.accent} ${100 - (failed / current * 100)}%, ${C.red} 100%)` : C.accent,
+          background: failed > 0 && current > 0 ? `linear-gradient(90deg, ${C.accent} ${100 - (failed / current * 100)}%, ${C.red} 100%)` : C.accent,
           transition: 'width 0.3s',
         }} />
       </div>

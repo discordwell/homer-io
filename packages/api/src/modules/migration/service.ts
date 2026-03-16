@@ -7,6 +7,7 @@ import { HttpError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
 import { encrypt } from '../../lib/integrations/crypto.js';
 import { config } from '../../config.js';
+import { getMigrationConnector, getMigrationPlatformInfo, apiMigrationPlatforms } from '../../lib/migration-connectors/index.js';
 
 // ─── BullMQ queue ─────────────────────────────────────────────────────────────
 
@@ -142,7 +143,7 @@ export async function cancelMigrationJob(tenantId: string, id: string) {
   const [updated] = await db
     .update(migrationJobs)
     .set({ status: 'cancelled', updatedAt: new Date() })
-    .where(eq(migrationJobs.id, id))
+    .where(and(eq(migrationJobs.id, id), eq(migrationJobs.tenantId, tenantId)))
     .returning();
 
   return formatJob(updated);
@@ -168,3 +169,26 @@ export async function deleteMigrationJob(tenantId: string, id: string) {
     .delete(migrationJobs)
     .where(and(eq(migrationJobs.id, id), eq(migrationJobs.tenantId, tenantId)));
 }
+
+// ─── API Credential Validation ───────────────────────────────────────────────
+
+export async function validateMigrationCredentials(platform: string, apiKey: string) {
+  if (!apiMigrationPlatforms.includes(platform)) {
+    throw new HttpError(400, `Platform '${platform}' does not support API import`);
+  }
+
+  const connector = getMigrationConnector(platform);
+  if (!connector) {
+    throw new HttpError(400, `No connector available for platform '${platform}'`);
+  }
+
+  const valid = await connector.validateCredentials(apiKey);
+  if (!valid) {
+    return { valid: false, message: 'Invalid API credentials' };
+  }
+
+  const counts = await connector.getCounts(apiKey);
+  return { valid: true, counts };
+}
+
+export { getMigrationPlatformInfo };

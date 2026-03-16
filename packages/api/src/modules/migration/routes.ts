@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { createMigrationJobSchema } from '@homer-io/shared';
+import { createMigrationJobSchema, validateMigrationCredentialsSchema } from '@homer-io/shared';
 import { authenticate, requireRole } from '../../plugins/auth.js';
 import {
   createMigrationJob,
@@ -7,9 +7,31 @@ import {
   getMigrationJob,
   cancelMigrationJob,
   deleteMigrationJob,
+  validateMigrationCredentials,
+  getMigrationPlatformInfo,
 } from './service.js';
 
 export async function migrationRoutes(app: FastifyInstance) {
+  // ─── Static routes first (before parameterized) ─────────────────────────────
+
+  // POST /validate — Test API credentials and return counts
+  app.post('/validate', {
+    preHandler: [authenticate, requireRole('admin')],
+  }, async (request, reply) => {
+    const body = validateMigrationCredentialsSchema.parse(request.body);
+    const result = await validateMigrationCredentials(body.platform, body.apiKey);
+    reply.send(result);
+  });
+
+  // GET /platforms — Return platform capabilities
+  app.get('/platforms', {
+    preHandler: [authenticate, requireRole('admin')],
+  }, async (_request, reply) => {
+    reply.send(getMigrationPlatformInfo());
+  });
+
+  // ─── Collection routes ──────────────────────────────────────────────────────
+
   // POST / — Create a new migration job
   app.post('/', {
     preHandler: [authenticate, requireRole('admin')],
@@ -34,6 +56,8 @@ export async function migrationRoutes(app: FastifyInstance) {
     const result = await listMigrationJobs(request.user.tenantId, page, limit);
     reply.send(result);
   });
+
+  // ─── Parameterized routes ───────────────────────────────────────────────────
 
   // GET /:id — Get single migration job with progress
   app.get('/:id', {

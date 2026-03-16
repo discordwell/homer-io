@@ -2,6 +2,19 @@
 
 ## Session Summaries
 
+### 2026-03-16T19:00 UTC — Phase 7C: API-Based Migration Connectors
+- Implemented 5 API connectors (Tookan, Onfleet, OptimoRoute, GetSwift, Circuit). SpeedyRoute stays CSV-only.
+- **Connector interface**: ExternalMigrationOrder, ExternalDriver, ExternalVehicle types. MigrationConnector interface with validateCredentials, fetchOrders/Drivers/Vehicles, getCounts.
+- **5 connectors**: Each ~100-150 LOC. Rate-limited pagination, AbortSignal.timeout(30s). Tookan (POST body api_key), Onfleet (Basic auth, cursor pagination, has vehicles), OptimoRoute (query param key, day-by-day), GetSwift (api-key header), Circuit (Bearer token, plans→stops).
+- **Registry**: getMigrationConnector(), apiMigrationPlatforms, getMigrationPlatformInfo() with supportsApi/supportsVehicles/credentialHint.
+- **API**: POST /validate (test credentials + counts), GET /platforms (capabilities). validateMigrationCredentials service fn.
+- **Worker**: API branch added — decrypt apiKey → fetchFromPlatformApi() → same batch insert pipeline. Duplicated fetch logic (same pattern as integration-sync.ts). Added crypto helpers.
+- **Frontend**: API/CSV mode toggle, API key input, date range, test connection button with validation counts. Review step adapts to mode. Fixed cancel setting currentJob=null (now re-fetches). History table shows imported/total.
+- **Shared**: validateMigrationCredentialsSchema, migrationPlatformInfoSchema added.
+- **Tests**: 22 new connector tests (mock fetch, mapping, pagination, empty responses, registry). 3 new validation schema tests. 4 new validation service tests. 43 migration tests pass.
+- **7B bug fixes**: CSS minmax missing px, cancel missing tenant filter, completedAt on failure, test mock path.
+- Build: zero TS errors. 425/426 tests pass (1 pre-existing onboarding timeout).
+
 ### 2026-03-16T17:30 UTC — Phase 7B: Migration API, Worker & UI
 - Implemented CSV-based migration pipeline: API endpoints, BullMQ worker, and 5-step wizard UI.
 - **Shared schema**: Added `migrationCsvDataSchema` (orders max 5000, drivers max 500, vehicles max 200) and `csvData` field to `createMigrationJobSchema`.
@@ -228,3 +241,5 @@
 - **Learning trigger pattern**: Same fire-and-forget `.catch()` as webhooks/notifications in completeStop(). Worker duplicates address normalization + haversine to avoid cross-package imports.
 - **Drizzle migration**: drizzle-kit generate fails with ESM .js imports (CJS resolution error). Workaround: hand-written SQL in drizzle/ with manual journal entries. Push via `drizzle-kit push --force` on deploy.
 - **NLOps tool count**: 22 tools (12 query, 10 mutation). Intelligence tools added in Phase 6D.
+- **Worker queues**: Now 13 total (added migration with concurrency 1 in 7B).
+- **Migration connector duplication**: Worker duplicates all platform fetch logic (same pattern as integration-sync.ts duplicating Shopify/WooCommerce). API package has connector classes; worker has standalone functions. Both must stay in sync.

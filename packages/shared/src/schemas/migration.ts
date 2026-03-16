@@ -74,3 +74,18 @@ export const migrationJobResponseSchema = z.object({
   updatedAt: z.string(),
 });
 export type MigrationJobResponse = z.infer<typeof migrationJobResponseSchema>;
+
+export const validateMigrationCredentialsSchema = z.object({
+  platform: migrationPlatformEnum,
+  apiKey: z.string().min(1),
+});
+export type ValidateMigrationCredentials = z.infer<typeof validateMigrationCredentialsSchema>;
+
+export const migrationPlatformInfoSchema = z.object({
+  platform: migrationPlatformEnum,
+  name: z.string(),
+  supportsApi: z.boolean(),
+  supportsVehicles: z.boolean(),
+  credentialHint: z.string(),
+});
+export type MigrationPlatformInfo = z.infer<typeof migrationPlatformInfoSchema>;
