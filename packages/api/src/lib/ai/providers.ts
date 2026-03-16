@@ -179,7 +179,7 @@ class OpenAIProvider implements AIProvider {
 
     const response = await this.client.chat.completions.create({
       model: this.model,
-      max_tokens: params.maxTokens,
+      max_completion_tokens: params.maxTokens,
       messages: openaiMessages,
       tools: openaiTools.length > 0 ? openaiTools : undefined,
     });

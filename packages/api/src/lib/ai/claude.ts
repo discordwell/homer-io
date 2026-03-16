@@ -49,7 +49,7 @@ export async function chatWithClaude(
     try {
       const response = await openai.chat.completions.create({
         model: config.nlops.openaiModel,
-        max_tokens: 1024,
+        max_completion_tokens: 1024,
         messages: [
           { role: 'system', content: systemPrompt },
           ...messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
