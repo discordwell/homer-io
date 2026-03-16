@@ -1,6 +1,15 @@
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { authenticate, requireRole } from '../../plugins/auth.js';
 import { getAddressIntelligence, getRouteRisk, getInsights } from './service.js';
+
+const addressHashParam = z.object({
+  hash: z.string().regex(/^[0-9a-f]{64}$/, 'Invalid address hash'),
+});
+
+const routeIdParam = z.object({
+  routeId: z.string().uuid('Invalid route ID'),
+});
 
 export async function intelligenceRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
@@ -9,7 +18,7 @@ export async function intelligenceRoutes(app: FastifyInstance) {
   app.get('/address/:hash', {
     preHandler: [requireRole('dispatcher')],
   }, async (request) => {
-    const { hash } = request.params as { hash: string };
+    const { hash } = addressHashParam.parse(request.params);
     return getAddressIntelligence(request.user.tenantId, hash);
   });
 
@@ -17,7 +26,7 @@ export async function intelligenceRoutes(app: FastifyInstance) {
   app.get('/risk/:routeId', {
     preHandler: [requireRole('dispatcher')],
   }, async (request) => {
-    const { routeId } = request.params as { routeId: string };
+    const { routeId } = routeIdParam.parse(request.params);
     return getRouteRisk(request.user.tenantId, routeId);
   });
 

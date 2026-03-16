@@ -29,7 +29,10 @@ export async function getAddressIntelligence(tenantId: string, addressHash: stri
     etaErrorMinutes: deliveryMetrics.etaErrorMinutes,
   })
     .from(deliveryMetrics)
-    .where(eq(deliveryMetrics.addressIntelligenceId, intel.id))
+    .where(and(
+      eq(deliveryMetrics.addressIntelligenceId, intel.id),
+      eq(deliveryMetrics.tenantId, tenantId),
+    ))
     .orderBy(desc(deliveryMetrics.completedAt))
     .limit(20);
 
