@@ -1,6 +1,8 @@
 import type { Job } from 'bullmq';
 import { eq, and, sql } from 'drizzle-orm';
 import Anthropic from '@anthropic-ai/sdk';
+import { normalizeAddress, hashAddress, haversineDistance, FAILURE_CATEGORIES } from '@homer-io/shared';
+import type { AddressComponents, FailureCategory } from '@homer-io/shared';
 import { db } from '../lib/db.js';
 import {
   orders, routes, locationHistory, proofOfDelivery,
@@ -8,9 +10,11 @@ import {
 } from '../lib/schema.js';
 import { config } from '../lib/config.js';
 import { logger } from '../lib/logger.js';
-import { createHash } from 'node:crypto';
 
 const log = logger.child({ worker: 'delivery-learning' });
+
+// Alias for backward compat with internal usage
+const haversineKm = haversineDistance;
 
 export interface DeliveryLearningJobData {
   tenantId: string;
@@ -19,58 +23,6 @@ export interface DeliveryLearningJobData {
   status: 'delivered' | 'failed';
   failureReason?: string;
   completedAt: string;
-}
-
-const FAILURE_CATEGORIES = [
-  'not_home', 'wrong_address', 'access_denied', 'refused',
-  'damaged', 'business_closed', 'weather', 'vehicle_issue', 'other',
-] as const;
-
-type FailureCategory = typeof FAILURE_CATEGORIES[number];
-
-interface AddressComponents {
-  street: string;
-  city: string;
-  state: string;
-  zip: string;
-  country?: string;
-}
-
-// ─── Address normalization (duplicated from API to avoid cross-package import) ───
-
-function normalizeAddress(addr: AddressComponents) {
-  const street = addr.street?.trim().toLowerCase() ?? '';
-  const city = addr.city?.trim().toLowerCase() ?? '';
-  const state = addr.state?.trim().toLowerCase() ?? '';
-  const zip = addr.zip?.trim() ?? '';
-  const country = addr.country?.trim().toLowerCase() || 'us';
-
-  const building = street
-    .replace(/\b(apt|apartment|suite|ste|unit|room|rm|fl|floor|dept|department)\b\.?\s*\S*/gi, '')
-    .replace(/#\s*\S*/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  return { street, building, city, state, zip, country };
-}
-
-function hashAddress(addr: AddressComponents): string {
-  const normalized = normalizeAddress(addr);
-  const key = [normalized.building, normalized.city, normalized.state, normalized.zip, normalized.country].join('|');
-  return createHash('sha256').update(key).digest('hex');
-}
-
-// ─── Haversine (duplicated to avoid cross-package dependency) ───
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 // ─── Main worker processor ───

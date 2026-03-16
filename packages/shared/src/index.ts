@@ -26,3 +26,5 @@ export * from './schemas/messages.js';
 export * from './schemas/gdpr.js';
 export * from './schemas/nlops.js';
 export * from './types/roles.js';
+export * from './utils/address.js';
+export * from './utils/geo.js';
