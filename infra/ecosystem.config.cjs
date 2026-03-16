@@ -4,11 +4,11 @@ module.exports = {
       name: 'homer-api',
       cwd: '/opt/homer-io/packages/api',
       script: 'dist/server.js',
-      instances: 2,
-      exec_mode: 'cluster',
+      instances: 1,
+      exec_mode: 'fork',
+      node_args: '--env-file=../../.env',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000,
       },
     },
     {
@@ -16,6 +16,8 @@ module.exports = {
       cwd: '/opt/homer-io/packages/worker',
       script: 'dist/index.js',
       instances: 1,
+      exec_mode: 'fork',
+      node_args: '--env-file=../../.env',
       env: {
         NODE_ENV: 'production',
       },
