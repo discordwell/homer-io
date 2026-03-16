@@ -12,7 +12,7 @@ interface RiskBadgeProps {
   factors?: RiskFactor[];
 }
 
-function getRiskLevel(score: number): { label: string; color: string } | null {
+export function getRiskLevel(score: number): { label: string; color: string } | null {
   if (score >= 80) return { label: 'Critical', color: C.red };
   if (score >= 60) return { label: 'High Risk', color: C.orange };
   if (score >= 40) return { label: 'Medium Risk', color: C.yellow };

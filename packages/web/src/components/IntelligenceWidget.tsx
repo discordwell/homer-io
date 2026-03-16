@@ -29,20 +29,25 @@ export function IntelligenceWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchInsights = useCallback(async () => {
+  const fetchInsights = useCallback(async (cancelled: () => boolean) => {
     try {
       const result = await api.get<InsightsData>('/intelligence/insights');
+      if (cancelled()) return;
       setData(result);
       setError(null);
     } catch (err) {
+      if (cancelled()) return;
+      console.warn('IntelligenceWidget: failed to fetch insights', err);
       setError(err instanceof Error ? err.message : 'Failed to load intelligence');
     } finally {
-      setLoading(false);
+      if (!cancelled()) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchInsights();
+    let cancelled = false;
+    fetchInsights(() => cancelled);
+    return () => { cancelled = true; };
   }, [fetchInsights]);
 
   if (loading) {

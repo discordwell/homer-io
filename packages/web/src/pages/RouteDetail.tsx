@@ -45,7 +45,7 @@ export function RouteDetailPage() {
           setLoading(false);
         });
     }
-  }, [id]);
+  }, [id, fetchRoute]);
 
   // Fetch risk scores for planned/in_progress routes
   useEffect(() => {

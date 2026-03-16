@@ -58,6 +58,7 @@ export function DispatchPreview({
   // Fetch risk scores for each proposed route
   useEffect(() => {
     if (routes.length === 0) return;
+    let cancelled = false;
     Promise.all(
       routes.map(async (r) => {
         try {
@@ -69,12 +70,14 @@ export function DispatchPreview({
         }
       })
     ).then((results) => {
+      if (cancelled) return;
       const map = new Map<string, RouteRisk>();
       for (const r of results) {
         if (r) map.set(r.routeId, r);
       }
       setRouteRisks(map);
     });
+    return () => { cancelled = true; };
   }, [routes]);
 
   const highRiskRouteCount = Array.from(routeRisks.values()).filter(r => r.maxScore >= 60).length;
