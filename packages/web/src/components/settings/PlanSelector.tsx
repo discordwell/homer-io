@@ -8,46 +8,76 @@ interface PlanSelectorProps {
   currentPlan: string;
 }
 
-const plans = [
+interface PlanDef {
+  id: string;
+  name: string;
+  monthlyPrice: number;
+  annualPrice: number;
+  ordersPerMonth: string;
+  popular?: boolean;
+  features: string[];
+}
+
+const plans: PlanDef[] = [
   {
-    id: 'starter',
-    name: 'Starter',
-    monthlyPrice: 49,
-    annualPrice: 39,
+    id: 'free',
+    name: 'Free',
+    monthlyPrice: 0,
+    annualPrice: 0,
+    ordersPerMonth: '100',
     features: [
-      '500 orders/driver/month',
-      'Manual route optimization',
+      '100 orders/month',
+      'Unlimited drivers',
+      'All features included',
+      'AI optimization (10 free/mo)',
       'Email notifications',
-      '3 webhook endpoints',
-      'Basic analytics',
+    ],
+  },
+  {
+    id: 'standard',
+    name: 'Standard',
+    monthlyPrice: 149,
+    annualPrice: 119,
+    ordersPerMonth: '1,000',
+    features: [
+      '1,000 orders/month',
+      'Unlimited drivers',
+      'All features included',
+      'AI optimization (10 free/mo)',
+      'Email + SMS notifications',
+      'E-commerce integrations',
     ],
   },
   {
     id: 'growth',
     name: 'Growth',
-    monthlyPrice: 59,
-    annualPrice: 47,
+    monthlyPrice: 349,
+    annualPrice: 279,
+    ordersPerMonth: '5,000',
     popular: true,
     features: [
-      'Unlimited orders',
-      'AI route optimization',
+      '5,000 orders/month',
+      'Unlimited drivers',
+      'All features included',
+      'AI optimization (10 free/mo)',
       'Email + SMS notifications',
-      '10 webhook endpoints',
-      'Third-party integrations',
-      'Advanced analytics',
+      'E-commerce integrations',
+      'Priority support',
     ],
   },
   {
-    id: 'enterprise',
-    name: 'Enterprise',
-    monthlyPrice: 65,
-    annualPrice: 52,
+    id: 'scale',
+    name: 'Scale',
+    monthlyPrice: 699,
+    annualPrice: 559,
+    ordersPerMonth: '15,000',
     features: [
-      'Unlimited orders',
-      'AI auto-dispatch',
-      'Email + SMS + branded notifications',
-      'Unlimited webhooks',
-      'All integrations',
+      '15,000 orders/month',
+      'Unlimited drivers',
+      'All features included',
+      'AI optimization (10 free/mo)',
+      'Email + SMS notifications',
+      'E-commerce integrations',
       'Priority support',
       'Custom branding',
     ],
@@ -65,13 +95,18 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
     if (planId === currentPlan) return;
     setLoadingPlan(planId);
     try {
-      // If currently on a paid plan, change directly; otherwise start checkout
-      if (currentPlan !== 'starter' || planId === 'starter') {
-        await changePlan(planId, interval);
+      if (planId === 'free') {
+        // Downgrade to free
+        await changePlan('free', 'monthly');
         onClose();
-      } else {
+      } else if (currentPlan === 'free') {
+        // Upgrading from free — need checkout
         const url = await createCheckout(planId, interval);
         window.location.href = url;
+      } else {
+        // Changing between paid plans — direct change
+        await changePlan(planId, interval);
+        onClose();
       }
     } catch {
       // Error handled by store
@@ -85,9 +120,14 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <h2 style={{ fontFamily: F.display, fontSize: 22, color: C.text, margin: 0 }}>
-            Choose Your Plan
-          </h2>
+          <div>
+            <h2 style={{ fontFamily: F.display, fontSize: 22, color: C.text, margin: '0 0 4px' }}>
+              Choose Your Plan
+            </h2>
+            <p style={{ color: C.dim, fontSize: 13, fontFamily: F.body, margin: 0 }}>
+              All plans include every feature. Unlimited drivers.
+            </p>
+          </div>
           <button onClick={onClose} style={closeBtnStyle}>
             &times;
           </button>
@@ -137,7 +177,7 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
         </div>
 
         {/* Plan Cards */}
-        <div style={{ display: 'flex', gap: 16 }}>
+        <div style={{ display: 'flex', gap: 12 }}>
           {plans.map((plan) => {
             const isCurrent = plan.id === currentPlan;
             const price = interval === 'annual' ? plan.annualPrice : plan.monthlyPrice;
@@ -149,7 +189,7 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
                   flex: 1,
                   background: C.bg3,
                   borderRadius: 12,
-                  padding: 24,
+                  padding: 20,
                   border: `1px solid ${isCurrent ? C.accent : plan.popular ? C.muted : C.border}`,
                   position: 'relative',
                 }}
@@ -174,31 +214,42 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
                   </div>
                 )}
 
-                <h3 style={{ fontFamily: F.display, fontSize: 18, color: C.text, margin: '0 0 8px' }}>
+                <h3 style={{ fontFamily: F.display, fontSize: 17, color: C.text, margin: '0 0 4px' }}>
                   {plan.name}
                 </h3>
-
-                <div style={{ marginBottom: 20 }}>
-                  <span style={{ fontFamily: F.display, fontSize: 36, color: C.text, fontWeight: 700 }}>
-                    ${price}
-                  </span>
-                  <span style={{ color: C.dim, fontSize: 14 }}>
-                    /driver/{interval === 'annual' ? 'mo' : 'mo'}
-                  </span>
+                <div style={{ color: C.dim, fontSize: 12, fontFamily: F.body, marginBottom: 12 }}>
+                  {plan.ordersPerMonth} orders/mo
                 </div>
 
-                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px' }}>
+                <div style={{ marginBottom: 16 }}>
+                  {price === 0 ? (
+                    <span style={{ fontFamily: F.display, fontSize: 32, color: C.text, fontWeight: 700 }}>
+                      Free
+                    </span>
+                  ) : (
+                    <>
+                      <span style={{ fontFamily: F.display, fontSize: 32, color: C.text, fontWeight: 700 }}>
+                        ${price}
+                      </span>
+                      <span style={{ color: C.dim, fontSize: 14 }}>
+                        /mo
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px' }}>
                   {plan.features.map((f) => (
                     <li key={f} style={{
                       color: C.text,
-                      fontSize: 13,
+                      fontSize: 12,
                       fontFamily: F.body,
-                      padding: '5px 0',
+                      padding: '4px 0',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 8,
+                      gap: 6,
                     }}>
-                      <span style={{ color: C.green, fontSize: 14, fontWeight: 700 }}>&#10003;</span>
+                      <span style={{ color: C.green, fontSize: 13, fontWeight: 700 }}>&#10003;</span>
                       {f}
                     </li>
                   ))}
@@ -209,15 +260,15 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
                   disabled={isCurrent || loadingPlan === plan.id}
                   style={{
                     width: '100%',
-                    padding: '12px 0',
+                    padding: '10px 0',
                     borderRadius: 8,
                     border: isCurrent ? `1px solid ${C.muted}` : 'none',
-                    background: isCurrent ? 'transparent' : C.accent,
-                    color: isCurrent ? C.dim : '#fff',
+                    background: isCurrent ? 'transparent' : plan.id === 'free' ? C.bg2 : C.accent,
+                    color: isCurrent ? C.dim : plan.id === 'free' ? C.text : '#fff',
                     cursor: isCurrent ? 'default' : 'pointer',
                     fontFamily: F.body,
                     fontWeight: 600,
-                    fontSize: 14,
+                    fontSize: 13,
                     opacity: loadingPlan === plan.id ? 0.6 : 1,
                   }}
                 >
@@ -225,12 +276,18 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
                     ? 'Current Plan'
                     : loadingPlan === plan.id
                       ? 'Processing...'
-                      : 'Select Plan'}
+                      : plan.id === 'free'
+                        ? 'Downgrade'
+                        : 'Select Plan'}
                 </button>
               </div>
             );
           })}
         </div>
+
+        <p style={{ color: C.dim, fontSize: 12, fontFamily: F.body, textAlign: 'center', marginTop: 16, marginBottom: 0 }}>
+          Need more than 15,000 orders/month? <a href="mailto:sales@homer.io" style={{ color: C.accent }}>Contact us</a> for Enterprise pricing.
+        </p>
       </div>
     </div>
   );
@@ -250,8 +307,8 @@ const modalStyle: React.CSSProperties = {
   background: C.bg2,
   borderRadius: 16,
   padding: 32,
-  maxWidth: 800,
-  width: '90vw',
+  maxWidth: 900,
+  width: '95vw',
   maxHeight: '90vh',
   overflowY: 'auto',
   border: `1px solid ${C.muted}`,

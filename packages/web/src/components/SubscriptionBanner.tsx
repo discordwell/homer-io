@@ -19,7 +19,29 @@ export function SubscriptionBanner() {
 
   if (!subscription) return null;
 
-  const { status, trialEndsAt } = subscription;
+  const { status, trialEndsAt, ordersUsed, ordersLimit } = subscription;
+
+  // Order limit warning (>= 90%) — ordersLimit of -1 means unlimited
+  if (status === 'active' && ordersLimit !== -1) {
+    const percent = Math.round((ordersUsed / ordersLimit) * 100);
+    if (percent >= 90) {
+      return (
+        <Banner
+          color={percent >= 100 ? C.red : C.orange}
+          message={
+            percent >= 100
+              ? `You've reached your monthly order limit (${ordersUsed.toLocaleString()}/${ordersLimit.toLocaleString()}). Upgrade to continue creating orders.`
+              : `You're at ${percent}% of your monthly order limit (${ordersUsed.toLocaleString()}/${ordersLimit.toLocaleString()}).`
+          }
+          linkText="Upgrade Plan"
+          onLink={() => {
+            window.location.hash = '';
+            window.location.href = '/dashboard/settings?tab=billing';
+          }}
+        />
+      );
+    }
+  }
 
   // Trial expiring (less than 3 days)
   if (status === 'trialing') {
@@ -36,7 +58,7 @@ export function SubscriptionBanner() {
         }
         linkText="Add Payment"
         onLink={async () => {
-          const url = await createCheckout(subscription.plan, 'monthly');
+          const url = await createCheckout('standard', 'monthly');
           window.location.href = url;
         }}
       />
@@ -70,7 +92,7 @@ export function SubscriptionBanner() {
         }
         linkText="Resubscribe"
         onLink={async () => {
-          const url = await createCheckout(subscription.plan, 'monthly');
+          const url = await createCheckout('standard', 'monthly');
           window.location.href = url;
         }}
       />

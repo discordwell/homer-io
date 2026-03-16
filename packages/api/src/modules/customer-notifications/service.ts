@@ -234,6 +234,19 @@ export async function enqueueCustomerNotification(
       subject = subject.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
     }
 
+    // Check metered usage BEFORE creating log entry to prevent ghost records
+    try {
+      const { recordMeteredUsage } = await import('../billing/service.js');
+      const feature = template.channel === 'sms' ? 'smsSent' as const : 'emailsSent' as const;
+      const meter = await recordMeteredUsage(tenantId, feature);
+      if (!meter.allowed) {
+        console.log(`[customer-notification] ${feature} quota exceeded for tenant ${tenantId}, skipping`);
+        continue;
+      }
+    } catch (err) {
+      console.error('[customer-notification] Metering failed, sending anyway:', err);
+    }
+
     // Create log entry with status 'queued'
     const [logEntry] = await db
       .insert(customerNotificationsLog)

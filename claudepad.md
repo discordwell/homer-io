@@ -2,6 +2,17 @@
 
 ## Session Summaries
 
+### 2026-03-16T04:15 UTC — Pricing Restructure: Per-Order Model
+- Full competitive audit completed (10+ competitors researched, market sizing, SWOT analysis).
+- Pricing restructured from per-driver ($49-65/driver/mo) to per-order model inspired by Routific.
+- **New tiers**: Free (100 orders/mo, $0), Standard (1K, $149), Growth (5K, $349), Scale (15K, $699), Enterprise (custom).
+- **All features at every tier**. Unlimited drivers. Volume-gated only.
+- **Metered at-cost**: AI optimization (10 free, $0.05/run), AI dispatch (5 free, $0.15/batch), AI chat (50 free, $0.02/msg), SMS (50 free, $0.01), email (500 free), POD storage (1GB free, $0.10/GB). Pay-as-you-go toggle.
+- **Files changed**: shared/schemas/billing.ts (new plan enum, metered schemas), api/db/schema/subscriptions.ts (removed quantity, added payAsYouGoEnabled), new metered-usage.ts table, billing service.ts (complete rewrite — removed syncSeats, added metering), billing middleware (order limit enforcement on POST /api/orders), billing routes (new /pay-as-you-go + /metered-usage endpoints), config.ts (new Stripe price keys), worker/billing-usage.ts (order-based limits), fleet/service.ts (removed syncSeats calls).
+- **Frontend**: PlanSelector (4 plans, per-order pricing), BillingTab (order usage bar, metered usage table, pay-as-you-go toggle), SubscriptionBanner (order limit warnings), billing store (new actions for metering).
+- **Metering hooks**: AI chat, route optimization, auto-dispatch, customer notifications (SMS/email) all check/record metered usage.
+- 273 tests pass (29 files). All 4 packages + demo build clean.
+
 ### 2026-03-15T23:15 UTC — Phase 5 Hardening + Full Wet Test
 - Applied 7 hardening fixes from code review: rate limits on email endpoints (3/min), GDPR list pagination, batchAssignToRoute transaction, route-template worker transaction, password reset token retention cleanup (7-day), escapeHtml utility (applied to team invite), DB indexes on emailVerificationToken + refreshTokens.tokenHash.
 - 267 tests pass (29 test files), 7 new tests in hardening.test.ts.

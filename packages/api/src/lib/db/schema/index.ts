@@ -17,6 +17,7 @@ export * from './webhook-deliveries.js';
 export * from './subscriptions.js';
 export * from './invoices.js';
 export * from './usage-records.js';
+export * from './metered-usage.js';
 export * from './integration-connections.js';
 export * from './integration-orders.js';
 export * from './password-reset-tokens.js';

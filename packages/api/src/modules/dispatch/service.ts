@@ -7,9 +7,21 @@ import { chatWithClaude } from '../../lib/ai/claude.js';
 import { createRoute, transitionRouteStatus } from '../routes/service.js';
 import { broadcastToTenant } from '../../lib/ws/index.js';
 import { logActivity } from '../../lib/activity.js';
+import { recordMeteredUsage } from '../billing/service.js';
 import type { AutoDispatchRequest } from '@homer-io/shared';
 
 export async function autoDispatch(tenantId: string, input: AutoDispatchRequest, userId?: string) {
+  // Check metered quota for AI dispatch
+  const meter = await recordMeteredUsage(tenantId, 'aiDispatches');
+  if (!meter.allowed) {
+    return {
+      routes: [],
+      unassignedOrderIds: [],
+      totalOrders: 0,
+      totalDrivers: 0,
+      message: meter.reason || 'AI dispatch quota exceeded. Enable Pay-as-you-go in Settings > Billing.',
+    };
+  }
   // 1. Get unassigned orders (status='received', no routeId)
   const unassignedOrders = await db.select().from(orders)
     .where(and(

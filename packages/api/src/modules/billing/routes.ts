@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { FastifyInstance } from 'fastify';
-import { checkoutRequestSchema, changePlanRequestSchema, planFeatures } from '@homer-io/shared';
+import { checkoutRequestSchema, changePlanRequestSchema, payAsYouGoRequestSchema, planFeatures } from '@homer-io/shared';
 import { authenticate, requireRole } from '../../plugins/auth.js';
 import {
   getSubscription,
@@ -8,6 +8,8 @@ import {
   createPortalSession,
   getInvoices,
   changePlan,
+  togglePayAsYouGo,
+  getMeteredUsage,
 } from './service.js';
 
 const portalRequestSchema = z.object({
@@ -58,5 +60,16 @@ export async function billingRoutes(app: FastifyInstance) {
   app.post('/change-plan', async (request) => {
     const body = changePlanRequestSchema.parse(request.body);
     return changePlan(request.user.tenantId, body.plan, body.interval);
+  });
+
+  // POST /api/billing/pay-as-you-go — toggle metered billing
+  app.post('/pay-as-you-go', async (request) => {
+    const body = payAsYouGoRequestSchema.parse(request.body);
+    return togglePayAsYouGo(request.user.tenantId, body.enabled);
+  });
+
+  // GET /api/billing/metered-usage — current metered usage + overage costs
+  app.get('/metered-usage', async (request) => {
+    return getMeteredUsage(request.user.tenantId);
   });
 }

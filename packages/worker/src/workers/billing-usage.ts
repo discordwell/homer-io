@@ -5,10 +5,10 @@ import { orders, routes, drivers } from '../lib/schema.js';
 import { logger } from '../lib/logger.js';
 
 // Minimal subscription/usage tables for worker context
-import { pgTable, uuid, varchar, timestamp, integer, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, integer, boolean, pgEnum } from 'drizzle-orm/pg-core';
 
 const subscriptionPlanEnum = pgEnum('subscription_plan', [
-  'starter', 'growth', 'enterprise',
+  'free', 'standard', 'growth', 'scale', 'enterprise',
 ]);
 
 const subscriptionStatusEnum = pgEnum('subscription_status', [
@@ -18,9 +18,9 @@ const subscriptionStatusEnum = pgEnum('subscription_status', [
 const subscriptions = pgTable('subscriptions', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull().unique(),
-  plan: subscriptionPlanEnum('plan').default('starter').notNull(),
+  plan: subscriptionPlanEnum('plan').default('free').notNull(),
   status: subscriptionStatusEnum('status').default('trialing').notNull(),
-  quantity: integer('quantity').default(1).notNull(),
+  payAsYouGoEnabled: boolean('pay_as_you_go_enabled').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -40,10 +40,12 @@ interface BillingUsageJobData {
   tenantId: string;
 }
 
-const PLAN_LIMITS: Record<string, { ordersPerDriver: number }> = {
-  starter: { ordersPerDriver: 500 },
-  growth: { ordersPerDriver: Infinity },
-  enterprise: { ordersPerDriver: Infinity },
+const PLAN_LIMITS: Record<string, number> = {
+  free: 100,
+  standard: 1_000,
+  growth: 5_000,
+  scale: 15_000,
+  enterprise: Infinity,
 };
 
 const log = logger.child({ worker: 'billing-usage' });
@@ -98,7 +100,7 @@ export async function processBillingUsage(job: Job<BillingUsageJobData>) {
       },
     });
 
-  // Check plan limits
+  // Check plan order limits
   const [sub] = await db
     .select()
     .from(subscriptions)
@@ -106,11 +108,9 @@ export async function processBillingUsage(job: Job<BillingUsageJobData>) {
     .limit(1);
 
   if (sub) {
-    const limits = PLAN_LIMITS[sub.plan] || PLAN_LIMITS.starter;
-    const effectiveDrivers = Math.max(1, driverCount);
+    const maxOrders = PLAN_LIMITS[sub.plan] ?? PLAN_LIMITS.free;
 
-    if (limits.ordersPerDriver !== Infinity) {
-      const maxOrders = limits.ordersPerDriver * effectiveDrivers;
+    if (maxOrders !== Infinity) {
       const usagePercent = (orderCount / maxOrders) * 100;
 
       if (usagePercent >= 90) {

@@ -1,8 +1,8 @@
-import { pgTable, uuid, varchar, timestamp, integer, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, boolean, pgEnum } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 export const subscriptionPlanEnum = pgEnum('subscription_plan', [
-  'starter', 'growth', 'enterprise',
+  'free', 'standard', 'growth', 'scale', 'enterprise',
 ]);
 
 export const subscriptionStatusEnum = pgEnum('subscription_status', [
@@ -14,9 +14,9 @@ export const subscriptions = pgTable('subscriptions', {
   tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }).notNull().unique(),
   stripeCustomerId: varchar('stripe_customer_id', { length: 255 }).notNull(),
   stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
-  plan: subscriptionPlanEnum('plan').default('starter').notNull(),
+  plan: subscriptionPlanEnum('plan').default('free').notNull(),
   status: subscriptionStatusEnum('status').default('trialing').notNull(),
-  quantity: integer('quantity').default(1).notNull(),
+  payAsYouGoEnabled: boolean('pay_as_you_go_enabled').default(false).notNull(),
   currentPeriodStart: timestamp('current_period_start', { withTimezone: true }),
   currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
   trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),

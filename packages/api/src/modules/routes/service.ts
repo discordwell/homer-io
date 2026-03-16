@@ -138,6 +138,13 @@ export async function deleteRoute(tenantId: string, id: string) {
 }
 
 export async function optimizeRoute(tenantId: string, routeId: string) {
+  // Check metered quota for AI optimization
+  const { recordMeteredUsage } = await import('../billing/service.js');
+  const meter = await recordMeteredUsage(tenantId, 'aiOptimizations');
+  if (!meter.allowed) {
+    throw new Error(meter.reason || 'AI optimization quota exceeded. Enable Pay-as-you-go in Settings > Billing.');
+  }
+
   // Get route with orders
   const routeData = await getRoute(tenantId, routeId);
 

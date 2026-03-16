@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import { api } from '../api/client.js';
 import type { SubscriptionResponse, InvoiceResponse } from '@homer-io/shared';
 
+interface MeteredUsageResponse {
+  usage: Record<string, number>;
+  quotas: Record<string, number>;
+  rates: Record<string, number>;
+  overageCosts: Record<string, number>;
+}
+
 interface InvoicePaginated {
   data: InvoiceResponse[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
@@ -10,18 +17,22 @@ interface InvoicePaginated {
 interface BillingState {
   subscription: SubscriptionResponse | null;
   invoices: InvoiceResponse[];
+  meteredUsage: MeteredUsageResponse | null;
   loading: boolean;
 
   loadSubscription: () => Promise<void>;
   loadInvoices: (page?: number) => Promise<void>;
+  loadMeteredUsage: () => Promise<void>;
   createCheckout: (plan: string, interval: string) => Promise<string>;
   createPortal: () => Promise<string>;
   changePlan: (plan: string, interval: string) => Promise<void>;
+  togglePayAsYouGo: (enabled: boolean) => Promise<void>;
 }
 
 export const useBillingStore = create<BillingState>()((set, get) => ({
   subscription: null,
   invoices: [],
+  meteredUsage: null,
   loading: false,
 
   loadSubscription: async () => {
@@ -43,6 +54,15 @@ export const useBillingStore = create<BillingState>()((set, get) => ({
     }
   },
 
+  loadMeteredUsage: async () => {
+    try {
+      const res = await api.get<MeteredUsageResponse>('/billing/metered-usage');
+      set({ meteredUsage: res });
+    } catch {
+      // fail silently
+    }
+  },
+
   createCheckout: async (plan: string, interval: string) => {
     const res = await api.post<{ url: string }>('/billing/checkout', { plan, interval });
     return res.url;
@@ -57,6 +77,11 @@ export const useBillingStore = create<BillingState>()((set, get) => ({
 
   changePlan: async (plan: string, interval: string) => {
     await api.post('/billing/change-plan', { plan, interval });
+    await get().loadSubscription();
+  },
+
+  togglePayAsYouGo: async (enabled: boolean) => {
+    await api.post('/billing/pay-as-you-go', { enabled });
     await get().loadSubscription();
   },
 }));

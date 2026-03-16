@@ -1,8 +1,10 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { eq } from 'drizzle-orm';
+import { eq, and, sql, gte } from 'drizzle-orm';
 import { db } from '../lib/db/index.js';
 import { subscriptions } from '../lib/db/schema/subscriptions.js';
+import { orders } from '../lib/db/schema/orders.js';
 import { cacheGet, cacheSet } from '../lib/cache.js';
+import { planFeatures } from '@homer-io/shared';
 
 // Paths that skip billing enforcement (match against full URL path)
 const SKIP_PREFIXES = ['/api/auth', '/api/public', '/api/billing', '/health', '/stripe'];
@@ -11,6 +13,7 @@ const BILLING_CACHE_TTL = 60; // Cache subscription status for 60 seconds
 
 interface CachedSubStatus {
   status: string;
+  plan: string;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
 }
@@ -25,6 +28,7 @@ async function getSubscriptionStatus(tenantId: string): Promise<CachedSubStatus 
   const [sub] = await db
     .select({
       status: subscriptions.status,
+      plan: subscriptions.plan,
       trialEndsAt: subscriptions.trialEndsAt,
       currentPeriodEnd: subscriptions.currentPeriodEnd,
     })
@@ -36,6 +40,7 @@ async function getSubscriptionStatus(tenantId: string): Promise<CachedSubStatus 
 
   const result: CachedSubStatus = {
     status: sub.status,
+    plan: sub.plan,
     trialEndsAt: sub.trialEndsAt?.toISOString() ?? null,
     currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
   };
@@ -76,8 +81,40 @@ export async function requireActiveSubscription(request: FastifyRequest, reply: 
     // Trial expired — fall through to block mutations
   }
 
-  // active — always allow
+  // active — check order limits for mutations that create orders
   if (sub.status === 'active') {
+    // For POST to /api/orders (creating new orders), check the plan order limit
+    if (request.method === 'POST' && (path === '/api/orders' || path === '/api/orders/import/csv')) {
+      const plan = sub.plan as keyof typeof planFeatures;
+      const planDef = planFeatures[plan] || planFeatures.free;
+      const limit = planDef.ordersPerMonth;
+
+      if (limit !== Infinity) {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const [result] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(orders)
+          .where(and(
+            eq(orders.tenantId, request.user.tenantId),
+            gte(orders.createdAt, monthStart),
+          ));
+        const orderCount = Number(result?.count ?? 0);
+
+        if (orderCount >= limit) {
+          return reply.code(402).send({
+            message: `You've reached your plan's monthly order limit (${limit}). Upgrade your plan to continue.`,
+            status: 'order_limit_reached',
+            ordersUsed: orderCount,
+            ordersLimit: limit,
+            readOnly: false,
+          });
+        }
+
+        // Add header so frontend can show usage
+        reply.header('X-Orders-Used', String(orderCount));
+        reply.header('X-Orders-Limit', String(limit));
+      }
+    }
     return;
   }
 

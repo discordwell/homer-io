@@ -342,19 +342,37 @@ Nested under `DriverLayout` with bottom tab bar (mobile-optimized):
 - **Billing Enforcement** — `requireActiveSubscription` middleware (trial/active/past_due/402)
 - **Credential Encryption** — AES-256-GCM for integration platform credentials
 
-## Billing & Pricing (Phase 4)
+## Billing & Pricing — Per-Order Model
 
-| | Starter | Growth | Enterprise |
-|---|---------|--------|------------|
-| Price | $49/driver/mo | $59/driver/mo | $65/driver/mo |
-| Orders | 500/driver/mo | Unlimited | Unlimited |
-| Optimization | Manual | AI-powered | AI + auto-dispatch |
-| Notifications | Email only | Email + SMS | All + branded |
-| Webhooks | 3 endpoints | 10 endpoints | Unlimited |
-| Integrations | — | Shopify + WooCommerce | All + custom API |
-| Trial | 14 days | 14 days | 14 days |
+| | Free | Standard | Growth | Scale | Enterprise |
+|---|------|----------|--------|-------|------------|
+| Price | $0 | $149/mo | $349/mo | $699/mo | Custom |
+| Orders/month | 100 | 1,000 | 5,000 | 15,000 | Unlimited |
+| Drivers | Unlimited | Unlimited | Unlimited | Unlimited | Unlimited |
+| Features | All | All | All | All | All |
+| Trial | 14 days | — | — | — | — |
 
-Annual discount: 20%. Per-seat billing (quantity = active drivers).
+Annual discount: 20%. All features included at every tier — volume-gated only.
+
+### Metered At-Cost Features (Pay-as-you-go)
+Each tenant gets a free monthly quota. Beyond that, enable "Pay-as-you-go" toggle:
+
+| Feature | Free Quota | At-Cost Rate |
+|---------|-----------|-------------|
+| AI Route Optimization | 10/mo | $0.05/run |
+| AI Auto-Dispatch | 5/mo | $0.15/batch |
+| AI Chat Messages | 50/mo | $0.02/msg |
+| SMS Notifications | 50/mo | $0.01/SMS |
+| Email Notifications | 500/mo | Free |
+| POD Storage | 1 GB | $0.10/GB |
+
+### Billing Architecture
+- **Per-order pricing** replaces per-driver/seat-based model
+- **Order limit enforcement** at middleware level (POST /api/orders blocked at plan limit)
+- **Metered usage** tracked in `metered_usage` table per tenant per month
+- **Pay-as-you-go toggle** per tenant — when off, usage stops at quota; when on, billed via Stripe
+- **Free tier** — all features, 100 orders/month, generous metered quotas
+- **Stripe integration** — flat subscription per tier (not quantity-based)
 
 ## Phase 5: Production Grade
 
@@ -367,7 +385,7 @@ Annual discount: 20%. Per-seat billing (quantity = active drivers).
 ### Stub/Wiring Fixes
 - **Notification Worker:** Sends real emails via SendGrid (was TODO)
 - **Public Tracking ETA:** Dynamic calculation via `calculateRouteETAs` (was hardcoded 30min)
-- **Seat Sync:** `syncSeats()` called on driver create/delete
+- **Order-Based Billing:** Per-order pricing with metered AI/SMS (replaced per-seat model)
 - **402 Handling:** Frontend `BillingError` + `BillingBlockedModal`
 - **Activity Logging:** Added to orders, fleet, billing, notifications, POD, driver modules
 - **Report Worker:** Real data queries (order stats, driver performance, route efficiency)

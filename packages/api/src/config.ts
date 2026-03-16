@@ -62,12 +62,12 @@ export const config = {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
     prices: {
-      starterMonthly: process.env.STRIPE_PRICE_STARTER_MONTHLY || '',
-      starterAnnual: process.env.STRIPE_PRICE_STARTER_ANNUAL || '',
+      standardMonthly: process.env.STRIPE_PRICE_STANDARD_MONTHLY || '',
+      standardAnnual: process.env.STRIPE_PRICE_STANDARD_ANNUAL || '',
       growthMonthly: process.env.STRIPE_PRICE_GROWTH_MONTHLY || '',
       growthAnnual: process.env.STRIPE_PRICE_GROWTH_ANNUAL || '',
-      enterpriseMonthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || '',
-      enterpriseAnnual: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || '',
+      scaleMonthly: process.env.STRIPE_PRICE_SCALE_MONTHLY || '',
+      scaleAnnual: process.env.STRIPE_PRICE_SCALE_ANNUAL || '',
     },
   },
 

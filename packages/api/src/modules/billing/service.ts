@@ -1,14 +1,17 @@
 import Stripe from 'stripe';
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { eq, and, sql, desc, gte } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
 import { subscriptions } from '../../lib/db/schema/subscriptions.js';
 import { invoices } from '../../lib/db/schema/invoices.js';
 import { usageRecords } from '../../lib/db/schema/usage-records.js';
-import { drivers } from '../../lib/db/schema/drivers.js';
+import { meteredUsage } from '../../lib/db/schema/metered-usage.js';
+import { orders } from '../../lib/db/schema/orders.js';
 import { config } from '../../config.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { cacheDelete } from '../../lib/cache.js';
 import { logActivity } from '../../lib/activity.js';
+import { planFeatures, meteredQuotas, meteredRates } from '@homer-io/shared';
+import type { MeteredFeature } from '@homer-io/shared';
 
 let stripe: Stripe | null = null;
 
@@ -54,9 +57,9 @@ export async function createStripeCustomer(
     .values({
       tenantId,
       stripeCustomerId,
-      plan: 'starter',
+      plan: 'free',
       status: 'trialing',
-      quantity: 1,
+      payAsYouGoEnabled: false,
       trialEndsAt: trialEnd,
     })
     .returning();
@@ -71,6 +74,13 @@ export async function createCheckoutSession(
   interval: string,
   urls: { successUrl?: string; cancelUrl?: string },
 ) {
+  if (plan === 'free') {
+    throw new Error('Free plan does not require checkout');
+  }
+  if (plan === 'enterprise') {
+    throw new Error('Enterprise plan requires contacting sales');
+  }
+
   const [sub] = await db
     .select()
     .from(subscriptions)
@@ -96,7 +106,7 @@ export async function createCheckoutSession(
   const session = await s.checkout.sessions.create({
     customer: sub.stripeCustomerId,
     mode: 'subscription',
-    line_items: [{ price: priceId, quantity: sub.quantity }],
+    line_items: [{ price: priceId, quantity: 1 }],
     success_url: urls.successUrl || `${config.cors.origin[0]}/settings?tab=billing&checkout=success`,
     cancel_url: urls.cancelUrl || `${config.cors.origin[0]}/settings?tab=billing&checkout=cancel`,
     metadata: { tenantId, plan, interval },
@@ -149,10 +159,32 @@ export async function getSubscription(tenantId: string) {
     .where(and(eq(usageRecords.tenantId, tenantId), eq(usageRecords.period, period)))
     .limit(1);
 
+  // Get metered usage for this period
+  const [metered] = await db
+    .select()
+    .from(meteredUsage)
+    .where(and(eq(meteredUsage.tenantId, tenantId), eq(meteredUsage.period, period)))
+    .limit(1);
+
+  // Get order count for this month (live count, not just from usage snapshot)
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const [orderStats] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(orders)
+    .where(and(eq(orders.tenantId, tenantId), gte(orders.createdAt, monthStart)));
+
+  const plan = sub.plan as keyof typeof planFeatures;
+  const planDef = planFeatures[plan] || planFeatures.free;
+
+  // Use -1 as sentinel for unlimited (Infinity is not JSON-serializable)
+  const ordersLimit = planDef.ordersPerMonth === Infinity ? -1 : planDef.ordersPerMonth;
+
   return {
     plan: sub.plan,
     status: sub.status,
-    quantity: sub.quantity,
+    ordersLimit,
+    ordersUsed: Number(orderStats?.count ?? 0),
+    payAsYouGoEnabled: sub.payAsYouGoEnabled,
     trialEndsAt: sub.trialEndsAt?.toISOString() ?? null,
     currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
     canceledAt: sub.canceledAt?.toISOString() ?? null,
@@ -160,6 +192,14 @@ export async function getSubscription(tenantId: string) {
       driverCount: usage?.driverCount ?? 0,
       orderCount: usage?.orderCount ?? 0,
       routeCount: usage?.routeCount ?? 0,
+    },
+    metered: {
+      aiOptimizations: metered?.aiOptimizations ?? 0,
+      aiDispatches: metered?.aiDispatches ?? 0,
+      aiChatMessages: metered?.aiChatMessages ?? 0,
+      smsSent: metered?.smsSent ?? 0,
+      emailsSent: metered?.emailsSent ?? 0,
+      podStorageMb: metered?.podStorageMb ?? 0,
     },
   };
 }
@@ -211,6 +251,27 @@ export async function changePlan(tenantId: string, plan: string, interval: strin
 
   const s = getStripe();
 
+  // Downgrading to free — cancel Stripe subscription
+  if (plan === 'free') {
+    if (s && sub.stripeSubscriptionId) {
+      await s.subscriptions.cancel(sub.stripeSubscriptionId);
+    }
+    const [updated] = await db
+      .update(subscriptions)
+      .set({
+        plan: 'free' as any,
+        stripeSubscriptionId: null,
+        status: 'active',
+        updatedAt: new Date(),
+      })
+      .where(eq(subscriptions.tenantId, tenantId))
+      .returning();
+
+    await logActivity({ tenantId, action: 'plan_changed', entityType: 'subscription', metadata: { newPlan: plan } });
+    return updated;
+  }
+
+  // Upgrading to a paid plan
   if (s && sub.stripeSubscriptionId) {
     const stripeSub = await s.subscriptions.retrieve(sub.stripeSubscriptionId);
     const priceId = getPriceId(plan, interval);
@@ -223,11 +284,10 @@ export async function changePlan(tenantId: string, plan: string, interval: strin
     });
   }
 
-  // Update local record
   const [updated] = await db
     .update(subscriptions)
     .set({
-      plan: plan as 'starter' | 'growth' | 'enterprise',
+      plan: plan as any,
       updatedAt: new Date(),
     })
     .where(eq(subscriptions.tenantId, tenantId))
@@ -238,40 +298,126 @@ export async function changePlan(tenantId: string, plan: string, interval: strin
   return updated;
 }
 
-// --- syncSeats ---
-export async function syncSeats(tenantId: string) {
-  const [result] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(drivers)
-    .where(eq(drivers.tenantId, tenantId));
+// --- togglePayAsYouGo ---
+export async function togglePayAsYouGo(tenantId: string, enabled: boolean) {
+  const [updated] = await db
+    .update(subscriptions)
+    .set({
+      payAsYouGoEnabled: enabled,
+      updatedAt: new Date(),
+    })
+    .where(eq(subscriptions.tenantId, tenantId))
+    .returning();
 
-  const driverCount = Math.max(1, Number(result.count));
+  if (!updated) throw new NotFoundError('No subscription found for this tenant');
 
+  await logActivity({
+    tenantId,
+    action: enabled ? 'pay_as_you_go_enabled' : 'pay_as_you_go_disabled',
+    entityType: 'subscription',
+  });
+
+  return { enabled: updated.payAsYouGoEnabled };
+}
+
+// --- recordMeteredUsage ---
+// Returns { allowed: true } if within quota or payAsYouGo is enabled
+// Returns { allowed: false, reason: string } if over quota and payAsYouGo is off
+// Uses atomic upsert to prevent race conditions on concurrent requests
+export async function recordMeteredUsage(
+  tenantId: string,
+  feature: MeteredFeature,
+  amount: number = 1,
+): Promise<{ allowed: boolean; reason?: string }> {
+  const period = new Date().toISOString().slice(0, 7);
+  const quota = meteredQuotas[feature];
+
+  // Get subscription to check payAsYouGo status
   const [sub] = await db
-    .select()
+    .select({ payAsYouGoEnabled: subscriptions.payAsYouGoEnabled })
     .from(subscriptions)
     .where(eq(subscriptions.tenantId, tenantId))
     .limit(1);
 
-  if (!sub) return;
+  // Atomic upsert: insert or increment in a single statement
+  // This prevents TOCTOU race conditions on concurrent requests
+  const [result] = await db
+    .insert(meteredUsage)
+    .values({
+      tenantId,
+      period,
+      [feature]: amount,
+    })
+    .onConflictDoUpdate({
+      target: [meteredUsage.tenantId, meteredUsage.period],
+      set: {
+        [feature]: sql`${meteredUsage[feature]} + ${amount}`,
+        updatedAt: new Date(),
+      },
+    })
+    .returning({ newValue: meteredUsage[feature] });
 
-  // Update Stripe quantity if connected
-  const s = getStripe();
-  if (s && sub.stripeSubscriptionId) {
-    const stripeSub = await s.subscriptions.retrieve(sub.stripeSubscriptionId);
-    await s.subscriptions.update(sub.stripeSubscriptionId, {
-      items: [{ id: stripeSub.items.data[0].id, quantity: driverCount }],
-      proration_behavior: 'create_prorations',
-    });
+  const currentUsage = Number(result?.newValue ?? amount);
+
+  // Check if over quota AFTER the increment (post-check is safe — we can decrement if denied)
+  if (currentUsage > quota && !sub?.payAsYouGoEnabled) {
+    // Roll back the increment since we're denying the request
+    await db
+      .update(meteredUsage)
+      .set({
+        [feature]: sql`GREATEST(0, ${meteredUsage[feature]} - ${amount})`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(meteredUsage.tenantId, tenantId), eq(meteredUsage.period, period)));
+
+    return {
+      allowed: false,
+      reason: `Monthly ${feature} quota exceeded (${currentUsage - amount}/${quota}). Enable Pay-as-you-go in Settings > Billing to continue.`,
+    };
   }
 
-  // Update local record
-  await db
-    .update(subscriptions)
-    .set({ quantity: driverCount, updatedAt: new Date() })
-    .where(eq(subscriptions.tenantId, tenantId));
+  return { allowed: true };
+}
 
-  return driverCount;
+// --- getMeteredUsage ---
+export async function getMeteredUsage(tenantId: string) {
+  const period = new Date().toISOString().slice(0, 7);
+
+  const [metered] = await db
+    .select()
+    .from(meteredUsage)
+    .where(and(eq(meteredUsage.tenantId, tenantId), eq(meteredUsage.period, period)))
+    .limit(1);
+
+  const usage = {
+    aiOptimizations: metered?.aiOptimizations ?? 0,
+    aiDispatches: metered?.aiDispatches ?? 0,
+    aiChatMessages: metered?.aiChatMessages ?? 0,
+    smsSent: metered?.smsSent ?? 0,
+    emailsSent: metered?.emailsSent ?? 0,
+    podStorageMb: metered?.podStorageMb ?? 0,
+  };
+
+  // Calculate overage costs
+  const overageCosts: Record<string, number> = {};
+  for (const [key, used] of Object.entries(usage)) {
+    const quota = meteredQuotas[key as MeteredFeature];
+    const rate = meteredRates[key as MeteredFeature];
+    const overage = Math.max(0, used - quota);
+    overageCosts[key] = overage * rate; // in cents
+  }
+
+  return { usage, quotas: meteredQuotas, rates: meteredRates, overageCosts };
+}
+
+// --- getOrderCount (for middleware) ---
+export async function getMonthlyOrderCount(tenantId: string): Promise<number> {
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const [result] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(orders)
+    .where(and(eq(orders.tenantId, tenantId), gte(orders.createdAt, monthStart)));
+  return Number(result?.count ?? 0);
 }
 
 // --- invalidate billing cache helper ---
@@ -285,6 +431,7 @@ export async function handleWebhookEvent(event: Stripe.Event) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
       const tenantId = session.metadata?.tenantId;
+      const plan = session.metadata?.plan;
       if (!tenantId) break;
 
       if (session.subscription) {
@@ -292,6 +439,7 @@ export async function handleWebhookEvent(event: Stripe.Event) {
           .update(subscriptions)
           .set({
             stripeSubscriptionId: session.subscription as string,
+            plan: (plan || 'standard') as any,
             status: 'active',
             updatedAt: new Date(),
           })
@@ -315,7 +463,6 @@ export async function handleWebhookEvent(event: Stripe.Event) {
         unpaid: 'unpaid',
       };
 
-      // Compute period timestamps from latest invoice or billing_cycle_anchor
       const latestInvoice = typeof stripeSub.latest_invoice === 'object' && stripeSub.latest_invoice
         ? stripeSub.latest_invoice as Stripe.Invoice
         : null;
@@ -326,12 +473,18 @@ export async function handleWebhookEvent(event: Stripe.Event) {
         ? new Date(latestInvoice.period_end * 1000)
         : null;
 
+      // Sync plan from metadata if available (handles Stripe portal plan changes)
+      const planFromMeta = stripeSub.metadata?.plan;
+      const planUpdate = planFromMeta && ['free', 'standard', 'growth', 'scale', 'enterprise'].includes(planFromMeta)
+        ? { plan: planFromMeta as any }
+        : {};
+
       await db
         .update(subscriptions)
         .set({
           stripeSubscriptionId: stripeSub.id,
-          status: (statusMap[stripeSub.status] || 'active') as 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid',
-          quantity: stripeSub.items.data[0]?.quantity ?? 1,
+          status: (statusMap[stripeSub.status] || 'active') as any,
+          ...planUpdate,
           currentPeriodStart: periodStart,
           currentPeriodEnd: periodEnd,
           trialEndsAt: stripeSub.trial_end ? new Date(stripeSub.trial_end * 1000) : null,
@@ -348,10 +501,12 @@ export async function handleWebhookEvent(event: Stripe.Event) {
       const tenantId = stripeSub.metadata?.tenantId;
       if (!tenantId) break;
 
+      // When Stripe subscription is deleted, revert to free plan
       await db
         .update(subscriptions)
         .set({
-          status: 'canceled',
+          plan: 'free' as any,
+          status: 'active',
           canceledAt: new Date(),
           updatedAt: new Date(),
         })
@@ -365,7 +520,6 @@ export async function handleWebhookEvent(event: Stripe.Event) {
       const tenantId = (invoice.parent as any)?.subscription_details?.metadata?.tenantId
         || invoice.metadata?.tenantId;
 
-      // Upsert invoice record
       await db
         .insert(invoices)
         .values({
@@ -419,11 +573,10 @@ export async function handleWebhookEvent(event: Stripe.Event) {
           },
         });
 
-      // Mark subscription as past_due if we can identify the tenant
       if (tenantId) {
         await db
           .update(subscriptions)
-          .set({ status: 'past_due', updatedAt: new Date() })
+          .set({ status: 'past_due' as any, updatedAt: new Date() })
           .where(eq(subscriptions.tenantId, tenantId));
         await invalidateBillingCache(tenantId);
       }

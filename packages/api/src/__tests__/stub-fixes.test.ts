@@ -76,10 +76,9 @@ vi.mock('../lib/activity.js', () => ({
   logActivity: (...args: any[]) => mockLogActivity(...args),
 }));
 
-// Mock syncSeats
-const mockSyncSeats = vi.fn().mockResolvedValue(1);
+// Mock billing service (syncSeats removed — per-order pricing now)
 vi.mock('../modules/billing/service.js', () => ({
-  syncSeats: (...args: any[]) => mockSyncSeats(...args),
+  recordMeteredUsage: vi.fn().mockResolvedValue({ allowed: true }),
 }));
 
 // Mock errors
@@ -151,8 +150,8 @@ describe('B2: Public tracking uses real ETA', () => {
   });
 });
 
-describe('B3: syncSeats called on driver create/delete', () => {
-  it('calls syncSeats after createDriver', async () => {
+describe('B3: Per-order billing — no syncSeats on driver create/delete', () => {
+  it('does not call syncSeats after createDriver (per-order model)', async () => {
     const { createDriver } = await import('../modules/fleet/service.js');
     await createDriver('tenant-1', {
       name: 'Test Driver',
@@ -161,14 +160,16 @@ describe('B3: syncSeats called on driver create/delete', () => {
       skillTags: [],
     });
 
-    expect(mockSyncSeats).toHaveBeenCalledWith('tenant-1');
+    // syncSeats no longer exists — per-order pricing means unlimited drivers
+    expect(mockLogActivity).toHaveBeenCalled();
   });
 
-  it('calls syncSeats after deleteDriver', async () => {
+  it('does not call syncSeats after deleteDriver (per-order model)', async () => {
     const { deleteDriver } = await import('../modules/fleet/service.js');
     await deleteDriver('tenant-1', 'driver-1');
 
-    expect(mockSyncSeats).toHaveBeenCalledWith('tenant-1');
+    // syncSeats no longer exists — per-order pricing means unlimited drivers
+    expect(mockLogActivity).toHaveBeenCalled();
   });
 });
 

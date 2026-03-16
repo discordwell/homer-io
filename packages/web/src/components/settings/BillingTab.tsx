@@ -33,13 +33,27 @@ const statusLabels: Record<string, string> = {
   unpaid: 'Unpaid',
 };
 
+const meteredLabels: Record<string, string> = {
+  aiOptimizations: 'AI Optimizations',
+  aiDispatches: 'AI Auto-Dispatch',
+  aiChatMessages: 'AI Chat Messages',
+  smsSent: 'SMS Sent',
+  emailsSent: 'Emails Sent',
+  podStorageMb: 'POD Storage (MB)',
+};
+
 export function BillingTab() {
-  const { subscription, invoices, loading, loadSubscription, loadInvoices, createPortal } = useBillingStore();
+  const {
+    subscription, invoices, meteredUsage, loading,
+    loadSubscription, loadInvoices, loadMeteredUsage,
+    createPortal, togglePayAsYouGo,
+  } = useBillingStore();
   const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
 
   useEffect(() => {
     loadSubscription();
     loadInvoices();
+    loadMeteredUsage();
   }, []);
 
   if (loading && !subscription) return <LoadingSpinner />;
@@ -54,10 +68,18 @@ export function BillingTab() {
 
   const trialDays = daysUntil(subscription.trialEndsAt);
   const planName = subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1);
+  const isUnlimited = subscription.ordersLimit === -1;
+  const ordersPercent = isUnlimited
+    ? 0
+    : Math.min(100, Math.round((subscription.ordersUsed / subscription.ordersLimit) * 100));
 
   async function handlePortal() {
     const url = await createPortal();
     window.location.href = url;
+  }
+
+  async function handleTogglePayAsYouGo() {
+    await togglePayAsYouGo(!subscription!.payAsYouGoEnabled);
   }
 
   return (
@@ -96,7 +118,7 @@ export function BillingTab() {
                   : `${trialDays} day${trialDays !== 1 ? 's' : ''} remaining in trial`}
               </p>
             )}
-            {subscription.currentPeriodEnd && subscription.status === 'active' && (
+            {subscription.currentPeriodEnd && subscription.status === 'active' && subscription.plan !== 'free' && (
               <p style={{ color: C.dim, fontSize: 13, margin: 0 }}>
                 Next billing: {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
               </p>
@@ -106,18 +128,116 @@ export function BillingTab() {
             <button onClick={() => setPlanSelectorOpen(true)} style={secondaryBtnStyle}>
               Change Plan
             </button>
-            <button onClick={handlePortal} style={primaryBtnStyle}>
-              Manage Payment
-            </button>
+            {subscription.plan !== 'free' && (
+              <button onClick={handlePortal} style={primaryBtnStyle}>
+                Manage Payment
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Seats / Usage */}
-        <div style={{ display: 'flex', gap: 24 }}>
-          <UsageCard label="Drivers" value={subscription.usage.driverCount} subtitle={`${subscription.quantity} seat${subscription.quantity !== 1 ? 's' : ''}`} />
-          <UsageCard label="Orders (this month)" value={subscription.usage.orderCount} />
-          <UsageCard label="Routes (this month)" value={subscription.usage.routeCount} />
+        {/* Order Usage Bar */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ color: C.dim, fontSize: 12, fontFamily: F.body, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Orders this month
+            </span>
+            <span style={{ color: C.text, fontSize: 13, fontFamily: F.body, fontWeight: 600 }}>
+              {subscription.ordersUsed.toLocaleString()} / {isUnlimited ? '∞' : subscription.ordersLimit.toLocaleString()}
+            </span>
+          </div>
+          {!isUnlimited && (
+            <div style={{ background: C.bg, borderRadius: 4, height: 8, overflow: 'hidden' }}>
+              <div style={{
+                width: `${ordersPercent}%`,
+                height: '100%',
+                borderRadius: 4,
+                background: ordersPercent >= 90 ? C.red : ordersPercent >= 75 ? C.orange : C.accent,
+                transition: 'width 0.3s ease',
+              }} />
+            </div>
+          )}
         </div>
+
+        {/* Usage Summary */}
+        <div style={{ display: 'flex', gap: 16 }}>
+          <UsageCard label="Orders" value={subscription.ordersUsed} />
+          <UsageCard label="Drivers" value={subscription.usage.driverCount} subtitle="Unlimited" />
+          <UsageCard label="Routes" value={subscription.usage.routeCount} />
+        </div>
+      </div>
+
+      {/* Pay-as-you-go + Metered Usage */}
+      <div style={{
+        background: C.bg2,
+        borderRadius: 12,
+        border: `1px solid ${C.muted}`,
+        padding: 24,
+        marginBottom: 24,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <h3 style={{ fontFamily: F.display, fontSize: 18, color: C.text, margin: '0 0 4px' }}>
+              Pay-as-you-go
+            </h3>
+            <p style={{ color: C.dim, fontSize: 13, fontFamily: F.body, margin: 0 }}>
+              AI, SMS, and storage include a free monthly quota. Enable pay-as-you-go to continue beyond the limit at cost.
+            </p>
+          </div>
+          <button
+            onClick={handleTogglePayAsYouGo}
+            style={{
+              padding: '8px 20px',
+              borderRadius: 8,
+              border: `1px solid ${subscription.payAsYouGoEnabled ? C.green : C.muted}`,
+              background: subscription.payAsYouGoEnabled ? `${C.green}15` : 'transparent',
+              color: subscription.payAsYouGoEnabled ? C.green : C.dim,
+              cursor: 'pointer',
+              fontFamily: F.body,
+              fontWeight: 600,
+              fontSize: 13,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {subscription.payAsYouGoEnabled ? 'Enabled' : 'Enable'}
+          </button>
+        </div>
+
+        {/* Metered Usage Table */}
+        {meteredUsage && (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Feature', 'Used', 'Free Quota', 'Overage Cost'].map((h) => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(meteredUsage.usage).map(([key, used]) => {
+                const quota = meteredUsage.quotas[key] ?? 0;
+                const overage = meteredUsage.overageCosts[key] ?? 0;
+                return (
+                  <tr key={key}>
+                    <td style={cellStyle}>{meteredLabels[key] || key}</td>
+                    <td style={cellStyle}>
+                      <span style={{ color: used > quota ? C.orange : C.text, fontWeight: used > quota ? 600 : 400 }}>
+                        {used.toLocaleString()}
+                      </span>
+                    </td>
+                    <td style={cellStyle}>{quota.toLocaleString()}</td>
+                    <td style={cellStyle}>
+                      {overage > 0
+                        ? <span style={{ color: C.orange }}>{formatCents(overage)}</span>
+                        : <span style={{ color: C.dim }}>—</span>
+                      }
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Invoice History */}
@@ -138,19 +258,7 @@ export function BillingTab() {
             <thead>
               <tr>
                 {['Date', 'Amount', 'Status', ''].map((h) => (
-                  <th key={h} style={{
-                    textAlign: 'left',
-                    padding: '8px 12px',
-                    color: C.dim,
-                    fontSize: 12,
-                    fontFamily: F.body,
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    borderBottom: `1px solid ${C.border}`,
-                  }}>
-                    {h}
-                  </th>
+                  <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -244,6 +352,18 @@ const secondaryBtnStyle: React.CSSProperties = {
   fontFamily: F.body,
   fontWeight: 600,
   fontSize: 14,
+};
+
+const thStyle: React.CSSProperties = {
+  textAlign: 'left',
+  padding: '8px 12px',
+  color: C.dim,
+  fontSize: 12,
+  fontFamily: F.body,
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  borderBottom: `1px solid ${C.border}`,
 };
 
 const cellStyle: React.CSSProperties = {
