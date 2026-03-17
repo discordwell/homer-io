@@ -14,7 +14,8 @@ interface DataTableProps<T> {
   pagination?: { page: number; totalPages: number; onPageChange: (page: number) => void };
 }
 
-export function DataTable<T extends Record<string, unknown>>({ columns, data, onRowClick, pagination }: DataTableProps<T>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataTable<T extends Record<string, any>>({ columns, data, onRowClick, pagination }: DataTableProps<T>) {
   return (
     <div>
       <div style={{ overflowX: 'auto' }}>
