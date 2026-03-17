@@ -8,7 +8,14 @@ interface TrendChartProps {
   data: TrendPoint[];
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+interface TooltipPayloadEntry {
+  dataKey: string;
+  name: string;
+  value: number;
+  color: string;
+}
+
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
@@ -16,7 +23,7 @@ function CustomTooltip({ active, payload, label }: any) {
       padding: '10px 14px', fontFamily: F.body, fontSize: 13,
     }}>
       <div style={{ color: C.dim, marginBottom: 6, fontSize: 12 }}>{label}</div>
-      {payload.map((entry: any) => (
+      {payload.map((entry: TooltipPayloadEntry) => (
         <div key={entry.dataKey} style={{ color: entry.color, display: 'flex', gap: 8, marginBottom: 2 }}>
           <span>{entry.name}:</span>
           <span style={{ fontWeight: 600 }}>{entry.value}</span>

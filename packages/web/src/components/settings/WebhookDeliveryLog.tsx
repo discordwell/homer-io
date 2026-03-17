@@ -73,6 +73,7 @@ export function WebhookDeliveryLog({ endpointId, onClose }: WebhookDeliveryLogPr
 
   useEffect(() => {
     fetchDeliveries(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpointId]);
 
   function handlePageChange(newPage: number) {

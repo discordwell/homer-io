@@ -58,6 +58,7 @@ export function IntegrationsTab() {
   useEffect(() => {
     loadPlatforms();
     loadConnections();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function getConnectionForPlatform(platform: string): ConnectionResponse | undefined {

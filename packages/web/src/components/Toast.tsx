@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { useState, useCallback, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { C, F } from '../theme.js';
 
@@ -8,6 +8,7 @@ interface ToastItem { id: number; message: string; type: ToastType; }
 interface ToastContextType { toast: (message: string, type?: ToastType) => void; }
 
 const ToastContext = createContext<ToastContextType>({ toast: () => {} });
+// eslint-disable-next-line react-refresh/only-export-components
 export const useToast = () => useContext(ToastContext);
 
 let nextId = 0;

@@ -14,7 +14,7 @@ interface DataTableProps<T> {
   pagination?: { page: number; totalPages: number; onPageChange: (page: number) => void };
 }
 
-export function DataTable<T extends Record<string, any>>({ columns, data, onRowClick, pagination }: DataTableProps<T>) {
+export function DataTable<T extends Record<string, unknown>>({ columns, data, onRowClick, pagination }: DataTableProps<T>) {
   return (
     <div>
       <div style={{ overflowX: 'auto' }}>
@@ -35,7 +35,7 @@ export function DataTable<T extends Record<string, any>>({ columns, data, onRowC
             {data.length === 0 ? (
               <tr><td colSpan={columns.length} style={{ padding: 32, textAlign: 'center', color: C.dim }}>No data</td></tr>
             ) : data.map((item, i) => (
-              <tr key={(item as any).id || i}
+              <tr key={(item as Record<string, unknown>).id as string || i}
                 onClick={() => onRowClick?.(item)}
                 style={{ cursor: onRowClick ? 'pointer' : 'default', borderBottom: `1px solid ${C.border}` }}
                 onMouseEnter={e => (e.currentTarget.style.background = C.bg3)}

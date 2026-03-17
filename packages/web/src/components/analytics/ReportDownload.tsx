@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../../stores/auth.js';
 import { useAnalyticsStore } from '../../stores/analytics.js';
 import { C, F } from '../../theme.js';
@@ -38,19 +38,20 @@ export function ReportDownload() {
     }
   }, [open]);
 
-  function handleDownload(type: ReportType) {
+  const handleDownload = useCallback(function handleDownload(type: ReportType) {
     if (!accessToken) return;
     setDownloading(type);
     setOpen(false);
 
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
     const params = new URLSearchParams();
 
     if (type === 'daily-summary') {
       params.set('date', today);
     } else {
       const rangeDays = range === '7d' ? 7 : range === '30d' ? 30 : 90;
-      const from = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const from = new Date(now.getTime() - rangeDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       params.set('from', from);
       params.set('to', today);
     }
@@ -80,7 +81,7 @@ export function ReportDownload() {
       .finally(() => {
         setDownloading(null);
       });
-  }
+  }, [accessToken, range]);
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>

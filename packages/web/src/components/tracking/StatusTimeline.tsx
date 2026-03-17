@@ -3,7 +3,7 @@ import { C, F } from '../../theme.js';
 interface TimelineEvent {
   action: string;
   createdAt: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 interface StatusTimelineProps {

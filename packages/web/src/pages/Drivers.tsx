@@ -32,6 +32,7 @@ export function DriversPage() {
   const [form, setForm] = useState<CreateDriverInput>(emptyForm);
   const [skillInput, setSkillInput] = useState('');
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchDrivers(); }, [driverStatusFilter]);
 
   const columns: Column<typeof drivers[0]>[] = [

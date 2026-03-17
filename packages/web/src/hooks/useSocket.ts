@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/auth.js';
 
@@ -47,27 +47,20 @@ function getSocket(): Socket | null {
  */
 export function useSocket(): Socket | null {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const socketRef = useRef<Socket | null>(null);
 
-  useEffect(() => {
-    if (!accessToken) {
-      // Disconnect if user logged out
-      if (socket) {
-        socket.disconnect();
-        socket = null;
-      }
-      socketRef.current = null;
-      return;
-    }
-
-    const s = getSocket();
-    socketRef.current = s;
-
-    return () => {
-      // Don't disconnect on unmount — singleton stays alive
-      // Only disconnect on logout (handled above)
-    };
+  // Derive the socket value synchronously — getSocket() is idempotent for the same token
+  const currentSocket = useMemo(() => {
+    if (!accessToken) return null;
+    return getSocket();
   }, [accessToken]);
 
-  return socketRef.current;
+  // Handle side effects: disconnect on logout
+  useEffect(() => {
+    if (!accessToken && socket) {
+      socket.disconnect();
+      socket = null;
+    }
+  }, [accessToken]);
+
+  return currentSocket;
 }

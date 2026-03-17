@@ -6,18 +6,17 @@ import { C, F } from '../theme.js';
 export function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [error, setError] = useState('');
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>(token ? 'loading' : 'error');
+  const [error, setError] = useState(token ? '' : 'Missing verification token.');
 
   useEffect(() => {
-    if (!token) {
-      setStatus('error');
-      setError('Missing verification token.');
-      return;
-    }
+    if (!token) return;
 
     api.post('/auth/verify-email', { token })
-      .then(() => setStatus('success'))
+      .then(() => {
+        setStatus('success');
+        setError('');
+      })
       .catch((err) => {
         setStatus('error');
         setError(err instanceof Error ? err.message : 'Verification failed');

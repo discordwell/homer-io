@@ -44,6 +44,7 @@ export function TeamTab() {
 
   useEffect(() => {
     fetchTeam();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isOwner = currentUser?.role === 'owner';

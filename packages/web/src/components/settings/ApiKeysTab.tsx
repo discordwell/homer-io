@@ -43,6 +43,7 @@ export function ApiKeysTab() {
 
   useEffect(() => {
     fetchApiKeys();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const columns: Column<(typeof apiKeys)[0]>[] = [

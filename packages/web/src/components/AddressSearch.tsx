@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { C, F } from '../theme.js';
 
 interface AddressSearchProps {

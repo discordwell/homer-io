@@ -45,7 +45,7 @@ function syncStatusLabel(status: string): string {
 
 export function IntegrationDetailPanel({ open, onClose, connection }: IntegrationDetailPanelProps) {
   const { toast } = useToast();
-  const { syncConnection, updateConnection, loadOrders, loadConnections } = useIntegrationsStore();
+  const { syncConnection, updateConnection, loadOrders } = useIntegrationsStore();
 
   const [syncing, setSyncing] = useState(false);
   const [orders, setOrders] = useState<IntegrationOrderResponse[]>([]);
@@ -58,6 +58,7 @@ export function IntegrationDetailPanel({ open, onClose, connection }: Integratio
       setAutoImport(connection.autoImport);
       fetchOrders(1);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection?.id]);
 
   async function fetchOrders(page: number) {

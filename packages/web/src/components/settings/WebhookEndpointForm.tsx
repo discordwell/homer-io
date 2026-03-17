@@ -88,7 +88,7 @@ export function WebhookEndpointForm({ open, onClose, onSave, endpoint }: Webhook
   function toggleCategory(events: readonly string[]) {
     const allSelected = events.every(e => selectedEvents.includes(e));
     if (allSelected) {
-      setSelectedEvents(prev => prev.filter(e => !events.includes(e as any)));
+      setSelectedEvents(prev => prev.filter(e => !(events as readonly string[]).includes(e)));
     } else {
       setSelectedEvents(prev => [...new Set([...prev, ...events])]);
     }

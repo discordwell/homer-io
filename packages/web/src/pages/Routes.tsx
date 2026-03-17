@@ -22,6 +22,7 @@ export function RoutesPage() {
   const { toast } = useToast();
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchRoutes(); }, [statusFilter]);
 
   const columns: Column<typeof routes[0]>[] = [

@@ -42,6 +42,7 @@ export function VehiclesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<CreateVehicleInput>(emptyForm);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchVehicles(); }, []);
 
   const columns: Column<typeof vehicles[0]>[] = [

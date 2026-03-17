@@ -19,6 +19,7 @@ export function NotificationCenter() {
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, POLL_INTERVAL);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   // Fetch notifications when panel opens
@@ -26,6 +27,7 @@ export function NotificationCenter() {
     if (open && isAuthenticated) {
       fetchNotifications();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isAuthenticated]);
 
   // Close on click outside

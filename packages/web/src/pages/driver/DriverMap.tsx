@@ -39,6 +39,7 @@ export function DriverMapPage() {
       map.remove();
       mapRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update driver position marker
@@ -132,6 +133,7 @@ export function DriverMapPage() {
       const bounds = L.latLngBounds(allPoints);
       map.fitBounds(bounds, { padding: [50, 50] });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRoute?.orders]);
 
   if (loading && !currentRoute) {

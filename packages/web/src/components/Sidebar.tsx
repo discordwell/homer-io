@@ -30,6 +30,7 @@ export function Sidebar() {
   const unreadCount = useMessagesStore((s) => s.unreadCount);
   const fetchUnreadCount = useMessagesStore((s) => s.fetchUnreadCount);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchUnreadCount(); }, []);
 
   return (

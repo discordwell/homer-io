@@ -26,4 +26,5 @@ export function FormField({ label, error, children, type = 'text', value, onChan
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { inputStyle };

@@ -23,6 +23,7 @@ export function DriverChat({ onClose }: DriverChatProps) {
     if (routeId) {
       fetchMessages(routeId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeId]);
 
   useEffect(() => {

@@ -90,7 +90,7 @@ export function DriverMarker({ driver, map, onClick }: DriverMarkerProps) {
 
       markerRef.current = marker;
     }
-  }, [driver.lat, driver.lng, driver.heading, driver.driverStatus, driver.speed, driver.updatedAt]);
+  }, [driver, map, onClick]);
 
   // Cleanup on unmount
   useEffect(() => {

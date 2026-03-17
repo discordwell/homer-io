@@ -2,6 +2,19 @@
 
 ## Session Summaries
 
+### 2026-03-17T03:15 UTC — ESLint TypeScript Coverage Fix
+- ESLint config only matched `**/*.{js,jsx}` — all TypeScript source files were invisible to lint.
+- Installed `typescript-eslint`, expanded file pattern to `**/*.{ts,tsx}`, swapped `no-unused-vars` for `@typescript-eslint/no-unused-vars`.
+- Fixed all 73 lint issues (40 errors, 33 warnings) across ~40 files:
+  - 12 unused vars (removed imports, prefixed with underscore)
+  - 14 `no-explicit-any` (replaced with `unknown`, `Record<string, unknown>`, or proper types)
+  - 5 refs-during-render (LiveFleetMap: added mapReady state; RouteMap: moved ref assignment to useEffect; useSocket: replaced ref return with state)
+  - 4 setState-in-effect (CarbonDashboard/PODViewer: derived loading from settled state; useGeoLocation: init from render; VerifyEmail: init from token presence)
+  - 1 impure function in render (ReportDownload: moved Date.now() into callback)
+  - 4 react-refresh/only-export-components (eslint-disable comments for utility co-exports)
+  - 33 exhaustive-deps (eslint-disable for stable zustand actions; added deps where appropriate)
+- Build passes, 20 tests pass, lint clean (0 errors, 0 warnings).
+
 ### 2026-03-16T19:45 UTC — Landing Page: "The Split Screen"
 - Created `/` landing page (720 LOC) with 8 sections: sticky nav, hero with split-panel mockup (SVG fleet map + AI chat), "See everything" dispatch board, "One click. Faster routes" before/after SVG, "Ask it anything" NLOps reveal, interactive pricing calculator + plan cards, migration callout, final CTA + footer.
 - **Routing**: Added `/` route to App.tsx, `CatchAllRedirect` component (auth → /dashboard, unauth → /).

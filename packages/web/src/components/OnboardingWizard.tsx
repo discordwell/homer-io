@@ -15,6 +15,7 @@ export function OnboardingWizard() {
   const { status, loading, fetchStatus, completeOnboarding, skipOnboarding } = useOnboardingStore();
   const navigate = useNavigate();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchStatus(); }, []);
 
   if (loading || !status || status.completed) return null;

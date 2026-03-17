@@ -12,16 +12,16 @@ interface GeoPosition {
 const LOCATION_POST_INTERVAL = 10_000; // 10 seconds
 
 export function useGeoLocation() {
+  const geoSupported = typeof navigator !== 'undefined' && !!navigator.geolocation;
   const [position, setPosition] = useState<GeoPosition | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    geoSupported ? null : 'Geolocation is not supported by this browser',
+  );
   const lastPostRef = useRef<number>(0);
   const watchIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by this browser');
-      return;
-    }
+    if (!geoSupported) return;
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
@@ -66,7 +66,7 @@ export function useGeoLocation() {
         watchIdRef.current = null;
       }
     };
-  }, []);
+  }, [geoSupported]);
 
   return { ...position, error };
 }

@@ -347,7 +347,8 @@ function formatPreview(preview: Record<string, unknown>): string {
       lines.push(`${key}: ${val.length} items`);
       for (const item of val.slice(0, 5)) {
         if (typeof item === 'object' && item !== null) {
-          const label = (item as any).recipient || (item as any).name || (item as any).id || JSON.stringify(item);
+          const obj = item as Record<string, unknown>;
+          const label = obj.recipient || obj.name || obj.id || JSON.stringify(item);
           lines.push(`  - ${label}`);
         } else {
           lines.push(`  - ${String(item)}`);

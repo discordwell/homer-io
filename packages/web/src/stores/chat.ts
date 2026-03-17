@@ -33,7 +33,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         history: messages,
       });
       set({ messages: [...get().messages, { role: 'assistant', content: res.reply }] });
-    } catch (err) {
+    } catch {
       set({
         messages: [
           ...get().messages,

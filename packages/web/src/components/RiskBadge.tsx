@@ -12,6 +12,7 @@ interface RiskBadgeProps {
   factors?: RiskFactor[];
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function getRiskLevel(score: number): { label: string; color: string } | null {
   if (score >= 80) return { label: 'Critical', color: C.red };
   if (score >= 60) return { label: 'High Risk', color: C.orange };
@@ -93,6 +94,7 @@ export function RiskBadge({ score, factors }: RiskBadgeProps) {
 }
 
 /** Summarize risk scores for a set of stops. Returns null if no high-risk stops. */
+// eslint-disable-next-line react-refresh/only-export-components
 export function riskSummary(scores: { score: number }[]): string | null {
   const high = scores.filter(s => s.score >= 60).length;
   const medium = scores.filter(s => s.score >= 40 && s.score < 60).length;

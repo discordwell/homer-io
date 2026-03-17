@@ -19,7 +19,7 @@ interface Stop {
 
 export function RouteBuilderPage() {
   const navigate = useNavigate();
-  const { createRoute, optimizeRoute } = useRoutesStore();
+  const { createRoute } = useRoutesStore();
   const { vehicles, drivers, fetchVehicles, fetchDrivers } = useFleetStore();
   const { orders, fetchOrders } = useOrdersStore();
   const { toast } = useToast();
@@ -36,6 +36,7 @@ export function RouteBuilderPage() {
     fetchVehicles(1);
     fetchDrivers(1);
     fetchOrders(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Available orders (not already assigned to a route)

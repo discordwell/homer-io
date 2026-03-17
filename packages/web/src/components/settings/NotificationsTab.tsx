@@ -7,7 +7,7 @@ import { LoadingSpinner } from '../LoadingSpinner.js';
 import { NotificationTemplateEditor } from './NotificationTemplateEditor.js';
 import { useToast } from '../Toast.js';
 import { C, F } from '../../theme.js';
-import type { NotificationTemplate } from '../../stores/customer-notifications.js';
+import type { NotificationTemplate, CreateTemplateInput, UpdateTemplateInput } from '../../stores/customer-notifications.js';
 
 const triggerLabels: Record<string, string> = {
   order_assigned: 'Order Assigned',
@@ -41,6 +41,7 @@ export function NotificationsTab({ onViewLog }: Props) {
 
   useEffect(() => {
     fetchTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleAdd() {
@@ -53,13 +54,13 @@ export function NotificationsTab({ onViewLog }: Props) {
     setEditorOpen(true);
   }
 
-  async function handleSave(input: any) {
+  async function handleSave(input: CreateTemplateInput | UpdateTemplateInput) {
     try {
       if (editingTemplate) {
-        await updateTemplate(editingTemplate.id, input);
+        await updateTemplate(editingTemplate.id, input as UpdateTemplateInput);
         toast('Template updated', 'success');
       } else {
-        await createTemplate(input as any);
+        await createTemplate(input as CreateTemplateInput);
         toast('Template created', 'success');
       }
     } catch (err) {

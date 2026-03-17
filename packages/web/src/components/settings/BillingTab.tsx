@@ -54,6 +54,7 @@ export function BillingTab() {
     loadSubscription();
     loadInvoices();
     loadMeteredUsage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading && !subscription) return <LoadingSpinner />;

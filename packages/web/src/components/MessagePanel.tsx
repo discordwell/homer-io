@@ -18,6 +18,7 @@ export function MessagePanel({ routeId, onClose }: MessagePanelProps) {
 
   useEffect(() => {
     fetchMessages(routeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeId]);
 
   useEffect(() => {

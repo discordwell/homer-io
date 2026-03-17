@@ -27,18 +27,22 @@ interface PODViewerProps {
 
 export function PODViewer({ orderId, open, onClose }: PODViewerProps) {
   const [pod, setPod] = useState<PodData | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
+  const [fetchedKey, setFetchedKey] = useState<string | null>(null);
+  const requestKey = open ? `${orderId}` : null;
+  const loading = open && fetchedKey !== requestKey;
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
-    setError(null);
+    const key = `${orderId}`;
     api.get<PodData>(`/pod/${orderId}`)
-      .then(setPod)
+      .then((data) => {
+        setPod(data);
+        setError(null);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load POD'))
-      .finally(() => setLoading(false));
+      .finally(() => setFetchedKey(key));
   }, [open, orderId]);
 
   return (

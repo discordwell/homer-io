@@ -42,6 +42,7 @@ export function CustomerNotificationLog({ onBack }: Props) {
 
   useEffect(() => {
     fetchLog(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const columns: Column<NotificationLogEntry>[] = [

@@ -16,6 +16,7 @@ export default function LiveMap() {
   // Fetch initial driver locations on mount
   useEffect(() => {
     fetchDriverLocations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Subscribe to real-time updates when socket connects
@@ -27,6 +28,7 @@ export default function LiveMap() {
     return () => {
       unsubscribe(socket);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
 
   const driverCount = driverLocations.size;

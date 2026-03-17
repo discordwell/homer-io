@@ -25,7 +25,7 @@ interface MessagesState {
   addMessage: (message: Message) => void;
 }
 
-export const useMessagesStore = create<MessagesState>()((set, get) => ({
+export const useMessagesStore = create<MessagesState>()((set) => ({
   messages: [],
   unreadCount: 0,
   loading: false,

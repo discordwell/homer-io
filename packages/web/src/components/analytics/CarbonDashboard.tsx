@@ -30,13 +30,12 @@ interface CarbonDashboardProps {
 
 export function CarbonDashboard({ range }: CarbonDashboardProps) {
   const [data, setData] = useState<CarbonData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [settledRange, setSettledRange] = useState<string | null>(null);
+  const loading = settledRange !== range;
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
     fetch(`/api/analytics/carbon?range=${range}`, {
       headers: {
@@ -48,13 +47,16 @@ export function CarbonDashboard({ range }: CarbonDashboardProps) {
         return res.json();
       })
       .then((json) => {
-        if (!cancelled) setData(json);
+        if (!cancelled) {
+          setData(json);
+          setError(null);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err.message);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setSettledRange(range);
       });
 
     return () => { cancelled = true; };

@@ -50,6 +50,7 @@ export function MigrationPage() {
   const driverFileRef = useRef<HTMLInputElement>(null);
   const vehicleFileRef = useRef<HTMLInputElement>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadJobs(); loadPlatforms(); }, []);
 
   // Cleanup polling on unmount

@@ -50,7 +50,7 @@ export function OrdersPage() {
   const {
     orders, page, totalPages, total, loading, statusFilter, search,
     fetchOrders, createOrder, deleteOrder, importCsv,
-    setStatusFilter, setSearch, setDateFrom, setDateTo,
+    setStatusFilter, setSearch,
   } = useOrdersStore();
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
@@ -65,6 +65,7 @@ export function OrdersPage() {
   const [intelData, setIntelData] = useState<AddressIntelligence | null>(null);
   const [intelLoading, setIntelLoading] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchOrders(); }, [statusFilter]);
   useEffect(() => { setSelectedIds(new Set()); }, [orders]);
 
@@ -138,7 +139,7 @@ export function OrdersPage() {
       key: 'select', header: (
         <input type="checkbox" checked={orders.length > 0 && selectedIds.size === orders.length}
           onChange={toggleSelectAll} style={{ accentColor: C.accent, cursor: 'pointer' }} />
-      ) as any, width: 36,
+      ) as unknown as string, width: 36,
       render: (o) => (
         <input type="checkbox" checked={selectedIds.has(o.id)}
           onChange={() => toggleSelect(o.id)}
@@ -313,7 +314,7 @@ export function OrdersPage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <FormField label="Packages" type="number" value={form.packageCount} onChange={(e) => setForm({ ...form, packageCount: parseInt(e.target.value) || 1 })} min={1} />
-            <SelectField label="Priority" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as any })}
+            <SelectField label="Priority" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as typeof emptyForm.priority })}
               options={[
                 { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' },
                 { value: 'high', label: 'High' }, { value: 'urgent', label: 'Urgent' },
@@ -350,8 +351,8 @@ const cancelBtnStyle: React.CSSProperties = {
   border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
 };
 
-function AddressIntelligencePanel({ orderId, data, loading, onClose }: {
-  orderId: string;
+function AddressIntelligencePanel({ data, loading, onClose }: {
+  orderId?: string;
   data: AddressIntelligence | null;
   loading: boolean;
   onClose: () => void;

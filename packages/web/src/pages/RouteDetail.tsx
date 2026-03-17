@@ -55,6 +55,7 @@ export function RouteDetailPage() {
     api.get<RiskScore[]>(`/intelligence/risk/${id}`)
       .then(setRiskScores)
       .catch(() => {}); // Silently fail — intelligence is optional
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, currentRoute?.status]);
 
   if (loading) return <LoadingSpinner />;

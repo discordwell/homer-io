@@ -12,7 +12,7 @@ interface TrackingData {
   deliveryLng: number | null;
   estimatedDelivery: string | null;
   driverLocation: { lat: number; lng: number } | null;
-  timeline: Array<{ action: string; createdAt: string; metadata?: any }>;
+  timeline: Array<{ action: string; createdAt: string; metadata?: Record<string, unknown> }>;
   createdAt: string;
   completedAt: string | null;
 }

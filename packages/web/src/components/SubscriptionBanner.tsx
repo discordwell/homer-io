@@ -15,6 +15,7 @@ export function SubscriptionBanner() {
     if (!subscription) {
       loadSubscription();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!subscription) return null;

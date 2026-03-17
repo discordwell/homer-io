@@ -44,7 +44,7 @@ interface TrackingState {
 
 let eventCounter = 0;
 
-export const useTrackingStore = create<TrackingState>()((set, get) => ({
+export const useTrackingStore = create<TrackingState>()((set) => ({
   driverLocations: new Map(),
   activeRouteProgress: new Map(),
   deliveryEvents: [],

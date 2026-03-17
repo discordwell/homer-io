@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { C } from '../theme.js';
@@ -10,7 +10,9 @@ export function RouteMap({ stops = [], center = [40.7128, -74.006], zoom = 12, h
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const onClickRef = useRef(onClick);
-  onClickRef.current = onClick;
+  useEffect(() => {
+    onClickRef.current = onClick;
+  });
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -25,6 +27,7 @@ export function RouteMap({ stops = [], center = [40.7128, -74.006], zoom = 12, h
     });
 
     return () => { map.remove(); mapRef.current = null; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

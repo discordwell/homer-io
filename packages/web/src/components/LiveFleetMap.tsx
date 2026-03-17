@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { C } from '../theme.js';
@@ -12,6 +12,7 @@ interface LiveFleetMapProps {
 export function LiveFleetMap({ height = '100%' }: LiveFleetMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const driverLocations = useTrackingStore((s) => s.driverLocations);
 
   // Initialize map
@@ -27,10 +28,12 @@ export function LiveFleetMap({ height = '100%' }: LiveFleetMapProps) {
     }).addTo(map);
 
     mapRef.current = map;
+    setMapReady(true);
 
     return () => {
       map.remove();
       mapRef.current = null;
+      setMapReady(false);
     };
   }, []);
 
@@ -48,6 +51,7 @@ export function LiveFleetMap({ height = '100%' }: LiveFleetMapProps) {
       const bounds = L.latLngBounds(points);
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [driverLocations.size]);
 
   const drivers = Array.from(driverLocations.values());
@@ -64,7 +68,7 @@ export function LiveFleetMap({ height = '100%' }: LiveFleetMapProps) {
         position: 'relative',
       }}
     >
-      {mapRef.current && drivers.map((driver) => (
+      {mapReady && mapRef.current && drivers.map((driver) => (
         <DriverMarker
           key={driver.driverId}
           driver={driver}
