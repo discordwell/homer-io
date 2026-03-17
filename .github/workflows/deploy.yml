@@ -57,10 +57,12 @@ jobs:
           key: ${{ secrets.OVH2_KEY }}
           script: |
             cd /opt/homer-io
-            git pull origin main
+            git fetch origin
+            git pull --ff-only origin main
             npm ci
             npx turbo build
-            npx drizzle-kit migrate --config packages/api/drizzle.config.ts
-            pm2 reload ecosystem.config.cjs
+            rsync -a --delete packages/web/dist/ site/
+            npx drizzle-kit push --config infra/drizzle-push.config.ts --force
+            pm2 reload infra/ecosystem.config.cjs || pm2 start infra/ecosystem.config.cjs
             curl -sf http://localhost:5000/ > /dev/null && echo "OSRM: healthy" || echo "OSRM: not running (routing will use haversine fallback)"
             echo "Deployed $(git rev-parse --short HEAD) at $(date)"
