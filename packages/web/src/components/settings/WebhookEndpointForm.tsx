@@ -3,7 +3,13 @@ import { Modal } from '../Modal.js';
 import { FormField, inputStyle } from '../FormField.js';
 import { useToast } from '../Toast.js';
 import { C, F } from '../../theme.js';
-import { webhookEvents } from '@homer-io/shared';
+
+const webhookEvents = [
+  'order.created', 'order.updated', 'order.assigned', 'order.delivered', 'order.failed',
+  'route.created', 'route.planned', 'route.started', 'route.completed', 'route.cancelled',
+  'delivery.completed', 'delivery.failed',
+  'driver.location_updated', 'driver.status_changed',
+] as const;
 
 interface WebhookEndpoint {
   id: string;

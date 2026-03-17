@@ -2,6 +2,17 @@
 
 ## Session Summaries
 
+### 2026-03-16T19:45 UTC — Landing Page: "The Split Screen"
+- Created `/` landing page (720 LOC) with 8 sections: sticky nav, hero with split-panel mockup (SVG fleet map + AI chat), "See everything" dispatch board, "One click. Faster routes" before/after SVG, "Ask it anything" NLOps reveal, interactive pricing calculator + plan cards, migration callout, final CTA + footer.
+- **Routing**: Added `/` route to App.tsx, `CatchAllRedirect` component (auth → /dashboard, unauth → /).
+- **Pricing calculator**: Driver slider (5-50) + competitor dropdown (Tookan/Onfleet/OptimoRoute/Circuit/Other). Auto-selects best HOMER plan (Standard/Growth/Scale) based on driver count. Shows savings in green.
+- **Plan cards**: Free/Standard/Growth/Scale with monthly/annual toggle. "Unlimited drivers" prominent. Growth has POPULAR badge.
+- **Animations**: Hero float (2px, 3s), driver dot pulse (2s), section fade-in-up via IntersectionObserver, calculator number transitions.
+- **Responsive**: useWidth() hook with breakpoints at <900px (hero stack), <768px (feature stack), <640px (full-width cards).
+- **Deploy**: CI deploy failed (missing OVH2_HOST secret). SSH to ovh2 also failed (port 22 closed). Pushed to main; deploy pending SSH restoration.
+- **Wet test (local)**: All 8 sections render. Nav opacity on scroll. Calculator interactive (slider/dropdown/savings). Annual toggle updates prices. Start Free → /register, Login → /login, catchall → /. Demo link points to homer.discordwell.com.
+- Build: zero TS errors. 720 LOC new file + 8 LOC App.tsx change.
+
 ### 2026-03-16T19:00 UTC — Phase 7C: API-Based Migration Connectors
 - Implemented 5 API connectors (Tookan, Onfleet, OptimoRoute, GetSwift, Circuit). SpeedyRoute stays CSV-only.
 - **Connector interface**: ExternalMigrationOrder, ExternalDriver, ExternalVehicle types. MigrationConnector interface with validateCredentials, fetchOrders/Drivers/Vehicles, getCounts.
