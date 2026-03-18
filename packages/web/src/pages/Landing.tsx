@@ -1,6 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useState, useEffect } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.js';
 import { C, F as ThemeFonts } from '../theme.js';
@@ -76,11 +74,13 @@ const bayRoutes = [
     note: 'Redwood City -> Foster City',
     stops: [
       [37.4852, -122.2364],
-      [37.4901, -122.2289],
+      [37.4891, -122.2321],
+      [37.4943, -122.2256],
       [37.5012, -122.2101],
+      [37.5146, -122.2212],
       [37.5305, -122.2548],
     ] as [number, number][],
-    driverPos: [37.4945, -122.2218] as [number, number],
+    driverPos: [37.5025, -122.2148] as [number, number],
   },
   {
     id: 'RT-002',
@@ -90,11 +90,13 @@ const bayRoutes = [
     note: 'San Mateo east loop',
     stops: [
       [37.563, -122.3255],
-      [37.5589, -122.3198],
-      [37.5548, -122.3141],
+      [37.5609, -122.3176],
+      [37.5569, -122.3084],
+      [37.5538, -122.2961],
+      [37.5527, -122.2814],
       [37.556, -122.268],
     ] as [number, number][],
-    driverPos: [37.5588, -122.3072] as [number, number],
+    driverPos: [37.5551, -122.2862] as [number, number],
   },
   {
     id: 'RT-003',
@@ -104,12 +106,164 @@ const bayRoutes = [
     note: 'Daly City -> South SF',
     stops: [
       [37.6879, -122.4702],
-      [37.6798, -122.4614],
+      [37.6838, -122.4649],
+      [37.6789, -122.4561],
       [37.672, -122.4528],
+      [37.6681, -122.4483],
       [37.6641, -122.4441],
     ] as [number, number][],
-    driverPos: [37.6815, -122.4587] as [number, number],
+    driverPos: [37.6778, -122.4572] as [number, number],
   },
+];
+
+type LatLng = [number, number];
+
+const bayAreaPlaces = [
+  { id: 'sf', label: 'San Francisco', point: [37.7749, -122.4194] as LatLng, dx: 0, dy: -14, align: 'middle' as const },
+  { id: 'daly', label: 'Daly City', point: [37.6879, -122.4702] as LatLng, dx: -10, dy: 18, align: 'end' as const },
+  { id: 'south-sf', label: 'South SF', point: [37.6641, -122.4441] as LatLng, dx: 10, dy: -10, align: 'start' as const },
+  { id: 'millbrae', label: 'Millbrae', point: [37.5985, -122.3867] as LatLng, dx: 10, dy: -10, align: 'start' as const },
+  { id: 'san-mateo', label: 'San Mateo', point: [37.563, -122.3255] as LatLng, dx: 12, dy: -12, align: 'start' as const },
+  { id: 'belmont', label: 'Belmont', point: [37.5202, -122.2758] as LatLng, dx: -10, dy: 18, align: 'end' as const },
+  { id: 'foster', label: 'Foster City', point: [37.5305, -122.2548] as LatLng, dx: 12, dy: 16, align: 'start' as const },
+  { id: 'redwood', label: 'Redwood City', point: [37.4852, -122.2364] as LatLng, dx: -10, dy: 18, align: 'end' as const },
+];
+
+const bayAreaWaterEdge: LatLng[] = [
+  [37.805, -122.43],
+  [37.785, -122.422],
+  [37.752, -122.405],
+  [37.72, -122.402],
+  [37.687, -122.405],
+  [37.655, -122.407],
+  [37.625, -122.393],
+  [37.596, -122.372],
+  [37.572, -122.344],
+  [37.558, -122.325],
+  [37.551, -122.3],
+  [37.541, -122.276],
+  [37.53, -122.252],
+  [37.509, -122.232],
+  [37.48, -122.21],
+];
+
+const bayAreaRoads = [
+  {
+    id: 'us-101',
+    tone: 'rgba(91,164,245,0.18)',
+    points: [
+      [37.79, -122.409],
+      [37.75, -122.403],
+      [37.7, -122.408],
+      [37.655, -122.407],
+      [37.61, -122.38],
+      [37.58, -122.35],
+      [37.56, -122.325],
+      [37.54, -122.282],
+      [37.495, -122.236],
+    ] as LatLng[],
+  },
+  {
+    id: 'i-280',
+    tone: 'rgba(167,184,214,0.14)',
+    points: [
+      [37.79, -122.47],
+      [37.74, -122.45],
+      [37.7, -122.446],
+      [37.67, -122.435],
+      [37.62, -122.429],
+      [37.58, -122.401],
+      [37.53, -122.373],
+      [37.49, -122.311],
+    ] as LatLng[],
+  },
+  {
+    id: 'sr-92',
+    tone: 'rgba(148,163,184,0.14)',
+    points: [
+      [37.562, -122.363],
+      [37.56, -122.345],
+      [37.558, -122.325],
+      [37.554, -122.295],
+      [37.553, -122.262],
+    ] as LatLng[],
+  },
+];
+
+const bayAreaMinorRoads = [
+  {
+    id: 'shore-1',
+    points: [
+      [37.744, -122.421],
+      [37.709, -122.414],
+      [37.678, -122.404],
+      [37.648, -122.392],
+      [37.618, -122.374],
+      [37.591, -122.349],
+      [37.565, -122.331],
+    ] as LatLng[],
+  },
+  {
+    id: 'shore-2',
+    points: [
+      [37.552, -122.319],
+      [37.544, -122.303],
+      [37.535, -122.286],
+      [37.522, -122.268],
+      [37.504, -122.247],
+    ] as LatLng[],
+  },
+  {
+    id: 'west-1',
+    points: [
+      [37.716, -122.459],
+      [37.689, -122.451],
+      [37.659, -122.441],
+      [37.628, -122.429],
+      [37.598, -122.409],
+      [37.569, -122.386],
+    ] as LatLng[],
+  },
+  {
+    id: 'east-loop',
+    points: [
+      [37.567, -122.317],
+      [37.562, -122.304],
+      [37.556, -122.291],
+      [37.55, -122.278],
+      [37.546, -122.262],
+    ] as LatLng[],
+  },
+];
+
+const bayAreaGhostRoutes = [
+  {
+    id: 'ghost-1',
+    tone: 'rgba(91,164,245,0.10)',
+    points: [
+      [37.706, -122.447],
+      [37.684, -122.43],
+      [37.659, -122.416],
+      [37.629, -122.401],
+    ] as LatLng[],
+  },
+  {
+    id: 'ghost-2',
+    tone: 'rgba(52,211,153,0.10)',
+    points: [
+      [37.59, -122.369],
+      [37.579, -122.347],
+      [37.565, -122.326],
+      [37.548, -122.296],
+      [37.531, -122.264],
+    ] as LatLng[],
+  },
+];
+
+const bayAreaRoadLabels = [
+  { id: 'label-101', label: 'US 101', point: [37.637, -122.393] as LatLng, color: 'rgba(91,164,245,0.9)' },
+  { id: 'label-280', label: 'I 280', point: [37.661, -122.438] as LatLng, color: 'rgba(200,216,240,0.84)' },
+  { id: 'label-92', label: 'SR 92', point: [37.557, -122.323] as LatLng, color: 'rgba(200,216,240,0.84)' },
 ];
 
 const actionPrompts = [
@@ -286,7 +440,7 @@ button, input, select, textarea { font: inherit; }
 @keyframes lFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }
 @keyframes lPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.38; } }
 @keyframes lSweep { 0% { transform: translateX(-150%); } 100% { transform: translateX(250%); } }
-.landing-shell { position: relative; overflow: clip; }
+.landing-shell { position: relative; overflow: hidden; }
 .landing-panel::before {
   content: "";
   position: absolute;
@@ -524,138 +678,210 @@ function StatTile({
   );
 }
 
-function SignalCard({
-  title,
-  detail,
-  accent,
-  style,
-}: {
-  title: string;
-  detail: string;
-  accent: string;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        maxWidth: 230,
-        padding: '14px 16px',
-        borderRadius: 18,
-        border: `1px solid ${accent}33`,
-        background: 'rgba(7,15,28,0.92)',
-        backdropFilter: 'blur(18px)',
-        boxShadow: '0 18px 42px rgba(0,0,0,0.32)',
-        ...style,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: accent, boxShadow: `0 0 14px ${accent}` }} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: accent, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{title}</span>
-      </div>
-      <div style={{ fontSize: 13, lineHeight: 1.6, color: C.text }}>{detail}</div>
-    </div>
-  );
+function createMapProjector(points: LatLng[], width: number, height: number) {
+  const latitudes = points.map(([lat]) => lat);
+  const longitudes = points.map(([, lng]) => lng);
+  const minLat = Math.min(...latitudes) - 0.02;
+  const maxLat = Math.max(...latitudes) + 0.02;
+  const minLng = Math.min(...longitudes) - 0.04;
+  const maxLng = Math.max(...longitudes) + 0.035;
+  const innerWidth = width - 48;
+  const innerHeight = height - 36;
+
+  return ([lat, lng]: LatLng) => ({
+    x: 24 + ((lng - minLng) / (maxLng - minLng)) * innerWidth,
+    y: 18 + ((maxLat - lat) / (maxLat - minLat)) * innerHeight,
+  });
+}
+
+function svgPath(points: LatLng[], project: (point: LatLng) => { x: number; y: number }) {
+  return points
+    .map((point, index) => {
+      const { x, y } = project(point);
+      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(' ');
 }
 
 function FleetMap() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const layerRef = useRef<L.LayerGroup | null>(null);
-
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-
-    const map = L.map(containerRef.current, {
-      attributionControl: false,
-      zoomControl: false,
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      boxZoom: false,
-      keyboard: false,
-      touchZoom: false,
-      inertia: false,
-      zoomAnimation: false,
-      fadeAnimation: false,
-      markerZoomAnimation: false,
-    }).setView([37.561, -122.34], 11);
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-
-    mapRef.current = map;
-    layerRef.current = L.layerGroup().addTo(map);
-
-    return () => {
-      map.remove();
-      mapRef.current = null;
-      layerRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const layer = layerRef.current;
-    if (!map || !layer) return;
-
-    layer.clearLayers();
-
-    const allPoints: [number, number][] = [];
-
-    const routeBadge = (label: string, color: string) =>
-      L.divIcon({
-        className: '',
-        html: `<div style="padding:4px 8px;border-radius:999px;background:rgba(7,15,28,0.94);border:1px solid ${color};color:${color};font:600 10px 'JetBrains Mono', monospace;letter-spacing:0.08em;">${label}</div>`,
-        iconSize: [72, 24],
-        iconAnchor: [36, 12],
-      });
-
-    const driverBadge = (name: string, color: string) =>
-      L.divIcon({
-        className: '',
-        html: `<div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:rgba(3,8,15,0.94);border:2px solid ${color};color:${color};font:700 11px 'Inter', sans-serif;box-shadow:0 0 18px ${color}44;">${name.slice(0, 1)}</div>`,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-      });
-
-    bayRoutes.forEach((route) => {
-      route.stops.forEach((point) => allPoints.push(point));
-      allPoints.push(route.driverPos);
-
-      L.polyline(route.stops, {
-        color: route.color,
-        weight: route.id === 'RT-003' ? 5 : 4,
-        opacity: 0.88,
-        dashArray: route.id === 'RT-003' ? '10 8' : undefined,
-      }).addTo(layer);
-
-      route.stops.forEach((stop, index) => {
-        const isTerminal = index === 0 || index === route.stops.length - 1;
-        L.circleMarker(stop, {
-          radius: isTerminal ? 7 : 5,
-          color: '#EAF2FF',
-          weight: 2,
-          fillColor: route.color,
-          fillOpacity: 1,
-        })
-          .bindTooltip(`${route.id} · stop ${index + 1}`, { permanent: false, direction: 'top' })
-          .addTo(layer);
-      });
-
-      L.marker(route.driverPos, { icon: driverBadge(route.driver, route.color) })
-        .bindTooltip(`${route.driver} · ${route.status}`, { permanent: false, direction: 'top', offset: [0, -18] })
-        .addTo(layer);
-
-      const midStop = route.stops[Math.floor(route.stops.length / 2)];
-      L.marker(midStop, { icon: routeBadge(route.id, route.color) }).addTo(layer);
-    });
-
-    map.fitBounds(L.latLngBounds(allPoints), { padding: [30, 30], maxZoom: 12 });
-  }, []);
+  const width = 760;
+  const height = 420;
+  const projectionPoints = [
+    ...bayAreaWaterEdge,
+    ...bayAreaPlaces.map((place) => place.point),
+    ...bayAreaRoads.flatMap((road) => road.points),
+    ...bayAreaMinorRoads.flatMap((road) => road.points),
+    ...bayAreaGhostRoutes.flatMap((route) => route.points),
+    ...bayAreaRoadLabels.map((label) => label.point),
+    ...bayRoutes.flatMap((route) => [...route.stops, route.driverPos] as LatLng[]),
+  ];
+  const project = createMapProjector(projectionPoints, width, height);
+  const shorelinePath = svgPath(bayAreaWaterEdge, project);
+  const waterCoords = bayAreaWaterEdge.map((point) => {
+    const { x, y } = project(point);
+    return `${x.toFixed(1)} ${y.toFixed(1)}`;
+  });
+  const waterPath = `M ${width} 0 L ${waterCoords.join(' L ')} L ${width} ${height} Z`;
+  const landPath = `M 0 0 L ${waterCoords.join(' L ')} L 0 ${height} Z`;
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <div ref={containerRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', transform: 'translateZ(0)' }} />
+    <div style={{ position: 'relative', width: '100%', height: '100%', background: '#08111E', overflow: 'hidden' }}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', pointerEvents: 'none' }}
+      >
+        <defs>
+          <linearGradient id="fleet-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#101A2A" />
+            <stop offset="100%" stopColor="#08111E" />
+          </linearGradient>
+          <linearGradient id="fleet-land" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#111D30" />
+            <stop offset="100%" stopColor="#0B1524" />
+          </linearGradient>
+          <linearGradient id="fleet-water" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#355786" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#5BA4F5" stopOpacity="0.09" />
+          </linearGradient>
+          <pattern id="fleet-grid" width="46" height="46" patternUnits="userSpaceOnUse">
+            <path d="M 46 0 L 0 0 0 46" fill="none" stroke="rgba(123,154,191,0.08)" strokeWidth="1" />
+          </pattern>
+          <filter id="route-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="5" />
+          </filter>
+        </defs>
+
+        <rect width={width} height={height} fill="url(#fleet-bg)" />
+        <rect width={width} height={height} fill="url(#fleet-grid)" opacity="0.42" />
+        <path d={landPath} fill="url(#fleet-land)" />
+        <path d={waterPath} fill="url(#fleet-water)" />
+        <path d={shorelinePath} fill="none" stroke="rgba(195,213,236,0.28)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+
+        {bayAreaRoads.map((road) => (
+          <path
+            key={road.id}
+            d={svgPath(road.points, project)}
+            fill="none"
+            stroke={road.tone}
+            strokeWidth={road.id === 'us-101' ? 3 : 2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+
+        {bayAreaMinorRoads.map((road) => (
+          <path
+            key={road.id}
+            d={svgPath(road.points, project)}
+            fill="none"
+            stroke="rgba(176,196,222,0.12)"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+
+        {bayAreaGhostRoutes.map((route) => (
+          <path
+            key={route.id}
+            d={svgPath(route.points, project)}
+            fill="none"
+            stroke={route.tone}
+            strokeWidth="3"
+            strokeDasharray="5 8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+
+        {bayAreaRoadLabels.map((item) => {
+          const point = project(item.point);
+          return (
+            <g key={item.id} transform={`translate(${point.x - 20} ${point.y - 10})`}>
+              <rect width="40" height="20" rx="10" fill="rgba(7,15,28,0.86)" stroke="rgba(200,216,240,0.12)" />
+              <text x="20" y="13.5" fill={item.color} fontSize="9.5" fontFamily={F.mono} fontWeight="600" textAnchor="middle">
+                {item.label}
+              </text>
+            </g>
+          );
+        })}
+
+        {bayAreaPlaces.map((place) => {
+          const { x, y } = project(place.point);
+          return (
+            <g key={place.id}>
+              <circle cx={x} cy={y} r="3.5" fill="#D9E7FA" opacity="0.9" />
+              <text
+                x={x + place.dx}
+                y={y + place.dy}
+                fill="rgba(214,227,247,0.74)"
+                fontSize="11"
+                fontFamily={F.body}
+                fontWeight="600"
+                textAnchor={place.align}
+              >
+                {place.label}
+              </text>
+            </g>
+          );
+        })}
+
+        {bayRoutes.map((route) => {
+          const routePath = svgPath(route.stops, project);
+          const badgePoint = project(route.stops[Math.floor(route.stops.length / 2)]);
+          const driverPoint = project(route.driverPos);
+          const badgeWidth = 58;
+
+          return (
+            <g key={route.id}>
+              <path d={routePath} fill="none" stroke={route.color} strokeWidth="10" strokeOpacity="0.18" strokeLinecap="round" strokeLinejoin="round" filter="url(#route-glow)" />
+              <path
+                d={routePath}
+                fill="none"
+                stroke={route.color}
+                strokeWidth={route.id === 'RT-003' ? 4.5 : 4}
+                strokeDasharray={route.id === 'RT-003' ? '10 8' : undefined}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {route.stops.map((stop, index) => {
+                const point = project(stop);
+                const terminal = index === 0 || index === route.stops.length - 1;
+                return (
+                  <circle
+                    key={`${route.id}-${index}`}
+                    cx={point.x}
+                    cy={point.y}
+                    r={terminal ? 6 : 4.5}
+                    fill={route.color}
+                    stroke="#EAF2FF"
+                    strokeWidth="2"
+                  />
+                );
+              })}
+
+              <g transform={`translate(${badgePoint.x - badgeWidth / 2} ${badgePoint.y - 12})`}>
+                <rect width={badgeWidth} height="24" rx="12" fill="rgba(7,15,28,0.94)" stroke={route.color} />
+                <text x={badgeWidth / 2} y="15.5" fill={route.color} fontSize="10" fontFamily={F.mono} fontWeight="600" textAnchor="middle">
+                  {route.id}
+                </text>
+              </g>
+
+              <g transform={`translate(${driverPoint.x} ${driverPoint.y})`}>
+                <circle r="17" fill="rgba(3,8,15,0.96)" stroke={route.color} strokeWidth="2.5" />
+                <text y="4" fill={route.color} fontSize="11" fontFamily={F.body} fontWeight="800" textAnchor="middle">
+                  {route.driver.slice(0, 1)}
+                </text>
+              </g>
+            </g>
+          );
+        })}
+
+        <rect width={width} height={height} fill="url(#fleet-bg)" opacity="0.06" />
+      </svg>
 
       <div style={{ position: 'absolute', top: 14, left: 14, padding: '12px 14px', borderRadius: 16, border: '1px solid rgba(91,164,245,0.14)', background: 'rgba(7,15,28,0.88)', backdropFilter: 'blur(18px)' }}>
         <div style={{ color: C.accent, fontSize: 10, fontFamily: F.mono, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Bay Area live view</div>
