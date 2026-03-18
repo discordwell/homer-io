@@ -41,7 +41,7 @@ export function OperationsStorySection({ width }: { width: number }) {
         <SectionIntro
           eyebrow="Run the day with HOMER"
           title="Plan it, dispatch it, recover it from the same place."
-          body="The homepage should show the shape of the product in sequence: get work into routes, run the live board, then absorb exceptions with the copilot."
+          body="Three moves, one operating surface."
         />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginTop: 26 }}>
@@ -55,7 +55,7 @@ export function OperationsStorySection({ width }: { width: number }) {
                 <div style={{ marginTop: 10, fontFamily: LandingF.display, fontWeight: 700, fontSize: 30, letterSpacing: '-0.04em', lineHeight: 1.02 }}>
                   {card.title}
                 </div>
-                <div style={{ marginTop: 10, color: 'rgba(200,216,240,0.72)', fontSize: 14, lineHeight: 1.65 }}>
+                <div style={{ marginTop: 10, color: 'rgba(200,216,240,0.72)', fontSize: 14, lineHeight: 1.58 }}>
                   {card.body}
                 </div>
 
@@ -65,14 +65,6 @@ export function OperationsStorySection({ width }: { width: number }) {
                   {card.step === 'Recover' && <RecoverPreview />}
                 </div>
 
-                <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
-                  {card.points.map((point) => (
-                    <div key={point} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                      <span style={{ width: 8, height: 8, marginTop: 6, borderRadius: '50%', background: getTone(card.tone).solid }} />
-                      <span style={{ color: C.text, fontSize: 14, lineHeight: 1.55 }}>{point}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             </Surface>
           ))}
@@ -95,7 +87,7 @@ function PlanPreview() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
+      <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
         {draftRoutes.map((route) => (
           <div key={route.route} style={{ borderRadius: 16, border: '1px solid rgba(91,164,245,0.10)', background: 'rgba(4,10,18,0.72)', padding: '12px 12px 10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
@@ -117,7 +109,7 @@ function DispatchPreview() {
       <div style={{ color: C.accent, fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Live dispatch board</div>
       <div style={{ marginTop: 5, fontFamily: LandingF.display, fontWeight: 700, fontSize: 22, letterSpacing: '-0.04em' }}>Board state stays tied to route context</div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginTop: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginTop: 14 }}>
         {boardColumns.map((column) => {
           const tone = getTone(column.tone);
           return (
@@ -149,7 +141,7 @@ function RecoverPreview() {
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: C.orange, boxShadow: '0 0 18px rgba(251,146,60,0.55)', animation: 'landingPulse 2s ease-in-out infinite' }} />
       </div>
 
-      <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
+      <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
         {recoverTimeline.map((item) => {
           const tone = getTone(item.tone);
           return (
@@ -168,4 +160,3 @@ function RecoverPreview() {
     </div>
   );
 }
-

@@ -27,7 +27,7 @@ export function LandingFooter({ compact }: { compact: boolean }) {
               </h2>
 
               <p style={{ margin: '0 auto', maxWidth: 700, color: 'rgba(200,216,240,0.74)', fontSize: 17, lineHeight: 1.7 }}>
-                Start on the free plan or walk through the live demo first. Either way, the homepage should make the product obvious before anyone has to decode the pricing model.
+                Start on the free plan or walk through the live demo first.
               </p>
 
               <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap', marginTop: 26 }}>
@@ -77,4 +77,3 @@ export function LandingFooter({ compact }: { compact: boolean }) {
     </>
   );
 }
-

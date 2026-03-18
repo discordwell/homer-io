@@ -56,35 +56,23 @@ export const heroMetrics: HeroMetric[] = [
 export const proofCards: ProofCard[] = [
   {
     eyebrow: 'AI auto-dispatch',
-    title: 'Draft routes around actual operating constraints.',
-    body: 'Turn unassigned work into draft routes using driver availability, urgency, and route shape before dispatch commits the day.',
-    points: [
-      'Preview route groups before confirming',
-      'Keep urgent work visible while balancing coverage',
-      'Move from backlog to draft routes without spreadsheets',
-    ],
+    title: 'Draft routes before dispatch commits the day.',
+    body: 'Build route suggestions around availability, urgency, and route shape.',
+    points: ['Preview first', 'Confirm later'],
     tone: 'accent',
   },
   {
     eyebrow: 'Exception recovery',
-    title: 'Spot risk early and recover it from the same screen.',
-    body: 'HOMER flags slips, proposes the next move, and queues the follow-up actions that operators usually stitch together by hand.',
-    points: [
-      'Late route context shows up on the board',
-      'Copilot suggests reassignments with clear impact',
-      'Customer updates can be staged with the route change',
-    ],
+    title: 'See the slip, make the move, keep going.',
+    body: 'Flags, reassignment ideas, and ETA updates stay in one workflow.',
+    points: ['Board + copilot', 'Approval gate'],
     tone: 'orange',
   },
   {
     eyebrow: 'Delivery intelligence',
-    title: 'Let completed stops improve the next dispatch day.',
-    body: 'Surface risky addresses, recurring failure reasons, and service-time patterns directly inside the operations workflow.',
-    points: [
-      'Address-level delivery history for dispatchers',
-      'Recurring failure reasons stay attached to the stop',
-      'Service-time patterns help set believable ETAs',
-    ],
+    title: 'Let each completed stop sharpen the next route.',
+    body: 'Risky addresses and service-time patterns feed back into dispatch.',
+    points: ['Address history', 'Stop patterns'],
     tone: 'green',
   },
 ];
@@ -92,35 +80,23 @@ export const proofCards: ProofCard[] = [
 export const storyCards: StoryCard[] = [
   {
     step: 'Plan',
-    title: 'Start with the work that still needs a route.',
-    body: 'The copilot can group unassigned orders into draft routes, explain its reasoning, and leave dispatch in control of the final commit.',
-    points: [
-      'Available drivers and open orders in one view',
-      'Draft routes come back with reasoning',
-      'Dispatch confirms before the routes go live',
-    ],
+    title: 'Start with unassigned work.',
+    body: 'Draft routes come back with reasoning before dispatch commits them.',
+    points: [],
     tone: 'accent',
   },
   {
     step: 'Dispatch',
-    title: 'Run the day from a live board with real route context.',
-    body: 'Queued, rolling, and closed routes stay tied to ETAs, route ownership, and current risk instead of spreading across tabs.',
-    points: [
-      'Board and route state stay in sync',
-      'Live route health is visible at a glance',
-      'Dispatch can act without rebuilding context',
-    ],
+    title: 'Run the day from one live board.',
+    body: 'Route state, ETAs, and ownership stay visible instead of spreading across tabs.',
+    points: [],
     tone: 'yellow',
   },
   {
     step: 'Recover',
-    title: 'Use natural language to absorb the next exception.',
-    body: 'Ask what slipped, reassign the work, and queue updates from a copilot that stays grounded in the live operation.',
-    points: [
-      'Query risk, drivers, and route load in plain language',
-      'Mutating actions require a visible confirmation',
-      'Notifications can be bundled into the recovery flow',
-    ],
+    title: 'Absorb the next exception fast.',
+    body: 'Ask what slipped, approve the change, and queue updates from the same surface.',
+    points: [],
     tone: 'green',
   },
 ];
@@ -128,44 +104,38 @@ export const storyCards: StoryCard[] = [
 export const capabilityCards: CapabilityCard[] = [
   {
     title: 'AI dispatch copilot',
-    body: 'Inspect the fleet or issue actions in natural language without leaving the ops surface.',
-    points: ['Operational summary', 'Driver comparison', 'Approval-gated actions'],
+    body: 'Ask questions or stage actions without leaving dispatch.',
+    points: ['Ask', 'Approve'],
     tone: 'accent',
   },
   {
-    title: 'Route optimization',
-    body: 'Optimize around route shape, urgent work, and real operational constraints instead of abstract demos.',
-    points: ['Draft route creation', 'Re-optimization', 'Reasoned changes'],
+    title: 'Live dispatch',
+    body: 'Keep the map, board, and route state tied together as the day moves.',
+    points: ['Map', 'Board', 'ETAs'],
     tone: 'green',
   },
   {
-    title: 'Live board and ETAs',
-    body: 'Keep route status, driver ownership, and timing risk visible as the day changes.',
-    points: ['Queued / rolling / closed', 'Route health context', 'Live ETA tracking'],
-    tone: 'yellow',
-  },
-  {
     title: 'Driver workflow and PoD',
-    body: 'Support the driver side of the operation with route details, completion flow, and proof of delivery.',
-    points: ['Driver route view', 'Failure flow', 'Photo and signature capture'],
+    body: 'Support the driver side with route details, failure flow, and proof of delivery.',
+    points: ['Driver route', 'PoD'],
     tone: 'orange',
   },
   {
-    title: 'Customer updates',
-    body: 'Keep recipients informed as routes move and exceptions are absorbed.',
-    points: ['Email and SMS support', 'Tracking links', 'Notification logs'],
+    title: 'Notifications and tracking',
+    body: 'Keep recipients informed as routes shift and ETAs change.',
+    points: ['ETA updates', 'Tracking'],
     tone: 'purple',
   },
   {
     title: 'Delivery intelligence',
-    body: 'Bring learned address risk and service-time patterns into planning, dispatch, and exception handling.',
-    points: ['Top failure addresses', 'Risk scoring', 'Service-time patterns'],
+    body: 'Bring learned address risk and service-time patterns back into dispatch.',
+    points: ['Risk', 'Patterns'],
     tone: 'green',
   },
   {
     title: 'Migration wizard',
-    body: 'Bring over orders, drivers, and vehicles with API or CSV import and review everything before it lands.',
-    points: ['API where supported', 'CSV fallback', 'Preview before import'],
+    body: 'Bring over orders, drivers, and vehicles with review before import.',
+    points: ['API or CSV', 'Preview'],
     tone: 'accent',
   },
 ];
@@ -177,7 +147,7 @@ export const anchorPlans: AnchorPlan[] = [
     price: '$0',
     orders: '100 orders / month',
     detail: 'Get dispatch live without a card on file.',
-    points: ['All core features', 'AI copilot (10 / month)', 'Email notifications'],
+    points: ['AI copilot (10 / month)', 'Email notifications'],
     tone: 'dim',
   },
   {
@@ -186,7 +156,7 @@ export const anchorPlans: AnchorPlan[] = [
     price: '$349',
     orders: '5,000 orders / month',
     detail: 'Best fit for teams replacing seat-based tools.',
-    points: ['Unlimited drivers', 'Email + SMS', 'Priority support'],
+    points: ['Unlimited drivers', 'Email + SMS'],
     tone: 'accent',
     featured: true,
   },
@@ -196,7 +166,7 @@ export const anchorPlans: AnchorPlan[] = [
     price: '$699',
     orders: '15,000 orders / month',
     detail: 'For higher-volume operations that still want a simple commercial model.',
-    points: ['Unlimited drivers', 'E-commerce integrations', 'Custom branding'],
+    points: ['Unlimited drivers', 'Custom branding'],
     tone: 'green',
   },
 ];
@@ -219,4 +189,3 @@ export const migrationSteps = [
 ];
 
 export const finalProofPills = ['AI copilot', 'Dispatch board', 'Route optimization', 'Driver workflow', 'Migration wizard'];
-

@@ -9,7 +9,7 @@ export function CapabilityGridSection() {
         <SectionIntro
           eyebrow="Capabilities"
           title="Everything the homepage promises is already in the product."
-          body="The supporting sections should be short, specific, and tied to actual surfaces inside the app: dispatch, driver workflow, notifications, intelligence, and migration."
+          body="Keep the rest of the page short and specific."
         />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 14, marginTop: 26 }}>
@@ -25,12 +25,11 @@ export function CapabilityGridSection() {
                   <div style={{ marginTop: 10, color: 'rgba(200,216,240,0.74)', fontSize: 14, lineHeight: 1.65 }}>
                     {card.body}
                   </div>
-                  <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
                     {card.points.map((point) => (
-                      <div key={point} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                        <span style={{ width: 8, height: 8, marginTop: 6, borderRadius: '50%', background: tone.solid }} />
-                        <span style={{ color: C.text, fontFamily: LandingF.body, fontSize: 14, lineHeight: 1.55 }}>{point}</span>
-                      </div>
+                      <span key={point} style={{ padding: '7px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(91,164,245,0.10)', color: C.text, fontFamily: LandingF.body, fontSize: 12, fontWeight: 600 }}>
+                        {point}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -42,4 +41,3 @@ export function CapabilityGridSection() {
     </section>
   );
 }
-

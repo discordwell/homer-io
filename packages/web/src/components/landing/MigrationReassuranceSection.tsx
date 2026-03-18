@@ -21,7 +21,7 @@ export function MigrationReassuranceSection({ width }: { width: number }) {
               <SectionIntro
                 eyebrow="Migration reassurance"
                 title="Switch without turning migration into the whole story."
-                body="Migration matters, but it should show up as confidence-building support near the end of the page. Keep the promise simple: connect, review, and move fast."
+                body="Connect, review, and move fast."
               />
 
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 22 }}>
@@ -52,4 +52,3 @@ export function MigrationReassuranceSection({ width }: { width: number }) {
     </section>
   );
 }
-

@@ -4,7 +4,8 @@ import { C, F as ThemeFonts } from '../../theme.js';
 
 export const LandingF = {
   ...ThemeFonts,
-  display: "'Space Grotesk', sans-serif",
+  display: "'Manrope', 'Segoe UI', sans-serif",
+  body: "'Manrope', 'Segoe UI', sans-serif",
   brand: ThemeFonts.display,
 } as const;
 
@@ -59,6 +60,7 @@ export function useScrolled(px = 24) {
 export function LandingGlobalStyles() {
   return (
     <style>{`
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 html {
   scroll-behavior: smooth;
   background: ${C.bg};

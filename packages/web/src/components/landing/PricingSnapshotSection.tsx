@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { anchorPlans } from '../../content/landing.js';
 import { C } from '../../theme.js';
 import {
@@ -7,15 +6,7 @@ import {
   Surface,
   containerStyle,
   getTone,
-  primaryActionStyle,
-  secondaryActionStyle,
 } from './shared.js';
-
-const pricingReasons = [
-  'Paid plans include unlimited drivers, so busy days do not punish headcount.',
-  'Commercial complexity comes later in the funnel, after the product proof is already clear.',
-  'Teams can start on the free plan, then move into volume-based plans as operations grow.',
-];
 
 export function PricingSnapshotSection({ width }: { width: number }) {
   const stacked = width < 1040;
@@ -36,28 +27,10 @@ export function PricingSnapshotSection({ width }: { width: number }) {
               <SectionIntro
                 eyebrow="Pricing snapshot"
                 title="Pay for delivery volume, not driver count."
-                body="Pricing should support the product story instead of leading it. Keep the model clear, highlight unlimited drivers on paid plans, and leave the full commercial detail to the app or a sales conversation."
+                body="Keep pricing simple and lower on the page."
               />
-
-              <div style={{ display: 'grid', gap: 12, marginTop: 22 }}>
-                {pricingReasons.map((reason) => (
-                  <div key={reason} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                    <span style={{ width: 9, height: 9, marginTop: 6, borderRadius: '50%', background: C.green, boxShadow: '0 0 14px rgba(52,211,153,0.45)' }} />
-                    <span style={{ color: 'rgba(200,216,240,0.74)', fontSize: 15, lineHeight: 1.65 }}>{reason}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 24 }}>
-                <Link to="/register" style={primaryActionStyle}>Start Free</Link>
-                <a
-                  href="https://homer.discordwell.com/demo/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={secondaryActionStyle}
-                >
-                  See Live Demo
-                </a>
+              <div style={{ marginTop: 18, color: 'rgba(200,216,240,0.74)', fontSize: 15, lineHeight: 1.65 }}>
+                Free gets teams started. Paid plans include unlimited drivers so busy weeks do not distort the buying decision.
               </div>
             </div>
 
@@ -111,4 +84,3 @@ export function PricingSnapshotSection({ width }: { width: number }) {
     </section>
   );
 }
-
