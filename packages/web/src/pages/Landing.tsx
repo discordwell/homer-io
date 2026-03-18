@@ -243,7 +243,6 @@ html, body, #root {
 body {
   color: ${C.text};
   overflow-x: hidden;
-  overscroll-behavior: none;
   background:
     radial-gradient(circle at 12% -8%, rgba(91,164,245,0.24), transparent 28%),
     radial-gradient(circle at 88% 10%, rgba(167,139,250,0.14), transparent 22%),
@@ -570,7 +569,10 @@ function FleetMap() {
       boxZoom: false,
       keyboard: false,
       touchZoom: false,
-      tapHold: false,
+      inertia: false,
+      zoomAnimation: false,
+      fadeAnimation: false,
+      markerZoomAnimation: false,
     }).setView([37.561, -122.34], 11);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
@@ -647,7 +649,7 @@ function FleetMap() {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
+      <div ref={containerRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', transform: 'translateZ(0)' }} />
 
       <div style={{ position: 'absolute', top: 14, left: 14, padding: '12px 14px', borderRadius: 16, border: '1px solid rgba(91,164,245,0.14)', background: 'rgba(7,15,28,0.88)', backdropFilter: 'blur(18px)' }}>
         <div style={{ color: C.accent, fontSize: 10, fontFamily: F.mono, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Bay Area live view</div>
@@ -777,7 +779,6 @@ function HeroControlRoom({ stacked }: { stacked: boolean }) {
     <Surface
       style={{
         padding: stacked ? 18 : 20,
-        animation: stacked ? undefined : 'lFloat 9s ease-in-out infinite',
         background: 'linear-gradient(180deg, rgba(10,19,33,0.98) 0%, rgba(7,14,24,0.98) 100%)',
       }}
     >
