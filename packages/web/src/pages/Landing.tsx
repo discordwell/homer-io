@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.js';
 import { C, F } from '../theme.js';
@@ -53,18 +55,55 @@ const plans = [
 const migrationNames = ['Tookan', 'Onfleet', 'OptimoRoute', 'SpeedyRoute', 'GetSwift', 'Circuit'];
 
 const heroSignals = [
-  { value: '94%', label: 'on-time across active routes', detail: '4 rolling routes and 12 drivers live in the same view.', color: C.green },
-  { value: '19m', label: 'reroute recovered before SLA breach', detail: 'Traffic on RT-003 is caught early and recovered with one action.', color: C.yellow },
-  { value: '+14%', label: 'tomorrow demand spike forecast', detail: 'Redwood City noon volume is flagged before dispatch starts.', color: C.purple },
-  { value: '2m', label: 'customer updates after route changes', detail: 'Notifications can go out as soon as the plan shifts.', color: C.accent },
+  { value: '94%', label: 'on-time today', detail: '4 rolling routes', color: C.green },
+  { value: '19m', label: 'RT-003 recovered', detail: 'reroute staged', color: C.yellow },
+  { value: '+14%', label: 'tomorrow forecast', detail: 'Redwood City noon', color: C.purple },
+  { value: '38', label: 'customer updates', detail: 'ETA messages queued', color: C.accent },
 ];
 
-const heroModules = ['Live fleet map', 'Dispatch board', 'Driver app', 'Tracking page', 'Webhooks', 'AI copilot'];
-
-const heroWatchlist = [
-  { route: 'RT-003', status: 'Traffic risk', detail: 'Junipero Serra recovers 19 min and preserves the last window.', color: C.yellow },
-  { route: 'RT-014', status: 'Warehouse hold', detail: 'An 8-stop cluster is queued and ready to release when inventory clears.', color: C.orange },
-  { route: 'RT-021', status: 'Forecast bump', detail: 'One spare driver covers the noon spike without blowing up the day.', color: C.purple },
+const bayRoutes = [
+  {
+    id: 'RT-001',
+    driver: 'Marcus',
+    color: C.accent,
+    status: 'Ahead',
+    note: 'Redwood City -> Foster City',
+    stops: [
+      [37.4852, -122.2364],
+      [37.4901, -122.2289],
+      [37.5012, -122.2101],
+      [37.5305, -122.2548],
+    ] as [number, number][],
+    driverPos: [37.4945, -122.2218] as [number, number],
+  },
+  {
+    id: 'RT-002',
+    driver: 'Priya',
+    color: C.green,
+    status: 'On time',
+    note: 'San Mateo east loop',
+    stops: [
+      [37.563, -122.3255],
+      [37.5589, -122.3198],
+      [37.5548, -122.3141],
+      [37.556, -122.268],
+    ] as [number, number][],
+    driverPos: [37.5588, -122.3072] as [number, number],
+  },
+  {
+    id: 'RT-003',
+    driver: 'James',
+    color: C.yellow,
+    status: 'Traffic watch',
+    note: 'Daly City -> South SF',
+    stops: [
+      [37.6879, -122.4702],
+      [37.6798, -122.4614],
+      [37.672, -122.4528],
+      [37.6641, -122.4441],
+    ] as [number, number][],
+    driverPos: [37.6815, -122.4587] as [number, number],
+  },
 ];
 
 const actionPrompts = [
@@ -515,149 +554,124 @@ function SignalCard({
 }
 
 function FleetMap() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const layerRef = useRef<L.LayerGroup | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current, {
+      attributionControl: false,
+      zoomControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      touchZoom: false,
+      tapHold: false,
+    }).setView([37.561, -122.34], 11);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+    mapRef.current = map;
+    layerRef.current = L.layerGroup().addTo(map);
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      layerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const layer = layerRef.current;
+    if (!map || !layer) return;
+
+    layer.clearLayers();
+
+    const allPoints: [number, number][] = [];
+
+    const routeBadge = (label: string, color: string) =>
+      L.divIcon({
+        className: '',
+        html: `<div style="padding:4px 8px;border-radius:999px;background:rgba(7,15,28,0.94);border:1px solid ${color};color:${color};font:600 10px 'JetBrains Mono', monospace;letter-spacing:0.08em;">${label}</div>`,
+        iconSize: [72, 24],
+        iconAnchor: [36, 12],
+      });
+
+    const driverBadge = (name: string, color: string) =>
+      L.divIcon({
+        className: '',
+        html: `<div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:rgba(3,8,15,0.94);border:2px solid ${color};color:${color};font:700 11px 'Inter', sans-serif;box-shadow:0 0 18px ${color}44;">${name.slice(0, 1)}</div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+      });
+
+    bayRoutes.forEach((route) => {
+      route.stops.forEach((point) => allPoints.push(point));
+      allPoints.push(route.driverPos);
+
+      L.polyline(route.stops, {
+        color: route.color,
+        weight: route.id === 'RT-003' ? 5 : 4,
+        opacity: 0.88,
+        dashArray: route.id === 'RT-003' ? '10 8' : undefined,
+      }).addTo(layer);
+
+      route.stops.forEach((stop, index) => {
+        const isTerminal = index === 0 || index === route.stops.length - 1;
+        L.circleMarker(stop, {
+          radius: isTerminal ? 7 : 5,
+          color: '#EAF2FF',
+          weight: 2,
+          fillColor: route.color,
+          fillOpacity: 1,
+        })
+          .bindTooltip(`${route.id} · stop ${index + 1}`, { permanent: false, direction: 'top' })
+          .addTo(layer);
+      });
+
+      L.marker(route.driverPos, { icon: driverBadge(route.driver, route.color) })
+        .bindTooltip(`${route.driver} · ${route.status}`, { permanent: false, direction: 'top', offset: [0, -18] })
+        .addTo(layer);
+
+      const midStop = route.stops[Math.floor(route.stops.length / 2)];
+      L.marker(midStop, { icon: routeBadge(route.id, route.color) }).addTo(layer);
+    });
+
+    map.fitBounds(L.latLngBounds(allPoints), { padding: [30, 30], maxZoom: 12 });
+  }, []);
+
   return (
-    <svg viewBox="0 0 620 420" aria-hidden="true" style={{ width: '100%', height: '100%', display: 'block' }}>
-      <defs>
-        <linearGradient id="fleetField" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#07111F" />
-          <stop offset="58%" stopColor="#0A1628" />
-          <stop offset="100%" stopColor="#08111D" />
-        </linearGradient>
-        <linearGradient id="bayFill" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="rgba(8,18,34,0.92)" />
-          <stop offset="100%" stopColor="rgba(5,11,22,0.72)" />
-        </linearGradient>
-        <filter id="fleetGlow">
-          <feGaussianBlur stdDeviation="5" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
 
-      <rect width="620" height="420" rx="24" fill="url(#fleetField)" />
-      <rect x="1" y="1" width="618" height="418" rx="23" fill="none" stroke="rgba(91,164,245,0.12)" />
+      <div style={{ position: 'absolute', top: 14, left: 14, padding: '12px 14px', borderRadius: 16, border: '1px solid rgba(91,164,245,0.14)', background: 'rgba(7,15,28,0.88)', backdropFilter: 'blur(18px)' }}>
+        <div style={{ color: C.accent, fontSize: 10, fontFamily: F.mono, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Bay Area live view</div>
+        <div style={{ marginTop: 6, color: C.text, fontFamily: F.display, fontSize: 20, fontWeight: 700, letterSpacing: '-0.04em' }}>12 drivers across the peninsula</div>
+        <div style={{ marginTop: 4, color: 'rgba(200,216,240,0.64)', fontSize: 12 }}>Redwood City, San Mateo, Daly City, and South SF</div>
+      </div>
 
-      <path
-        d="M618 8 L618 412 L442 412 C432 364 432 318 452 282 C470 250 492 222 506 182 C520 142 520 92 500 32 Z"
-        fill="url(#bayFill)"
-        opacity="0.86"
-      />
+      <div style={{ position: 'absolute', right: 14, bottom: 14, padding: '12px 14px', width: 190, borderRadius: 16, border: '1px solid rgba(251,191,36,0.16)', background: 'rgba(7,15,28,0.9)', backdropFilter: 'blur(18px)' }}>
+        <div style={{ color: C.yellow, fontSize: 10, fontFamily: F.mono, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Next action</div>
+        <div style={{ marginTop: 6, color: C.text, fontWeight: 700, fontSize: 13, lineHeight: 1.5 }}>Reroute RT-003 around El Camino traffic before the 4:30 window slips.</div>
+      </div>
 
-      {Array.from({ length: 8 }, (_, i) => (
-        <line key={`h-${i}`} x1="0" y1={48 + i * 44} x2="620" y2={48 + i * 44} stroke="rgba(91,164,245,0.05)" strokeWidth="1" />
-      ))}
-      {Array.from({ length: 10 }, (_, i) => (
-        <line key={`v-${i}`} x1={36 + i * 56} y1="0" x2={36 + i * 56} y2="420" stroke="rgba(91,164,245,0.045)" strokeWidth="1" />
-      ))}
-
-      {[
-        'M18 344 C102 296 168 250 236 188 S366 92 456 44',
-        'M52 114 C136 166 208 224 290 264 S424 330 566 346',
-        'M88 290 C160 244 218 200 286 152 S404 98 504 112',
-        'M136 46 C194 92 246 132 308 158 S436 198 560 210',
-        'M194 370 C256 338 324 324 384 292 S458 214 494 174',
-      ].map((road, index) => (
-        <path key={road} d={road} stroke="rgba(20,40,72,0.8)" strokeWidth={index === 0 ? 4 : 3} fill="none" strokeLinecap="round" />
-      ))}
-
-      {[
-        { name: 'Redwood City', x: 196, y: 232 },
-        { name: 'San Mateo', x: 308, y: 172 },
-        { name: 'Burlingame', x: 366, y: 132 },
-        { name: 'Daly City', x: 464, y: 86 },
-        { name: 'Foster City', x: 352, y: 212 },
-      ].map((city) => (
-        <g key={city.name}>
-          <circle cx={city.x} cy={city.y} r="4" fill="rgba(91,164,245,0.36)" />
-          <text x={city.x + 10} y={city.y - 8} fill="rgba(200,216,240,0.44)" fontSize="10" fontFamily={F.mono}>
-            {city.name}
-          </text>
-        </g>
-      ))}
-
-      <path d="M72,326 C142,266 194,230 266,232 S396,262 472,206 S544,138 580,138" stroke={C.accent} strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#fleetGlow)" />
-      <path d="M74,112 C150,182 200,238 250,292 S348,370 444,332 S522,260 570,250" stroke={C.green} strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#fleetGlow)" />
-      <path d="M108,276 C168,224 220,180 286,154 S404,110 490,118" stroke={C.orange} strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#fleetGlow)" />
-      <path d="M198,346 C240,334 286,334 326,314 S400,256 452,232" stroke={C.purple} strokeWidth="3.5" fill="none" strokeLinecap="round" strokeDasharray="9 8" filter="url(#fleetGlow)" />
-
-      {[
-        { cx: 266, cy: 232, fill: C.accent, label: 'RT-001' },
-        { cx: 472, cy: 206, fill: C.accent, label: 'RT-001' },
-        { cx: 580, cy: 138, fill: C.accent, label: 'RT-001' },
-        { cx: 250, cy: 292, fill: C.green, label: 'RT-002' },
-        { cx: 444, cy: 332, fill: C.green, label: 'RT-002' },
-        { cx: 286, cy: 154, fill: C.orange, label: 'RT-014' },
-        { cx: 490, cy: 118, fill: C.orange, label: 'RT-014' },
-        { cx: 452, cy: 232, fill: C.purple, label: 'RT-021' },
-      ].map((dot, index) => (
-        <g key={`${dot.label}-${index}`}>
-          <circle
-            cx={dot.cx}
-            cy={dot.cy}
-            r="6"
-            fill={dot.fill}
-            style={{ animation: `lPulse 2.4s ease-in-out ${index * 0.18}s infinite` }}
-            filter="url(#fleetGlow)"
-          />
-          <circle cx={dot.cx} cy={dot.cy} r="12" fill="none" stroke={`${dot.fill}40`} strokeWidth="1.5" />
-        </g>
-      ))}
-
-      {[
-        { x: 240, y: 230, fill: C.accent },
-        { x: 334, y: 178, fill: C.green },
-        { x: 458, y: 136, fill: C.yellow },
-      ].map((driver, index) => (
-        <path
-          key={index}
-          d={`M ${driver.x} ${driver.y - 12} L ${driver.x + 12} ${driver.y} L ${driver.x} ${driver.y + 12} L ${driver.x - 12} ${driver.y} Z`}
-          fill={driver.fill}
-          stroke={C.bg}
-          strokeWidth="2"
-          filter="url(#fleetGlow)"
-        />
-      ))}
-
-      <g transform="translate(24,18)">
-        <rect width="216" height="78" rx="18" fill="rgba(7,15,28,0.9)" stroke="rgba(91,164,245,0.14)" />
-        <text x="18" y="28" fill={C.accent} fontSize="11" fontFamily={F.mono} letterSpacing="1.4">LIVE FLEET MAP</text>
-        <text x="18" y="52" fill={C.text} fontSize="19" fontFamily={F.display} fontWeight="700">12 drivers · 4 active routes</text>
-        <text x="18" y="68" fill="rgba(200,216,240,0.62)" fontSize="11" fontFamily={F.body}>Route state, driver location, and exception risk in one frame.</text>
-      </g>
-
-      <g transform="translate(422,20)">
-        <rect width="172" height="84" rx="18" fill="rgba(7,15,28,0.9)" stroke="rgba(52,211,153,0.16)" />
-        <text x="16" y="24" fill={C.green} fontSize="11" fontFamily={F.mono} letterSpacing="1.4">ROUTE HEALTH</text>
-        <text x="16" y="52" fill={C.text} fontSize="28" fontFamily={F.display} fontWeight="700">94% on time</text>
-        <text x="16" y="69" fill="rgba(200,216,240,0.64)" fontSize="11" fontFamily={F.body}>3 watched exceptions · 1 reroute ready</text>
-      </g>
-
-      <g transform="translate(24,306)">
-        <rect width="248" height="90" rx="18" fill="rgba(7,15,28,0.9)" stroke="rgba(91,164,245,0.14)" />
-        <text x="16" y="24" fill={C.accent} fontSize="11" fontFamily={F.mono} letterSpacing="1.4">ROLLING ROUTES</text>
-        {[
-          { id: 'RT-001', detail: 'Marcus · 14 stops left', color: C.accent, y: 46 },
-          { id: 'RT-002', detail: 'Priya · ahead of plan', color: C.green, y: 64 },
-          { id: 'RT-003', detail: 'Traffic watch · reroute staged', color: C.yellow, y: 82 },
-        ].map((item) => (
-          <g key={item.id}>
-            <rect x="16" y={item.y - 9} width="22" height="3" rx="2" fill={item.color} />
-            <text x="48" y={item.y} fill={C.text} fontSize="12" fontFamily={F.mono}>{item.id}</text>
-            <text x="96" y={item.y} fill="rgba(200,216,240,0.62)" fontSize="11" fontFamily={F.body}>{item.detail}</text>
-          </g>
+      <div style={{ position: 'absolute', left: 14, bottom: 14, display: 'grid', gap: 8 }}>
+        {bayRoutes.map((route) => (
+          <div key={route.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 10, alignItems: 'center', padding: '10px 12px', borderRadius: 16, border: `1px solid ${route.color}22`, background: 'rgba(7,15,28,0.84)', backdropFilter: 'blur(18px)' }}>
+            <span style={{ width: 26, height: 4, borderRadius: 999, background: route.color }} />
+            <div>
+              <div style={{ fontFamily: F.mono, fontSize: 11, color: route.color }}>{route.id}</div>
+              <div style={{ marginTop: 3, fontSize: 12, color: 'rgba(200,216,240,0.72)' }}>{route.driver} · {route.note}</div>
+            </div>
+          </div>
         ))}
-      </g>
-
-      <g transform="translate(390,294)">
-        <rect width="204" height="102" rx="18" fill="rgba(7,15,28,0.9)" stroke="rgba(167,139,250,0.18)" />
-        <text x="16" y="24" fill={C.purple} fontSize="11" fontFamily={F.mono} letterSpacing="1.4">FORECAST</text>
-        <text x="16" y="48" fill={C.text} fontSize="18" fontFamily={F.display} fontWeight="700">+14% Redwood City at noon</text>
-        <text x="16" y="68" fill="rgba(200,216,240,0.7)" fontSize="11" fontFamily={F.body}>Pre-stage one extra driver and keep ETAs intact.</text>
-        <text x="16" y="86" fill={C.green} fontSize="11" fontFamily={F.mono}>Coverage gap: solved</text>
-      </g>
-    </svg>
+      </div>
+    </div>
   );
 }
 
@@ -760,101 +774,49 @@ function AIChatMockup({ compact = false }: { compact?: boolean }) {
 
 function HeroControlRoom({ stacked }: { stacked: boolean }) {
   return (
-    <div style={{ position: 'relative' }}>
-      <Surface
-        style={{
-          padding: stacked ? 18 : 20,
-          animation: stacked ? undefined : 'lFloat 9s ease-in-out infinite',
-          background: 'linear-gradient(180deg, rgba(10,19,33,0.98) 0%, rgba(7,14,24,0.98) 100%)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '2px 4px 16px' }}>
-          <div>
-            <div style={{ ...eyebrowStyle, padding: '7px 10px', fontSize: 10 }}>Mission Control</div>
-            <div style={{ marginTop: 10, fontFamily: F.display, fontSize: 24, fontWeight: 800, letterSpacing: '-0.04em' }}>Routes, drivers, and exceptions in one frame.</div>
+    <Surface
+      style={{
+        padding: stacked ? 18 : 20,
+        animation: stacked ? undefined : 'lFloat 9s ease-in-out infinite',
+        background: 'linear-gradient(180deg, rgba(10,19,33,0.98) 0%, rgba(7,14,24,0.98) 100%)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '2px 4px 16px' }}>
+        <div>
+          <div style={{ ...eyebrowStyle, padding: '7px 10px', fontSize: 10 }}>Bay Area fleet</div>
+          <div style={{ marginTop: 10, fontFamily: F.display, fontSize: 24, fontWeight: 800, letterSpacing: '-0.04em' }}>Bay Area routes, live.</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'rgba(200,216,240,0.64)', fontSize: 13 }}>
+          <span style={{ width: 9, height: 9, borderRadius: '50%', background: C.green, boxShadow: '0 0 16px rgba(52,211,153,0.55)' }} />
+          12 drivers live
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : '1.34fr 0.66fr', gap: 16 }}>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 320 : 430 }}>
+            <FleetMap />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {['Fleet', 'AI', 'Forecast'].map((item, index) => (
-              <span
-                key={item}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: 999,
-                  border: '1px solid rgba(91,164,245,0.12)',
-                  background: index === 0 ? 'rgba(91,164,245,0.16)' : 'rgba(255,255,255,0.03)',
-                  color: index === 0 ? C.accent : 'rgba(200,216,240,0.62)',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {item}
-              </span>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+            {[
+              { label: 'Routes rolling', value: '4', color: C.accent },
+              { label: 'Reroutes ready', value: '1', color: C.yellow },
+              { label: 'ETA notices', value: '38', color: C.green },
+            ].map((item) => (
+              <div key={item.label} style={{ borderRadius: 16, border: `1px solid ${item.color}22`, background: 'rgba(255,255,255,0.03)', padding: '14px 14px 12px' }}>
+                <div style={{ fontSize: 10, color: 'rgba(200,216,240,0.54)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{item.label}</div>
+                <div style={{ marginTop: 6, fontFamily: F.display, fontWeight: 800, fontSize: 24, color: item.color, letterSpacing: '-0.04em' }}>{item.value}</div>
+              </div>
             ))}
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : '1.24fr 0.76fr', gap: 16 }}>
-          <div style={{ display: 'grid', gap: 12 }}>
-            <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 300 : 430 }}>
-              <FleetMap />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
-              {[
-                { label: 'Routes rolling', value: '4', color: C.accent },
-                { label: 'Customer pings', value: '38', color: C.green },
-                { label: 'At-risk', value: '2', color: C.yellow },
-              ].map((item) => (
-                <div key={item.label} style={{ borderRadius: 16, border: `1px solid ${item.color}22`, background: 'rgba(255,255,255,0.03)', padding: '14px 14px 12px' }}>
-                  <div style={{ fontSize: 10, color: 'rgba(200,216,240,0.54)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{item.label}</div>
-                  <div style={{ marginTop: 6, fontFamily: F.display, fontWeight: 800, fontSize: 24, color: item.color, letterSpacing: '-0.04em' }}>{item.value}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateRows: stacked ? 'auto minmax(320px, auto)' : 'auto minmax(0, 1fr)', gap: 14 }}>
-            <div style={{ borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', background: 'rgba(255,255,255,0.03)', padding: '16px 16px 14px' }}>
-              <div style={{ ...eyebrowStyle, padding: '7px 10px', fontSize: 10 }}>Hot routes</div>
-              <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-                {heroWatchlist.map((item) => (
-                  <div key={item.route} style={{ padding: '12px 12px 10px', borderRadius: 16, border: `1px solid ${item.color}22`, background: `${item.color}0D` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ fontFamily: F.mono, fontSize: 11, color: C.text }}>{item.route}</div>
-                      <span style={{ fontSize: 10, color: item.color, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{item.status}</span>
-                    </div>
-                    <div style={{ marginTop: 7, fontSize: 13, lineHeight: 1.6, color: 'rgba(200,216,240,0.72)' }}>{item.detail}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 320 : 402 }}>
-              <AIChatMockup compact={stacked} />
-            </div>
-          </div>
+        <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 320 : 512 }}>
+          <AIChatMockup compact />
         </div>
-      </Surface>
-
-      {!stacked && (
-        <>
-          <SignalCard
-            title="AI suggestion"
-            detail="Traffic spike on El Camino Real. Dispatch can approve the recovery before the route actually slips."
-            accent={C.yellow}
-            style={{ top: 64, right: -26 }}
-          />
-          <SignalCard
-            title="Tomorrow"
-            detail="Redwood City runs hot between 10 AM and noon. One spare driver closes the gap."
-            accent={C.purple}
-            style={{ left: -18, bottom: 112 }}
-          />
-        </>
-      )}
-    </div>
+      </div>
+    </Surface>
   );
 }
 
@@ -975,25 +937,6 @@ function Hero({ w }: { w: number }) {
 
             <div style={{ marginTop: 18, color: 'rgba(200,216,240,0.68)', fontSize: 13, lineHeight: 1.7 }}>
               Start free with 100 orders per month. No credit card. Unlimited drivers on paid plans.
-            </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 18 }}>
-              {heroModules.map((item) => (
-                <span
-                  key={item}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: 999,
-                    border: '1px solid rgba(91,164,245,0.14)',
-                    background: 'rgba(255,255,255,0.03)',
-                    color: 'rgba(200,216,240,0.74)',
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
-                >
-                  {item}
-                </span>
-              ))}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: stacked ? 'repeat(2, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: 12, marginTop: 28, maxWidth: 720 }}>
