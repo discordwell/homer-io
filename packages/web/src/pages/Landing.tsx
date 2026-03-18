@@ -929,7 +929,7 @@ function Hero({ w }: { w: number }) {
                 maxWidth: 500,
               }}
             >
-              Dispatch the Bay Area from one readable control room.
+              Dispatch the Bay Area with a live map and real route context.
             </h1>
 
             <p
@@ -941,7 +941,7 @@ function Hero({ w }: { w: number }) {
                 color: 'rgba(200,216,240,0.78)',
               }}
             >
-              Live map, route board, customer ETAs, and AI actions in one system built for actual dispatch teams.
+              See drivers, stops, ETAs, and exceptions in one place. Ask AI for reroutes, compare drivers, and send updates without leaving dispatch.
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 28 }}>
@@ -978,8 +978,8 @@ function PlatformSection({ w }: { w: number }) {
             <div>
               <SectionIntro
                 eyebrow="Live visibility"
-                title="See the work as a system, not a pile of tabs."
-                body="Monitor route state, driver progress, and emerging exceptions in one view. Dispatch does not need five tabs and a spreadsheet just to understand the day."
+                title="See routes, drivers, and exceptions in one place."
+                body="Monitor route state, driver progress, and emerging exceptions without bouncing between tabs or rebuilding the day in a spreadsheet."
               />
 
               <div style={{ display: 'grid', gap: 14, marginTop: 24 }}>
@@ -993,8 +993,8 @@ function PlatformSection({ w }: { w: number }) {
                     body: 'Traffic, late routes, and demand spikes show up as focused interrupts instead of generic alerts.',
                   },
                   {
-                    title: 'One visual system',
-                    body: 'The map, board, analytics, and AI panel all feel like the same product instead of stitched-together screens.',
+                    title: 'Map and board together',
+                    body: 'The map, board, analytics, and AI stay in sync so dispatch can act without losing context.',
                   },
                 ].map((item) => (
                   <div key={item.title} style={{ padding: '16px 18px', borderRadius: 18, border: '1px solid rgba(91,164,245,0.12)', background: 'rgba(255,255,255,0.025)' }}>
@@ -1009,7 +1009,7 @@ function PlatformSection({ w }: { w: number }) {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingBottom: 14, borderBottom: '1px solid rgba(91,164,245,0.1)' }}>
                 <div>
                   <div style={{ ...eyebrowStyle, padding: '7px 10px', fontSize: 10 }}>Dispatch board</div>
-                  <div style={{ marginTop: 10, fontFamily: F.display, fontWeight: 800, fontSize: 26, letterSpacing: '-0.04em' }}>Everything in the same frame.</div>
+                  <div style={{ marginTop: 10, fontFamily: F.display, fontWeight: 800, fontSize: 26, letterSpacing: '-0.04em' }}>Board, alerts, and ETAs at a glance.</div>
                 </div>
                 <div style={{ padding: '10px 12px', borderRadius: 16, border: '1px solid rgba(91,164,245,0.14)', background: 'rgba(255,255,255,0.03)', textAlign: 'right' }}>
                   <div style={{ fontSize: 10, color: 'rgba(200,216,240,0.54)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Live</div>
@@ -1489,11 +1489,11 @@ function FinalCTA({ compact }: { compact: boolean }) {
             </div>
 
             <h2 style={{ margin: '20px auto 14px', maxWidth: 760, fontFamily: F.display, fontWeight: 800, fontSize: compact ? 'clamp(40px, 10vw, 58px)' : 'clamp(48px, 6vw, 68px)', lineHeight: 0.94, letterSpacing: '-0.05em' }}>
-              Put dispatch, routing, and AI in the same control room.
+              Start free and run dispatch on a live map from day one.
             </h2>
 
             <p style={{ margin: '0 auto', maxWidth: 720, color: 'rgba(200,216,240,0.74)', fontSize: 18, lineHeight: 1.7 }}>
-              Start free with 100 orders, bring the team over fast, and give operators a system that can actually run the day instead of just reporting on it.
+              Start with 100 orders, migrate fast, and give dispatch a live map, route board, and AI help before the first route goes out.
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap', marginTop: 26 }}>
