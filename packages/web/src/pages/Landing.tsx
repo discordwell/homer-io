@@ -3,7 +3,13 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.js';
-import { C, F } from '../theme.js';
+import { C, F as ThemeFonts } from '../theme.js';
+
+const F = {
+  ...ThemeFonts,
+  display: "'Space Grotesk', sans-serif",
+  brand: ThemeFonts.display,
+} as const;
 
 const competitorPricing = [
   { id: 'tookan', name: 'Tookan', perDriver: 39 },
@@ -785,7 +791,7 @@ function HeroControlRoom({ stacked }: { stacked: boolean }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '2px 4px 16px' }}>
         <div>
           <div style={{ ...eyebrowStyle, padding: '7px 10px', fontSize: 10 }}>Bay Area fleet</div>
-          <div style={{ marginTop: 10, fontFamily: F.display, fontSize: 24, fontWeight: 800, letterSpacing: '-0.04em' }}>Bay Area routes, live.</div>
+          <div style={{ marginTop: 10, fontFamily: F.display, fontSize: 26, fontWeight: 800, letterSpacing: '-0.04em' }}>Live map with route context.</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'rgba(200,216,240,0.64)', fontSize: 13 }}>
           <span style={{ width: 9, height: 9, borderRadius: '50%', background: C.green, boxShadow: '0 0 16px rgba(52,211,153,0.55)' }} />
@@ -793,10 +799,14 @@ function HeroControlRoom({ stacked }: { stacked: boolean }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : '1.34fr 0.66fr', gap: 16 }}>
-        <div style={{ display: 'grid', gap: 12 }}>
-          <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 320 : 430 }}>
-            <FleetMap />
+      <div style={{ display: 'grid', gap: 14 }}>
+        <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 340 : 500 }}>
+          <FleetMap />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : '0.94fr 1.06fr', gap: 14 }}>
+          <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 280 : 270 }}>
+            <AIChatMockup compact />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
@@ -810,11 +820,14 @@ function HeroControlRoom({ stacked }: { stacked: boolean }) {
                 <div style={{ marginTop: 6, fontFamily: F.display, fontWeight: 800, fontSize: 24, color: item.color, letterSpacing: '-0.04em' }}>{item.value}</div>
               </div>
             ))}
-          </div>
-        </div>
 
-        <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 320 : 512 }}>
-          <AIChatMockup compact />
+            <div style={{ gridColumn: '1 / -1', borderRadius: 18, border: '1px solid rgba(91,164,245,0.12)', background: 'rgba(255,255,255,0.03)', padding: '16px 16px 14px' }}>
+              <div style={{ fontSize: 10, color: C.yellow, textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800 }}>Traffic watch</div>
+              <div style={{ marginTop: 8, fontSize: 14, lineHeight: 1.65, color: 'rgba(200,216,240,0.76)' }}>
+                RT-003 is the only live route that needs intervention. Everything else is on plan.
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </Surface>
@@ -846,7 +859,7 @@ function Nav({ compact }: { compact: boolean }) {
               border: 'none',
               padding: 0,
               cursor: 'pointer',
-              fontFamily: F.display,
+              fontFamily: F.brand,
               fontWeight: 800,
               fontSize: compact ? 24 : 32,
               letterSpacing: '-0.04em',
@@ -898,7 +911,7 @@ function Hero({ w }: { w: number }) {
       <div style={{ position: 'absolute', inset: '-4% auto auto -6%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(91,164,245,0.22) 0%, transparent 72%)', filter: 'blur(12px)', pointerEvents: 'none' }} />
       {!stacked && <div style={{ position: 'absolute', top: 96, right: '12%', width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(251,146,60,0.12) 0%, transparent 70%)', filter: 'blur(10px)', pointerEvents: 'none' }} />}
       <div style={mx(1240)}>
-        <div style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : 'minmax(0, 0.8fr) minmax(660px, 1.2fr)', gap: stacked ? 34 : 32, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : 'minmax(0, 0.7fr) minmax(720px, 1.3fr)', gap: stacked ? 34 : 28, alignItems: 'start' }}>
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={eyebrowStyle}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.green, boxShadow: '0 0 18px rgba(52,211,153,0.55)' }} />
@@ -910,25 +923,25 @@ function Hero({ w }: { w: number }) {
                 margin: '22px 0 18px',
                 fontFamily: F.display,
                 fontWeight: 800,
-                fontSize: stacked ? 'clamp(50px, 14vw, 72px)' : 'clamp(48px, 4.8vw, 68px)',
-                lineHeight: 0.9,
+                fontSize: stacked ? 'clamp(46px, 14vw, 66px)' : 'clamp(42px, 4.4vw, 58px)',
+                lineHeight: 0.96,
                 letterSpacing: '-0.05em',
-                maxWidth: 540,
+                maxWidth: 500,
               }}
             >
-              Run dispatch from one live control room.
+              Dispatch the Bay Area from one readable control room.
             </h1>
 
             <p
               style={{
                 margin: 0,
                 maxWidth: 560,
-                fontSize: stacked ? 18 : 19,
-                lineHeight: 1.72,
+                fontSize: stacked ? 17 : 18,
+                lineHeight: 1.66,
                 color: 'rgba(200,216,240,0.78)',
               }}
             >
-              Routes, drivers, ETAs, exceptions, and customer updates stay in the same operating surface. HOMER combines route optimization, live dispatch, and an AI copilot that can actually execute.
+              Live map, route board, customer ETAs, and AI actions in one system built for actual dispatch teams.
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 28 }}>
@@ -1507,7 +1520,7 @@ function Footer() {
     <footer style={{ padding: '0 0 34px' }}>
       <div style={{ ...mx(1220), borderTop: '1px solid rgba(91,164,245,0.12)', paddingTop: 22, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 26, letterSpacing: '-0.04em' }}>
+          <div style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 26, letterSpacing: '-0.04em' }}>
             HOMER<span style={{ color: C.accent }}>.io</span>
           </div>
           <div style={{ marginTop: 4, color: 'rgba(200,216,240,0.56)', fontSize: 12 }}>AI-powered logistics intelligence</div>
