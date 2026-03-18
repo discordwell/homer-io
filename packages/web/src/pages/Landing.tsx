@@ -53,10 +53,18 @@ const plans = [
 const migrationNames = ['Tookan', 'Onfleet', 'OptimoRoute', 'SpeedyRoute', 'GetSwift', 'Circuit'];
 
 const heroSignals = [
-  { value: '19', label: 'fleet actions via AI', color: C.accent },
-  { value: 'Live', label: 'dispatch state, not stale reports', color: C.green },
-  { value: 'OSRM', label: 'route optimization core', color: C.orange },
-  { value: '100', label: 'free orders to start', color: C.purple },
+  { value: '94%', label: 'on-time across active routes', detail: '4 rolling routes and 12 drivers live in the same view.', color: C.green },
+  { value: '19m', label: 'reroute recovered before SLA breach', detail: 'Traffic on RT-003 is caught early and recovered with one action.', color: C.yellow },
+  { value: '+14%', label: 'tomorrow demand spike forecast', detail: 'Redwood City noon volume is flagged before dispatch starts.', color: C.purple },
+  { value: '2m', label: 'customer updates after route changes', detail: 'Notifications can go out as soon as the plan shifts.', color: C.accent },
+];
+
+const heroModules = ['Live fleet map', 'Dispatch board', 'Driver app', 'Tracking page', 'Webhooks', 'AI copilot'];
+
+const heroWatchlist = [
+  { route: 'RT-003', status: 'Traffic risk', detail: 'Junipero Serra recovers 19 min and preserves the last window.', color: C.yellow },
+  { route: 'RT-014', status: 'Warehouse hold', detail: 'An 8-stop cluster is queued and ready to release when inventory clears.', color: C.orange },
+  { route: 'RT-021', status: 'Forecast bump', detail: 'One spare driver covers the noon spike without blowing up the day.', color: C.purple },
 ];
 
 const actionPrompts = [
@@ -181,13 +189,26 @@ function useWidth() {
 
 const GlobalCSS = () => (
   <style>{`
-html { scroll-behavior: smooth; }
-html, body, #root { margin: 0; min-height: 100%; background: ${C.bg}; }
+html {
+  scroll-behavior: smooth;
+  background: ${C.bg};
+  color-scheme: dark;
+}
+html, body, #root {
+  margin: 0;
+  min-height: 100%;
+  width: 100%;
+  background: ${C.bg};
+  overflow-x: hidden;
+}
 body {
   color: ${C.text};
+  overflow-x: hidden;
+  overscroll-behavior: none;
   background:
     radial-gradient(circle at 12% -8%, rgba(91,164,245,0.24), transparent 28%),
     radial-gradient(circle at 88% 10%, rgba(167,139,250,0.14), transparent 22%),
+    radial-gradient(circle at 72% 24%, rgba(251,146,60,0.09), transparent 24%),
     linear-gradient(180deg, #03080F 0%, #040A13 22%, #03080F 100%);
 }
 body::before {
@@ -213,6 +234,7 @@ body::after {
 }
 * { box-sizing: border-box; }
 a { color: inherit; }
+button, input, select, textarea { font: inherit; }
 ::selection { background: rgba(91,164,245,0.28); color: ${C.text}; }
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: ${C.bg2}; }
@@ -417,24 +439,43 @@ function SectionIntro({
 function StatTile({
   value,
   label,
+  detail,
   color,
 }: {
   value: string;
   label: string;
+  detail: string;
   color: string;
 }) {
   return (
     <div
       style={{
+        position: 'relative',
+        overflow: 'hidden',
         padding: '18px 18px 16px',
-        borderRadius: 18,
+        borderRadius: 20,
         border: `1px solid ${color}22`,
-        background: 'rgba(255,255,255,0.02)',
+        background: `linear-gradient(180deg, ${color}14 0%, rgba(255,255,255,0.035) 42%, rgba(255,255,255,0.02) 100%)`,
         minWidth: 0,
       }}
     >
-      <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 28, color, letterSpacing: '-0.04em' }}>{value}</div>
-      <div style={{ marginTop: 4, fontSize: 12, color: 'rgba(200,216,240,0.66)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 'auto -18% -58% 56%',
+          width: 120,
+          height: 120,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${color}40 0%, transparent 72%)`,
+          filter: 'blur(10px)',
+          pointerEvents: 'none',
+        }}
+      />
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 30, color, letterSpacing: '-0.04em' }}>{value}</div>
+        <div style={{ marginTop: 4, fontSize: 12, color: 'rgba(200,216,240,0.72)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>{label}</div>
+        <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: 'rgba(200,216,240,0.7)' }}>{detail}</div>
+      </div>
     </div>
   );
 }
@@ -478,9 +519,13 @@ function FleetMap() {
     <svg viewBox="0 0 620 420" aria-hidden="true" style={{ width: '100%', height: '100%', display: 'block' }}>
       <defs>
         <linearGradient id="fleetField" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#08111E" />
-          <stop offset="55%" stopColor="#0A1628" />
-          <stop offset="100%" stopColor="#07101C" />
+          <stop offset="0%" stopColor="#07111F" />
+          <stop offset="58%" stopColor="#0A1628" />
+          <stop offset="100%" stopColor="#08111D" />
+        </linearGradient>
+        <linearGradient id="bayFill" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(8,18,34,0.92)" />
+          <stop offset="100%" stopColor="rgba(5,11,22,0.72)" />
         </linearGradient>
         <filter id="fleetGlow">
           <feGaussianBlur stdDeviation="5" result="coloredBlur" />
@@ -494,59 +539,124 @@ function FleetMap() {
       <rect width="620" height="420" rx="24" fill="url(#fleetField)" />
       <rect x="1" y="1" width="618" height="418" rx="23" fill="none" stroke="rgba(91,164,245,0.12)" />
 
+      <path
+        d="M618 8 L618 412 L442 412 C432 364 432 318 452 282 C470 250 492 222 506 182 C520 142 520 92 500 32 Z"
+        fill="url(#bayFill)"
+        opacity="0.86"
+      />
+
       {Array.from({ length: 8 }, (_, i) => (
-        <line key={`h-${i}`} x1="0" y1={52 + i * 44} x2="620" y2={52 + i * 44} stroke="rgba(91,164,245,0.06)" strokeWidth="1" />
+        <line key={`h-${i}`} x1="0" y1={48 + i * 44} x2="620" y2={48 + i * 44} stroke="rgba(91,164,245,0.05)" strokeWidth="1" />
       ))}
       {Array.from({ length: 10 }, (_, i) => (
-        <line key={`v-${i}`} x1={44 + i * 58} y1="0" x2={44 + i * 58} y2="420" stroke="rgba(91,164,245,0.05)" strokeWidth="1" />
+        <line key={`v-${i}`} x1={36 + i * 56} y1="0" x2={36 + i * 56} y2="420" stroke="rgba(91,164,245,0.045)" strokeWidth="1" />
       ))}
 
-      <rect x="32" y="44" width="116" height="74" rx="18" fill="rgba(91,164,245,0.08)" stroke="rgba(91,164,245,0.12)" />
-      <rect x="438" y="56" width="136" height="82" rx="18" fill="rgba(167,139,250,0.07)" stroke="rgba(167,139,250,0.16)" />
-      <rect x="386" y="258" width="164" height="102" rx="18" fill="rgba(52,211,153,0.06)" stroke="rgba(52,211,153,0.14)" />
-
-      <path d="M78,328 C146,264 196,232 260,238 S386,274 470,214 S550,126 580,132" stroke={C.accent} strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#fleetGlow)" />
-      <path d="M76,118 C146,186 196,242 248,298 S352,382 450,338 S520,258 570,252" stroke={C.green} strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#fleetGlow)" />
-      <path d="M104,280 C160,236 214,180 280,154 S406,112 486,118" stroke={C.orange} strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#fleetGlow)" />
-      <path d="M198,340 C244,326 290,330 328,314 S398,254 452,232" stroke={C.purple} strokeWidth="3.5" fill="none" strokeLinecap="round" strokeDasharray="9 8" filter="url(#fleetGlow)" />
+      {[
+        'M18 344 C102 296 168 250 236 188 S366 92 456 44',
+        'M52 114 C136 166 208 224 290 264 S424 330 566 346',
+        'M88 290 C160 244 218 200 286 152 S404 98 504 112',
+        'M136 46 C194 92 246 132 308 158 S436 198 560 210',
+        'M194 370 C256 338 324 324 384 292 S458 214 494 174',
+      ].map((road, index) => (
+        <path key={road} d={road} stroke="rgba(20,40,72,0.8)" strokeWidth={index === 0 ? 4 : 3} fill="none" strokeLinecap="round" />
+      ))}
 
       {[
-        { cx: 260, cy: 238, fill: C.accent },
-        { cx: 470, cy: 214, fill: C.accent },
-        { cx: 580, cy: 132, fill: C.accent },
-        { cx: 248, cy: 298, fill: C.green },
-        { cx: 450, cy: 338, fill: C.green },
-        { cx: 280, cy: 154, fill: C.orange },
-        { cx: 486, cy: 118, fill: C.orange },
-        { cx: 452, cy: 232, fill: C.purple },
+        { name: 'Redwood City', x: 196, y: 232 },
+        { name: 'San Mateo', x: 308, y: 172 },
+        { name: 'Burlingame', x: 366, y: 132 },
+        { name: 'Daly City', x: 464, y: 86 },
+        { name: 'Foster City', x: 352, y: 212 },
+      ].map((city) => (
+        <g key={city.name}>
+          <circle cx={city.x} cy={city.y} r="4" fill="rgba(91,164,245,0.36)" />
+          <text x={city.x + 10} y={city.y - 8} fill="rgba(200,216,240,0.44)" fontSize="10" fontFamily={F.mono}>
+            {city.name}
+          </text>
+        </g>
+      ))}
+
+      <path d="M72,326 C142,266 194,230 266,232 S396,262 472,206 S544,138 580,138" stroke={C.accent} strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#fleetGlow)" />
+      <path d="M74,112 C150,182 200,238 250,292 S348,370 444,332 S522,260 570,250" stroke={C.green} strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#fleetGlow)" />
+      <path d="M108,276 C168,224 220,180 286,154 S404,110 490,118" stroke={C.orange} strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#fleetGlow)" />
+      <path d="M198,346 C240,334 286,334 326,314 S400,256 452,232" stroke={C.purple} strokeWidth="3.5" fill="none" strokeLinecap="round" strokeDasharray="9 8" filter="url(#fleetGlow)" />
+
+      {[
+        { cx: 266, cy: 232, fill: C.accent, label: 'RT-001' },
+        { cx: 472, cy: 206, fill: C.accent, label: 'RT-001' },
+        { cx: 580, cy: 138, fill: C.accent, label: 'RT-001' },
+        { cx: 250, cy: 292, fill: C.green, label: 'RT-002' },
+        { cx: 444, cy: 332, fill: C.green, label: 'RT-002' },
+        { cx: 286, cy: 154, fill: C.orange, label: 'RT-014' },
+        { cx: 490, cy: 118, fill: C.orange, label: 'RT-014' },
+        { cx: 452, cy: 232, fill: C.purple, label: 'RT-021' },
       ].map((dot, index) => (
-        <circle
+        <g key={`${dot.label}-${index}`}>
+          <circle
+            cx={dot.cx}
+            cy={dot.cy}
+            r="6"
+            fill={dot.fill}
+            style={{ animation: `lPulse 2.4s ease-in-out ${index * 0.18}s infinite` }}
+            filter="url(#fleetGlow)"
+          />
+          <circle cx={dot.cx} cy={dot.cy} r="12" fill="none" stroke={`${dot.fill}40`} strokeWidth="1.5" />
+        </g>
+      ))}
+
+      {[
+        { x: 240, y: 230, fill: C.accent },
+        { x: 334, y: 178, fill: C.green },
+        { x: 458, y: 136, fill: C.yellow },
+      ].map((driver, index) => (
+        <path
           key={index}
-          cx={dot.cx}
-          cy={dot.cy}
-          r="6"
-          fill={dot.fill}
-          style={{ animation: `lPulse 2.4s ease-in-out ${index * 0.18}s infinite` }}
+          d={`M ${driver.x} ${driver.y - 12} L ${driver.x + 12} ${driver.y} L ${driver.x} ${driver.y + 12} L ${driver.x - 12} ${driver.y} Z`}
+          fill={driver.fill}
+          stroke={C.bg}
+          strokeWidth="2"
           filter="url(#fleetGlow)"
         />
       ))}
 
       <g transform="translate(24,18)">
-        <rect width="212" height="70" rx="16" fill="rgba(7,15,28,0.88)" stroke="rgba(91,164,245,0.14)" />
-        <text x="18" y="26" fill={C.accent} fontSize="11" fontFamily={F.mono} letterSpacing="1.4">LIVE FLEET MAP</text>
-        <text x="18" y="50" fill={C.text} fontSize="18" fontFamily={F.display} fontWeight="700">12 drivers · 4 active routes</text>
+        <rect width="216" height="78" rx="18" fill="rgba(7,15,28,0.9)" stroke="rgba(91,164,245,0.14)" />
+        <text x="18" y="28" fill={C.accent} fontSize="11" fontFamily={F.mono} letterSpacing="1.4">LIVE FLEET MAP</text>
+        <text x="18" y="52" fill={C.text} fontSize="19" fontFamily={F.display} fontWeight="700">12 drivers · 4 active routes</text>
+        <text x="18" y="68" fill="rgba(200,216,240,0.62)" fontSize="11" fontFamily={F.body}>Route state, driver location, and exception risk in one frame.</text>
       </g>
 
-      <g transform="translate(426,300)">
-        <rect width="168" height="82" rx="18" fill="rgba(7,15,28,0.9)" stroke="rgba(52,211,153,0.16)" />
-        <text x="16" y="24" fill={C.green} fontSize="11" fontFamily={F.mono} letterSpacing="1.4">OPTIMIZATION</text>
-        <text x="16" y="48" fill={C.text} fontSize="18" fontFamily={F.display} fontWeight="700">Save 19 min on RT-003</text>
-        <text x="16" y="66" fill="rgba(200,216,240,0.7)" fontSize="11" fontFamily={F.body}>Junipero Serra beats El Camino right now.</text>
+      <g transform="translate(422,20)">
+        <rect width="172" height="84" rx="18" fill="rgba(7,15,28,0.9)" stroke="rgba(52,211,153,0.16)" />
+        <text x="16" y="24" fill={C.green} fontSize="11" fontFamily={F.mono} letterSpacing="1.4">ROUTE HEALTH</text>
+        <text x="16" y="52" fill={C.text} fontSize="28" fontFamily={F.display} fontWeight="700">94% on time</text>
+        <text x="16" y="69" fill="rgba(200,216,240,0.64)" fontSize="11" fontFamily={F.body}>3 watched exceptions · 1 reroute ready</text>
       </g>
 
-      <text x="52" y="102" fill="rgba(200,216,240,0.56)" fontSize="10" fontFamily={F.mono}>Warehouse A</text>
-      <text x="474" y="102" fill="rgba(200,216,240,0.56)" fontSize="10" fontFamily={F.mono}>North zone</text>
-      <text x="446" y="278" fill="rgba(200,216,240,0.56)" fontSize="10" fontFamily={F.mono}>Low-risk cluster</text>
+      <g transform="translate(24,306)">
+        <rect width="248" height="90" rx="18" fill="rgba(7,15,28,0.9)" stroke="rgba(91,164,245,0.14)" />
+        <text x="16" y="24" fill={C.accent} fontSize="11" fontFamily={F.mono} letterSpacing="1.4">ROLLING ROUTES</text>
+        {[
+          { id: 'RT-001', detail: 'Marcus · 14 stops left', color: C.accent, y: 46 },
+          { id: 'RT-002', detail: 'Priya · ahead of plan', color: C.green, y: 64 },
+          { id: 'RT-003', detail: 'Traffic watch · reroute staged', color: C.yellow, y: 82 },
+        ].map((item) => (
+          <g key={item.id}>
+            <rect x="16" y={item.y - 9} width="22" height="3" rx="2" fill={item.color} />
+            <text x="48" y={item.y} fill={C.text} fontSize="12" fontFamily={F.mono}>{item.id}</text>
+            <text x="96" y={item.y} fill="rgba(200,216,240,0.62)" fontSize="11" fontFamily={F.body}>{item.detail}</text>
+          </g>
+        ))}
+      </g>
+
+      <g transform="translate(390,294)">
+        <rect width="204" height="102" rx="18" fill="rgba(7,15,28,0.9)" stroke="rgba(167,139,250,0.18)" />
+        <text x="16" y="24" fill={C.purple} fontSize="11" fontFamily={F.mono} letterSpacing="1.4">FORECAST</text>
+        <text x="16" y="48" fill={C.text} fontSize="18" fontFamily={F.display} fontWeight="700">+14% Redwood City at noon</text>
+        <text x="16" y="68" fill="rgba(200,216,240,0.7)" fontSize="11" fontFamily={F.body}>Pre-stage one extra driver and keep ETAs intact.</text>
+        <text x="16" y="86" fill={C.green} fontSize="11" fontFamily={F.mono}>Coverage gap: solved</text>
+      </g>
     </svg>
   );
 }
@@ -651,39 +761,78 @@ function AIChatMockup({ compact = false }: { compact?: boolean }) {
 function HeroControlRoom({ stacked }: { stacked: boolean }) {
   return (
     <div style={{ position: 'relative' }}>
-      <Surface style={{ padding: stacked ? 18 : 20, animation: stacked ? undefined : 'lFloat 9s ease-in-out infinite' }}>
+      <Surface
+        style={{
+          padding: stacked ? 18 : 20,
+          animation: stacked ? undefined : 'lFloat 9s ease-in-out infinite',
+          background: 'linear-gradient(180deg, rgba(10,19,33,0.98) 0%, rgba(7,14,24,0.98) 100%)',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '2px 4px 16px' }}>
           <div>
             <div style={{ ...eyebrowStyle, padding: '7px 10px', fontSize: 10 }}>Mission Control</div>
-            <div style={{ marginTop: 10, fontFamily: F.display, fontSize: 22, fontWeight: 800, letterSpacing: '-0.04em' }}>Dispatch with signal, not guesswork.</div>
+            <div style={{ marginTop: 10, fontFamily: F.display, fontSize: 24, fontWeight: 800, letterSpacing: '-0.04em' }}>Routes, drivers, and exceptions in one frame.</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'rgba(200,216,240,0.64)', fontSize: 13 }}>
-            <span style={{ width: 9, height: 9, borderRadius: '50%', background: C.green, boxShadow: '0 0 16px rgba(52,211,153,0.55)' }} />
-            12 drivers live
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {['Fleet', 'AI', 'Forecast'].map((item, index) => (
+              <span
+                key={item}
+                style={{
+                  padding: '7px 10px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(91,164,245,0.12)',
+                  background: index === 0 ? 'rgba(91,164,245,0.16)' : 'rgba(255,255,255,0.03)',
+                  color: index === 0 ? C.accent : 'rgba(200,216,240,0.62)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {item}
+              </span>
+            ))}
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : '1.22fr 0.92fr', gap: 16 }}>
-          <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 280 : 384 }}>
-            <FleetMap />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateRows: stacked ? 'minmax(320px, auto) auto' : 'minmax(0, 1fr) auto', gap: 14 }}>
-            <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 320 : 384 }}>
-              <AIChatMockup compact={stacked} />
+        <div style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : '1.24fr 0.76fr', gap: 16 }}>
+          <div style={{ display: 'grid', gap: 12 }}>
+            <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 300 : 430 }}>
+              <FleetMap />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
               {[
-                { label: 'On-time', value: '94%', color: C.green },
-                { label: 'AI actions', value: '3', color: C.accent },
-                { label: 'Forecast', value: '+14%', color: C.purple },
+                { label: 'Routes rolling', value: '4', color: C.accent },
+                { label: 'Customer pings', value: '38', color: C.green },
+                { label: 'At-risk', value: '2', color: C.yellow },
               ].map((item) => (
                 <div key={item.label} style={{ borderRadius: 16, border: `1px solid ${item.color}22`, background: 'rgba(255,255,255,0.03)', padding: '14px 14px 12px' }}>
                   <div style={{ fontSize: 10, color: 'rgba(200,216,240,0.54)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{item.label}</div>
                   <div style={{ marginTop: 6, fontFamily: F.display, fontWeight: 800, fontSize: 24, color: item.color, letterSpacing: '-0.04em' }}>{item.value}</div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateRows: stacked ? 'auto minmax(320px, auto)' : 'auto minmax(0, 1fr)', gap: 14 }}>
+            <div style={{ borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', background: 'rgba(255,255,255,0.03)', padding: '16px 16px 14px' }}>
+              <div style={{ ...eyebrowStyle, padding: '7px 10px', fontSize: 10 }}>Hot routes</div>
+              <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                {heroWatchlist.map((item) => (
+                  <div key={item.route} style={{ padding: '12px 12px 10px', borderRadius: 16, border: `1px solid ${item.color}22`, background: `${item.color}0D` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ fontFamily: F.mono, fontSize: 11, color: C.text }}>{item.route}</div>
+                      <span style={{ fontSize: 10, color: item.color, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{item.status}</span>
+                    </div>
+                    <div style={{ marginTop: 7, fontSize: 13, lineHeight: 1.6, color: 'rgba(200,216,240,0.72)' }}>{item.detail}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ overflow: 'hidden', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', minHeight: stacked ? 320 : 402 }}>
+              <AIChatMockup compact={stacked} />
             </div>
           </div>
         </div>
@@ -693,15 +842,15 @@ function HeroControlRoom({ stacked }: { stacked: boolean }) {
         <>
           <SignalCard
             title="AI suggestion"
-            detail="Traffic spike on El Camino Real. A reroute is ready before the route actually slips."
+            detail="Traffic spike on El Camino Real. Dispatch can approve the recovery before the route actually slips."
             accent={C.yellow}
-            style={{ top: 46, right: -22 }}
+            style={{ top: 64, right: -26 }}
           />
           <SignalCard
             title="Tomorrow"
-            detail="Redwood City looks heavy between 10 AM and noon. One extra driver is enough."
+            detail="Redwood City runs hot between 10 AM and noon. One spare driver closes the gap."
             accent={C.purple}
-            style={{ left: -18, bottom: 54 }}
+            style={{ left: -18, bottom: 112 }}
           />
         </>
       )}
@@ -725,8 +874,8 @@ function Nav({ compact }: { compact: boolean }) {
         transition: 'background .25s ease, border-color .25s ease',
       }}
     >
-      <div style={{ ...mx(1220), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, height: compact ? 68 : 78 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ ...mx(1220), padding: compact ? '0 16px' : '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: compact ? 10 : 18, height: compact ? 64 : 78 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 10 : 14, minWidth: 0 }}>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             style={{
@@ -736,9 +885,10 @@ function Nav({ compact }: { compact: boolean }) {
               cursor: 'pointer',
               fontFamily: F.display,
               fontWeight: 800,
-              fontSize: compact ? 28 : 32,
+              fontSize: compact ? 24 : 32,
               letterSpacing: '-0.04em',
               color: C.text,
+              flexShrink: 0,
             }}
           >
             HOMER<span style={{ color: C.accent }}>.io</span>
@@ -767,9 +917,9 @@ function Nav({ compact }: { compact: boolean }) {
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button style={{ ...btnGhost, padding: compact ? '12px 18px' : '12px 20px' }} onClick={() => nav('/login')}>Login</button>
-          <button style={{ ...btnAccent, padding: compact ? '12px 18px' : '12px 22px' }} onClick={() => nav('/register')}>Start Free</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 8 : 12, flexShrink: 0 }}>
+          <button style={{ ...btnGhost, padding: compact ? '10px 12px' : '12px 20px', fontSize: compact ? 13 : 15 }} onClick={() => nav('/login')}>Login</button>
+          <button style={{ ...btnAccent, padding: compact ? '10px 14px' : '12px 22px', fontSize: compact ? 13 : 15 }} onClick={() => nav('/register')}>Start Free</button>
         </div>
       </div>
     </nav>
@@ -782,12 +932,14 @@ function Hero({ w }: { w: number }) {
 
   return (
     <section style={{ position: 'relative', paddingTop: stacked ? 122 : 136, paddingBottom: stacked ? 72 : 96 }}>
-      <div style={mx(1220)}>
-        <div style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : 'minmax(0, 1.06fr) minmax(520px, 0.94fr)', gap: stacked ? 34 : 40, alignItems: 'start' }}>
+      <div style={{ position: 'absolute', inset: '-4% auto auto -6%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(91,164,245,0.22) 0%, transparent 72%)', filter: 'blur(12px)', pointerEvents: 'none' }} />
+      {!stacked && <div style={{ position: 'absolute', top: 96, right: '12%', width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(251,146,60,0.12) 0%, transparent 70%)', filter: 'blur(10px)', pointerEvents: 'none' }} />}
+      <div style={mx(1240)}>
+        <div style={{ display: 'grid', gridTemplateColumns: stacked ? '1fr' : 'minmax(0, 0.8fr) minmax(660px, 1.2fr)', gap: stacked ? 34 : 32, alignItems: 'start' }}>
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={eyebrowStyle}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.green, boxShadow: '0 0 18px rgba(52,211,153,0.55)' }} />
-              Built for dispatchers, drivers, and operators
+              Live dispatch OS for last-mile teams
             </div>
 
             <h1
@@ -795,13 +947,13 @@ function Hero({ w }: { w: number }) {
                 margin: '22px 0 18px',
                 fontFamily: F.display,
                 fontWeight: 800,
-                fontSize: stacked ? 'clamp(52px, 14vw, 76px)' : 'clamp(60px, 6.2vw, 78px)',
-                lineHeight: 0.92,
+                fontSize: stacked ? 'clamp(50px, 14vw, 72px)' : 'clamp(48px, 4.8vw, 68px)',
+                lineHeight: 0.9,
                 letterSpacing: '-0.05em',
-                maxWidth: 760,
+                maxWidth: 540,
               }}
             >
-              A real control room for last-mile delivery.
+              Run dispatch from one live control room.
             </h1>
 
             <p
@@ -813,24 +965,28 @@ function Hero({ w }: { w: number }) {
                 color: 'rgba(200,216,240,0.78)',
               }}
             >
-              Live fleet map, route optimization, driver tracking, and an AI copilot that can actually take action. HOMER should feel closer to a mission console than a generic SaaS brochure.
+              Routes, drivers, ETAs, exceptions, and customer updates stay in the same operating surface. HOMER combines route optimization, live dispatch, and an AI copilot that can actually execute.
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 28 }}>
               <button style={btnAccent} onClick={() => nav('/register')}>Start Free</button>
-              <a href="https://homer.discordwell.com" target="_blank" rel="noopener noreferrer" style={btnGhost}>Explore Demo</a>
+              <a href="https://homer.discordwell.com/demo/" target="_blank" rel="noopener noreferrer" style={btnGhost}>Explore Demo</a>
+            </div>
+
+            <div style={{ marginTop: 18, color: 'rgba(200,216,240,0.68)', fontSize: 13, lineHeight: 1.7 }}>
+              Start free with 100 orders per month. No credit card. Unlimited drivers on paid plans.
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 18 }}>
-              {['Free forever', '100 orders/month', 'No credit card', 'Unlimited drivers on paid plans'].map((item) => (
+              {heroModules.map((item) => (
                 <span
                   key={item}
                   style={{
                     padding: '8px 12px',
                     borderRadius: 999,
                     border: '1px solid rgba(91,164,245,0.14)',
-                    background: 'rgba(255,255,255,0.02)',
-                    color: 'rgba(200,216,240,0.7)',
+                    background: 'rgba(255,255,255,0.03)',
+                    color: 'rgba(200,216,240,0.74)',
                     fontSize: 12,
                     fontWeight: 600,
                   }}
@@ -840,9 +996,9 @@ function Hero({ w }: { w: number }) {
               ))}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: stacked ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', gap: 12, marginTop: 28, maxWidth: 720 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: stacked ? 'repeat(2, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: 12, marginTop: 28, maxWidth: 720 }}>
               {heroSignals.map((signal) => (
-                <StatTile key={signal.label} value={signal.value} label={signal.label} color={signal.color} />
+                <StatTile key={signal.label} value={signal.value} label={signal.label} detail={signal.detail} color={signal.color} />
               ))}
             </div>
           </div>
@@ -866,7 +1022,7 @@ function PlatformSection({ w }: { w: number }) {
               <SectionIntro
                 eyebrow="Live visibility"
                 title="See the work as a system, not a pile of tabs."
-                body="The demo feels strong because every panel tells you something operationally real. The homepage should do the same: routes, drivers, exceptions, and AI suggestions living in one visual language."
+                body="Monitor route state, driver progress, and emerging exceptions in one view. Dispatch does not need five tabs and a spreadsheet just to understand the day."
               />
 
               <div style={{ display: 'grid', gap: 14, marginTop: 24 }}>
@@ -1017,7 +1173,7 @@ function RoutingSection({ w }: { w: number }) {
               <SectionIntro
                 eyebrow="Optimization"
                 title="One click. Faster routes. Clear reasons."
-                body="The demo has confidence because it shows intent. The homepage now does too: before and after, concrete time savings, and explicit rules about what the optimizer respects."
+                body="Run optimization against real operating constraints: driver ownership, capacity, time windows, and urgent stops. Dispatch sees both the win and the reason behind it."
               />
 
               <div style={{ marginTop: 28, padding: '22px 20px', borderRadius: 24, border: '1px solid rgba(91,164,245,0.12)', background: 'rgba(255,255,255,0.03)' }}>
@@ -1037,7 +1193,7 @@ function RoutingSection({ w }: { w: number }) {
               </div>
 
               <div style={{ padding: '20px 20px 18px', borderRadius: 22, border: '1px solid rgba(91,164,245,0.12)', background: 'rgba(255,255,255,0.03)' }}>
-                <div style={{ ...eyebrowStyle, padding: '7px 10px', fontSize: 10 }}>Why it feels better</div>
+                <div style={{ ...eyebrowStyle, padding: '7px 10px', fontSize: 10 }}>Optimization rules</div>
                 <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
                   {optimizationRules.map((rule) => (
                     <div key={rule} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
@@ -1067,7 +1223,7 @@ function CopilotSection({ w }: { w: number }) {
               <SectionIntro
                 eyebrow="Natural language ops"
                 title="Ask the fleet a question. Or tell it what to do."
-                body="The homepage needed more product truth. So this section now looks and reads like the actual system: concrete prompts, visible tool calls, and explicit confirmation before changes land."
+                body="Use natural language to inspect risk, compare drivers, reassign work, and notify teams. The model stays grounded in live route data and asks for confirmation before destructive actions."
               />
 
               <div style={{ display: 'grid', gap: 12, marginTop: 24 }}>
@@ -1121,7 +1277,7 @@ function PricingSection({ w }: { w: number }) {
           <SectionIntro
             eyebrow="Pricing"
             title="Pay for deliveries, not headcount."
-            body="The visual problem on the old homepage was also a product-story problem. The pricing section now spells out the difference quickly: flat plans, unlimited drivers, and savings against the tools teams already know."
+            body="Plans scale by monthly delivery volume, not seats or driver count. Busy days should not turn into a penalty for adding coverage."
             align="center"
           />
         </div>
@@ -1246,9 +1402,9 @@ function PricingSection({ w }: { w: number }) {
               </div>
 
               <div style={{ borderRadius: 22, border: '1px solid rgba(52,211,153,0.16)', background: 'rgba(52,211,153,0.07)', padding: '20px 18px 18px' }}>
-                <div style={{ fontSize: 10, color: C.green, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 800 }}>Why it lands</div>
+                <div style={{ fontSize: 10, color: C.green, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 800 }}>Why it works</div>
                 <div style={{ marginTop: 10, fontSize: 15, lineHeight: 1.7, color: 'rgba(200,216,240,0.76)' }}>
-                  Better visual hierarchy helps here too: one strong recommendation, clear savings, and a faster explanation of why the pricing model is different.
+                  One strong recommendation, clear savings, and unlimited drivers make the buying decision faster for operations teams.
                 </div>
               </div>
             </div>
@@ -1325,7 +1481,7 @@ function MigrationSection({ w }: { w: number }) {
               <SectionIntro
                 eyebrow="Migration"
                 title="Switch without the replatforming drama."
-                body="Another reason the demo felt better: it looked like a system you could move into now. The migration section now supports that feeling with a concrete path instead of hand-wavy logos."
+                body="Bring over orders, drivers, vehicles, and historical routes from the tools you already use. Review the import before anything goes live."
               />
 
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 24 }}>
@@ -1376,16 +1532,16 @@ function FinalCTA({ compact }: { compact: boolean }) {
             </div>
 
             <h2 style={{ margin: '20px auto 14px', maxWidth: 760, fontFamily: F.display, fontWeight: 800, fontSize: compact ? 'clamp(40px, 10vw, 58px)' : 'clamp(48px, 6vw, 68px)', lineHeight: 0.94, letterSpacing: '-0.05em' }}>
-              The homepage now matches the product energy behind it.
+              Put dispatch, routing, and AI in the same control room.
             </h2>
 
             <p style={{ margin: '0 auto', maxWidth: 720, color: 'rgba(200,216,240,0.74)', fontSize: 18, lineHeight: 1.7 }}>
-              Route optimization, live dispatch, driver tracking, migration tooling, and an AI copilot that looks and feels like it belongs in the same product.
+              Start free with 100 orders, bring the team over fast, and give operators a system that can actually run the day instead of just reporting on it.
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap', marginTop: 26 }}>
               <button style={btnAccent} onClick={() => nav('/register')}>Start Free</button>
-              <a href="https://homer.discordwell.com" target="_blank" rel="noopener noreferrer" style={btnGhost}>Explore Demo</a>
+              <a href="https://homer.discordwell.com/demo/" target="_blank" rel="noopener noreferrer" style={btnGhost}>Explore Demo</a>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 22 }}>
@@ -1416,7 +1572,7 @@ function Footer() {
         <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', color: 'rgba(200,216,240,0.68)', fontSize: 14 }}>
           <Link to="/login" style={{ textDecoration: 'none' }}>Login</Link>
           <Link to="/register" style={{ textDecoration: 'none' }}>Register</Link>
-          <a href="https://homer.discordwell.com" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>Demo</a>
+          <a href="https://homer.discordwell.com/demo/" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>Demo</a>
         </div>
 
         <div style={{ color: 'rgba(200,216,240,0.5)', fontSize: 12 }}>© 2026 HOMER.io</div>
