@@ -11,6 +11,7 @@ import { extractDomain, isGenericDomain, findTenantByDomain } from './domain.js'
 import { seedDemoOrg } from './demo-seed.js';
 import { createStripeCustomer } from '../billing/service.js';
 import type { GoogleAuthInput, OrgChoiceInput, OrgOption } from '@homer-io/shared';
+import { HttpError } from '../../lib/errors.js';
 
 const client = new OAuth2Client(config.google.clientId);
 
@@ -22,13 +23,18 @@ interface GoogleProfile {
 }
 
 async function verifyGoogleToken(credential: string): Promise<GoogleProfile> {
-  const ticket = await client.verifyIdToken({
-    idToken: credential,
-    audience: config.google.clientId,
-  });
+  let ticket;
+  try {
+    ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: config.google.clientId,
+    });
+  } catch {
+    throw new HttpError(401, 'Invalid or expired Google credential');
+  }
   const payload = ticket.getPayload();
   if (!payload || !payload.email) {
-    throw new Error('Invalid Google token');
+    throw new HttpError(401, 'Google account has no email address');
   }
   return {
     googleId: payload.sub,
