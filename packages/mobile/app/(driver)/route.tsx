@@ -4,12 +4,14 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDriverStore } from '@/stores/driver';
 import { StopCard } from '@/components/driver/StopCard';
+import { DriverChat } from '@/components/driver/DriverChat';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
 import { formatAddress } from '@/utils/address';
 import { C, Size, Spacing, Radius, alpha, Base } from '@/theme';
 
 export default function DriverRouteScreen() {
+  const [chatOpen, setChatOpen] = useState(false);
   const router = useRouter();
   const { currentRoute, upcomingRoutes, loading, error, fetchCurrentRoute, fetchUpcomingRoutes } = useDriverStore();
 
@@ -107,6 +109,22 @@ export default function DriverRouteScreen() {
         onRefresh={() => { fetchCurrentRoute(); fetchUpcomingRoutes(); }}
         refreshing={loading}
       />
+
+      {/* Chat FAB */}
+      <Pressable
+        onPress={() => setChatOpen(true)}
+        style={styles.chatFab}
+      >
+        <Text style={styles.chatFabText}>{'\u2709'}</Text>
+      </Pressable>
+
+      {/* Chat panel */}
+      {chatOpen && (
+        <DriverChat
+          routeId={currentRoute?.id}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -194,5 +212,26 @@ const styles = StyleSheet.create({
   upcomingMeta: {
     fontSize: Size.sm,
     color: C.dim,
+  },
+  chatFab: {
+    position: 'absolute',
+    bottom: 90,
+    right: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: C.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 50,
+    shadowColor: C.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  chatFabText: {
+    fontSize: 22,
+    color: '#000',
   },
 });
