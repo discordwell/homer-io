@@ -52,6 +52,7 @@ export const config = {
 
   google: {
     routesApiKey: process.env.GOOGLE_ROUTES_API_KEY || '',
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
   },
 
   openai: {

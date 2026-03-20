@@ -3,6 +3,7 @@ import { eq, and } from 'drizzle-orm';
 import * as argon2 from 'argon2';
 import { randomBytes, createHash } from 'crypto';
 import type { RegisterInput, LoginInput, AuthResponse, UserResponse } from '@homer-io/shared';
+import { extractDomain, isGenericDomain } from './domain.js';
 import { NotFoundError, HttpError } from '../../lib/errors.js';
 import { db } from '../../lib/db/index.js';
 import { tenants } from '../../lib/db/schema/tenants.js';
@@ -169,6 +170,7 @@ export async function getMe(userId: string): Promise<UserResponse> {
       role: users.role,
       tenantId: users.tenantId,
       createdAt: users.createdAt,
+      avatarUrl: users.avatarUrl,
     })
     .from(users)
     .where(eq(users.id, userId))
@@ -181,6 +183,7 @@ export async function getMe(userId: string): Promise<UserResponse> {
   return {
     ...user,
     createdAt: user.createdAt.toISOString(),
+    avatarUrl: user.avatarUrl || null,
   };
 }
 
@@ -244,7 +247,7 @@ export async function resetPassword(app: FastifyInstance, token: string, newPass
   return { success: true };
 }
 
-async function generateAuthResponse(
+export async function generateAuthResponse(
   app: FastifyInstance,
   user: typeof users.$inferSelect,
 ): Promise<AuthResponse> {
@@ -278,6 +281,7 @@ async function generateAuthResponse(
       role: user.role,
       tenantId: user.tenantId,
       createdAt: user.createdAt.toISOString(),
+      avatarUrl: user.avatarUrl || null,
     },
   };
 }

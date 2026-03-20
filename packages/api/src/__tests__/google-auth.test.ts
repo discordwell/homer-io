@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { extractDomain, isGenericDomain } from '../modules/auth/domain.js';
+import { buildOrgOptions } from '../modules/auth/google.js';
 
 describe('Google Auth - Schema columns', () => {
   it('users table has googleId column defined', async () => {
@@ -46,5 +47,24 @@ describe('Domain resolution', () => {
   it('identifies non-generic domains', () => {
     expect(isGenericDomain('acme.com')).toBe(false);
     expect(isGenericDomain('homer.io')).toBe(false);
+  });
+});
+
+describe('Google Auth - Org options', () => {
+  it('returns fresh and demo options for generic email domains', () => {
+    const options = buildOrgOptions(null);
+    expect(options).toHaveLength(2);
+    expect(options.map(o => o.type)).toEqual(['fresh', 'demo']);
+  });
+
+  it('includes join option when matching tenant found', () => {
+    const tenant = { id: 'tenant-123', name: 'Acme Logistics', autoJoinEnabled: true };
+    const options = buildOrgOptions(tenant);
+    expect(options).toHaveLength(3);
+    expect(options[0]).toEqual({
+      type: 'join',
+      tenantId: 'tenant-123',
+      tenantName: 'Acme Logistics',
+    });
   });
 });
