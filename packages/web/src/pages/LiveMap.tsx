@@ -206,8 +206,8 @@ export default function LiveMap() {
 
       if (changed) {
         useTrackingStore.setState({ driverLocations: updated });
+        setDriverProgress(progressMap);
       }
-      setDriverProgress(progressMap);
     }, 1000);
 
     return () => clearInterval(interval);

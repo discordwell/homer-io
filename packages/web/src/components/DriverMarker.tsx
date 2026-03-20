@@ -3,17 +3,6 @@ import L from 'leaflet';
 import { C } from '../theme.js';
 import type { DriverLocation } from '../stores/tracking.js';
 
-// Inject global CSS for smooth marker movement (once)
-let cssInjected = false;
-function injectMarkerCSS() {
-  if (cssInjected) return;
-  cssInjected = true;
-  const style = document.createElement('style');
-  style.textContent = `.driver-marker-anim { transition: transform 0.9s linear !important; }`;
-  document.head.appendChild(style);
-}
-
-
 interface DriverMarkerProps {
   driver: DriverLocation;
   map: L.Map;
@@ -40,11 +29,36 @@ function createArrowIcon(heading: number | null, color: string): L.DivIcon {
 
   return L.divIcon({
     html: arrowSvg,
-    className: 'driver-marker-anim',
+    className: '',
     iconSize: [32, 32],
     iconAnchor: [16, 16],
     popupAnchor: [0, -16],
   });
+}
+
+function buildPopupContent(driver: DriverLocation, color: string): string {
+  const speedText = driver.speed != null ? `${Math.round(driver.speed)} km/h` : 'N/A';
+  const updatedText = driver.updatedAt
+    ? new Date(driver.updatedAt).toLocaleTimeString()
+    : 'Unknown';
+
+  return `
+    <div style="
+      background: ${C.bg2};
+      color: ${C.text};
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid ${C.muted};
+      font-family: Inter, sans-serif;
+      font-size: 13px;
+      min-width: 160px;
+    ">
+      <div style="font-weight: 600; font-size: 14px; margin-bottom: 6px;">${driver.driverName}</div>
+      <div style="color: ${C.dim}; margin-bottom: 3px;">Status: <span style="color: ${color};">${driver.driverStatus.replace('_', ' ')}</span></div>
+      <div style="color: ${C.dim}; margin-bottom: 3px;">Speed: <span style="color: ${C.text};">${speedText}</span></div>
+      <div style="color: ${C.dim};">Updated: <span style="color: ${C.text};">${updatedText}</span></div>
+    </div>
+  `;
 }
 
 export function DriverMarker({ driver, map, onClick }: DriverMarkerProps) {
@@ -55,13 +69,21 @@ export function DriverMarker({ driver, map, onClick }: DriverMarkerProps) {
     const icon = createArrowIcon(driver.heading, color);
 
     if (markerRef.current) {
-      // Update existing marker position and icon
+      // Update existing marker position, icon, and popup
       markerRef.current.setLatLng([driver.lat, driver.lng]);
       markerRef.current.setIcon(icon);
+      markerRef.current.setPopupContent(buildPopupContent(driver, color));
     } else {
       // Create new marker
-      injectMarkerCSS();
       const marker = L.marker([driver.lat, driver.lng], { icon }).addTo(map);
+
+      // Apply smooth transition on the marker container element (where Leaflet sets transform)
+      requestAnimationFrame(() => {
+        const el = marker.getElement();
+        if (el) {
+          el.style.transition = 'transform 0.9s linear';
+        }
+      });
 
       marker.bindTooltip(driver.driverName, {
         permanent: false,
@@ -74,28 +96,7 @@ export function DriverMarker({ driver, map, onClick }: DriverMarkerProps) {
         marker.on('click', () => onClick(driver));
       }
 
-      const speedText = driver.speed != null ? `${Math.round(driver.speed)} km/h` : 'N/A';
-      const updatedText = driver.updatedAt
-        ? new Date(driver.updatedAt).toLocaleTimeString()
-        : 'Unknown';
-
-      marker.bindPopup(`
-        <div style="
-          background: ${C.bg2};
-          color: ${C.text};
-          padding: 10px 14px;
-          border-radius: 8px;
-          border: 1px solid ${C.muted};
-          font-family: Inter, sans-serif;
-          font-size: 13px;
-          min-width: 160px;
-        ">
-          <div style="font-weight: 600; font-size: 14px; margin-bottom: 6px;">${driver.driverName}</div>
-          <div style="color: ${C.dim}; margin-bottom: 3px;">Status: <span style="color: ${color};">${driver.driverStatus.replace('_', ' ')}</span></div>
-          <div style="color: ${C.dim}; margin-bottom: 3px;">Speed: <span style="color: ${C.text};">${speedText}</span></div>
-          <div style="color: ${C.dim};">Updated: <span style="color: ${C.text};">${updatedText}</span></div>
-        </div>
-      `, {
+      marker.bindPopup(buildPopupContent(driver, color), {
         className: 'driver-popup',
         closeButton: false,
       });

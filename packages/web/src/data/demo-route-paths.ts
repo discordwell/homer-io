@@ -214,8 +214,11 @@ export function advanceAlongPath(
   let idx = pathIndex;
   let frac = fraction;
   let looped = false;
+  let iterations = 0;
+  const maxIterations = path.length * 2;
 
-  while (remaining > 0) {
+  while (remaining > 0 && iterations < maxIterations) {
+    iterations++;
     if (idx >= path.length - 1) {
       // Loop back to start
       idx = 0;
