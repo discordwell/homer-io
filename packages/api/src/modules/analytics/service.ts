@@ -476,7 +476,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
     getAnalyticsOverview(tenantId, range), // We'll compute prev separately below
     // Failure categories
     db.execute(sql`
-      SELECT COALESCE(failure_category, 'unknown') AS category, count(*)::int AS cnt
+      SELECT COALESCE(failure_category::text, 'unknown') AS category, count(*)::int AS cnt
       FROM ${orders}
       WHERE tenant_id = ${tenantId} AND status = 'failed' AND created_at >= ${cutoffISO}::timestamptz
       GROUP BY 1 ORDER BY cnt DESC
@@ -665,7 +665,7 @@ export async function getDeliveryOutcomes(tenantId: string, range: '7d' | '30d' 
   const cutoff = cutoffDate(range);
   const cutoffISO = cutoff.toISOString();
   const failCatResult = await db.execute(sql`
-    SELECT COALESCE(failure_category, 'unknown') AS category, count(*)::int AS cnt
+    SELECT COALESCE(failure_category::text, 'unknown') AS category, count(*)::int AS cnt
     FROM ${orders}
     WHERE tenant_id = ${tenantId} AND status = 'failed' AND created_at >= ${cutoffISO}::timestamptz
     GROUP BY 1 ORDER BY cnt DESC
