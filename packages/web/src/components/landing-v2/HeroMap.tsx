@@ -30,7 +30,7 @@ export function HeroMap() {
 
       {/* MapLibre — loads once geolocation resolves (granted or denied) */}
       {hasApiKey && settled && (
-        <div className={`hero-map-gl ${mapReady ? 'visible' : ''}`}>
+        <div className="hero-map-gl">
           <Suspense fallback={null}>
             <MapLibreHeroMap lat={centerLat} lng={centerLng} onReady={onReady} />
           </Suspense>

@@ -19,17 +19,13 @@
   pointer-events: none;
 }
 
-/* MapLibre layer */
+/* MapLibre layer — always renders at full opacity behind SVG.
+   Chrome skips tile loading for opacity:0 elements, so we keep
+   MapLibre visible and crossfade by fading out the SVG on top. */
 .hero-map-gl {
   position: absolute;
   inset: 0;
   z-index: 0;
-  opacity: 0;
-  transition: opacity 0.8s ease;
-}
-
-.hero-map-gl.visible {
-  opacity: 1;
 }
 
 /* MapLibre container fills parent */
