@@ -131,6 +131,10 @@ RESTful API at `/api/*` with Swagger docs at `/api/docs`:
 - `POST /api/auth/refresh` — Token refresh (rotation)
 - `POST /api/auth/logout` — Delete refresh tokens
 - `GET /api/auth/me` — Current user profile
+- `POST /api/auth/google` — Google OAuth sign-in (returns JWT or org options)
+- `POST /api/auth/google/org-choice` — Complete Google sign-up with org selection
+- `POST /api/auth/email-link/request` — Request work email link (authenticated)
+- `POST /api/auth/email-link/verify` — Verify work email link token
 
 ### Fleet & Orders
 - `CRUD /api/fleet/vehicles` — Vehicle management
@@ -330,11 +334,33 @@ Nested under `DriverLayout` with bottom tab bar (mobile-optimized):
 
 ## Authentication Flow
 
-1. Register → creates tenant + user → returns JWT + refresh token
+### Email/Password
+1. Register → creates tenant (with domain auto-join) + user → returns JWT + refresh token
 2. Login → validates credentials → returns JWT (15min) + refresh token (7d)
 3. API requests include `Authorization: Bearer <jwt>`
 4. On 401, client auto-refreshes using refresh token (rotation)
 5. Roles enforced via `requireRole()` middleware
+
+### Google OAuth
+1. Frontend shows Google's sign-in button via `@react-oauth/google` (`GoogleLogin` component)
+2. Google returns an ID token (credential) to the frontend
+3. Frontend sends credential to `POST /api/auth/google`
+4. Backend verifies ID token via `google-auth-library` `verifyIdToken` with audience check
+5. If existing user (by googleId or email match) → returns JWT + refresh token
+6. If new user → returns org options: join existing org (domain match), start fresh, or explore demo
+7. Frontend shows OrgChoicePage → user picks → `POST /api/auth/google/org-choice`
+8. Backend creates tenant + user (or joins existing tenant), seeds demo data if requested
+
+### Domain Auto-Join
+- On registration/Google sign-up, org domain extracted from email
+- Generic domains (gmail, yahoo, etc.) are excluded
+- First user from a domain becomes owner; subsequent users auto-join as dispatcher
+- Auto-join can be disabled per tenant via `autoJoinEnabled` setting
+
+### Email Linking
+- Users who signed up with a personal email can link a work email
+- `POST /api/auth/email-link/request` sends verification to work email (24h expiry)
+- On verification, if work email domain matches an existing tenant with auto-join, user is migrated to that org
 
 ## Infrastructure Hardening (Phase 4)
 
