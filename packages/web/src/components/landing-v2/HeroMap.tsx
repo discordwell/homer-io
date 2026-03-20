@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, useCallback } from 'react';
 import { BayAreaMap } from './BayAreaMap.js';
-import { useHeroGeolocation } from './useHeroGeolocation.js';
+import type { HeroGeoResult } from './useHeroGeolocation.js';
 import './heroMap.css';
 
 const MapLibreHeroMap = lazy(() => import('./MapLibreHeroMap.js'));
@@ -10,8 +10,12 @@ const BAY_AREA = { lat: 37.56, lng: -122.15 };
 
 const hasApiKey = !!import.meta.env.VITE_MAPTILER_KEY;
 
-export function HeroMap() {
-  const { lat, lng, status } = useHeroGeolocation();
+interface HeroMapProps {
+  geo: HeroGeoResult;
+}
+
+export function HeroMap({ geo }: HeroMapProps) {
+  const { lat, lng, status } = geo;
   const [mapReady, setMapReady] = useState(false);
 
   const onReady = useCallback(() => setMapReady(true), []);

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { HeroMap } from './HeroMap.js';
+import { useHeroGeolocation } from './useHeroGeolocation.js';
+import { getNearestCity } from './nearestCity.js';
 import './home.css';
 
 /* ---- Scroll reveal ---- */
@@ -45,7 +47,7 @@ function Nav() {
 
 /* ---- Chat Preview (auto-playing) ---- */
 
-function ChatPreview() {
+function ChatPreview({ city = 'Oakland' }: { city?: string }) {
   const [cycle, setCycle] = useState(0);
   const [step, setStep] = useState(0);
 
@@ -65,7 +67,7 @@ function ChatPreview() {
       </div>
       <div className="chat-body">
         {step >= 1 && (
-          <div className="c-msg user">3 new pickups in Oakland. Who&apos;s nearby?</div>
+          <div className="c-msg user">3 new pickups in {city}. Who&apos;s nearby?</div>
         )}
         {step === 2 && (
           <div className="c-typing"><i /><i /><i /></div>
@@ -105,9 +107,12 @@ function ChatPreview() {
 /* ---- Hero ---- */
 
 function Hero() {
+  const geo = useHeroGeolocation();
+  const city = getNearestCity(geo.lat, geo.lng);
+
   return (
     <section className="hero">
-      <div className="hero-map-wrap"><HeroMap /></div>
+      <div className="hero-map-wrap"><HeroMap geo={geo} /></div>
       <div className="hero-overlay" />
       <div className="hero-content">
         <div className="hero-text">
@@ -124,7 +129,7 @@ function Hero() {
             <a href="#features" className="btn-outline">See how it works</a>
           </div>
         </div>
-        <ChatPreview />
+        <ChatPreview city={city} />
       </div>
       <div className="hero-scroll">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
