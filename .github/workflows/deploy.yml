@@ -49,12 +49,16 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to ovh2
+
+      - name: Deploy to ovh2 via SSH
+        id: ssh_deploy
+        continue-on-error: true
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.OVH2_HOST }}
           username: ${{ secrets.OVH2_USER }}
           key: ${{ secrets.OVH2_KEY }}
+          command_timeout: 8m
           script: |
             cd /opt/homer-io
             git fetch origin
@@ -62,7 +66,50 @@ jobs:
             npm ci
             npx turbo build
             rsync -a --delete packages/web/dist/ site/
-            npx drizzle-kit push --config infra/drizzle-push.config.ts --force
+            echo 'n' | npx drizzle-kit push --config infra/drizzle-push.config.ts --force || echo 'drizzle push skipped'
             pm2 reload infra/ecosystem.config.cjs || pm2 start infra/ecosystem.config.cjs
             curl -sf http://localhost:5000/ > /dev/null && echo "OSRM: healthy" || echo "OSRM: not running (routing will use haversine fallback)"
             echo "Deployed $(git rev-parse --short HEAD) at $(date)"
+
+      - name: Reboot ovh2 via OVH API (SSH failed)
+        if: steps.ssh_deploy.outcome == 'failure'
+        env:
+          OVH_APP_KEY: ${{ secrets.OVH_APP_KEY }}
+          OVH_APP_SECRET: ${{ secrets.OVH_APP_SECRET }}
+          OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
+        run: |
+          echo "::warning::SSH deploy failed — rebooting ovh2 via OVH API"
+          VPS="vps-05030f8b.vps.ovh.us"
+          API="https://api.us.ovhcloud.com/1.0"
+          TSTAMP=$(curl -s "${API}/auth/time")
+          URL="${API}/vps/${VPS}/reboot"
+          SIG="\$1\$$(echo -n "${OVH_APP_SECRET}+${OVH_CONSUMER_KEY}+POST+${URL}++${TSTAMP}" | sha1sum | cut -d' ' -f1)"
+          RESULT=$(curl -s -X POST \
+            -H "X-Ovh-Application: ${OVH_APP_KEY}" \
+            -H "X-Ovh-Timestamp: ${TSTAMP}" \
+            -H "X-Ovh-Signature: ${SIG}" \
+            -H "X-Ovh-Consumer: ${OVH_CONSUMER_KEY}" \
+            -H "Content-Type: application/json" \
+            "${URL}")
+          echo "OVH reboot response: $RESULT"
+          echo "Waiting 90s for server to come back..."
+          sleep 90
+
+      - name: Retry deploy after reboot
+        if: steps.ssh_deploy.outcome == 'failure'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.OVH2_HOST }}
+          username: ${{ secrets.OVH2_USER }}
+          key: ${{ secrets.OVH2_KEY }}
+          command_timeout: 8m
+          script: |
+            cd /opt/homer-io
+            git fetch origin
+            git pull --ff-only origin main
+            npm ci
+            npx turbo build
+            rsync -a --delete packages/web/dist/ site/
+            echo 'n' | npx drizzle-kit push --config infra/drizzle-push.config.ts --force || echo 'drizzle push skipped'
+            pm2 reload infra/ecosystem.config.cjs || pm2 start infra/ecosystem.config.cjs
+            echo "Deployed $(git rev-parse --short HEAD) at $(date) (after reboot)"
