@@ -89,7 +89,7 @@ export function DemoDashboardLayout() {
         flexDirection: 'column',
         minHeight: '100vh',
       }}>
-        <main style={{ flex: 1, padding: '20px 32px 32px', overflow: 'auto' }}>
+        <main style={{ flex: 1, padding: '20px 32px 32px', overflow: 'auto', height: 'calc(100vh - var(--topnav-h) - 41px)' }}>
           <Outlet />
         </main>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/auth.js';
+import { useDemoStore } from '../stores/demo.js';
 
 const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
 
@@ -47,12 +48,14 @@ function getSocket(): Socket | null {
  */
 export function useSocket(): Socket | null {
   const accessToken = useAuthStore((s) => s.accessToken);
+  const isDemoMode = useDemoStore((s) => s.isDemoMode);
 
   // Derive the socket value synchronously — getSocket() is idempotent for the same token
+  // Skip WebSocket connection entirely in demo mode (fake token would cause reconnect spam)
   const currentSocket = useMemo(() => {
-    if (!accessToken) return null;
+    if (!accessToken || isDemoMode) return null;
     return getSocket();
-  }, [accessToken]);
+  }, [accessToken, isDemoMode]);
 
   // Handle side effects: disconnect on logout
   useEffect(() => {

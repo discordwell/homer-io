@@ -123,8 +123,8 @@ export interface DemoDriver {
 export const DEMO_DRIVERS: DemoDriver[] = [
   { id: 'drv-001', name: 'Alex Rivera', email: 'alex.rivera@demo.homer.io', phone: '555-2001', licenseNumber: 'D1234567', status: 'on_route', skillTags: ['hazmat', 'large_vehicle'], lat: 37.725, lng: -122.405, heading: 15, speed: 32, createdAt: '2025-11-15T00:00:00Z' },
   { id: 'drv-002', name: 'Jordan Chen', email: 'jordan.chen@demo.homer.io', phone: '555-2002', licenseNumber: 'D2345678', status: 'on_route', skillTags: [], lat: 37.845, lng: -122.268, heading: 195, speed: 28, createdAt: '2025-11-20T00:00:00Z' },
-  { id: 'drv-003', name: 'Sam Okafor', email: 'sam.okafor@demo.homer.io', phone: '555-2003', licenseNumber: 'D3456789', status: 'available', skillTags: ['refrigerated'], lat: 37.839, lng: -122.293, heading: null, speed: null, createdAt: '2025-12-01T00:00:00Z' },
-  { id: 'drv-004', name: 'Morgan Patel', email: 'morgan.patel@demo.homer.io', phone: '555-2004', licenseNumber: 'D4567890', status: 'available', skillTags: [], lat: 37.321, lng: -121.948, heading: null, speed: null, createdAt: '2026-01-05T00:00:00Z' },
+  { id: 'drv-003', name: 'Sam Okafor', email: 'sam.okafor@demo.homer.io', phone: '555-2003', licenseNumber: 'D3456789', status: 'available', skillTags: ['refrigerated'], lat: 37.565, lng: -122.324, heading: null, speed: null, createdAt: '2025-12-01T00:00:00Z' },
+  { id: 'drv-004', name: 'Morgan Patel', email: 'morgan.patel@demo.homer.io', phone: '555-2004', licenseNumber: 'D4567890', status: 'available', skillTags: [], lat: 37.486, lng: -122.229, heading: null, speed: null, createdAt: '2026-01-05T00:00:00Z' },
   { id: 'drv-005', name: 'Casey Nguyen', email: 'casey.nguyen@demo.homer.io', phone: '555-2005', licenseNumber: null, status: 'offline', skillTags: ['cargo_bike'], lat: null, lng: null, heading: null, speed: null, createdAt: '2026-01-15T00:00:00Z' },
 ];
 

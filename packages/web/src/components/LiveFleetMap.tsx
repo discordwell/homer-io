@@ -85,7 +85,6 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
     routeLayersRef.current = group;
 
     for (const route of DEMO_ROUTE_PATHS) {
-      if (route.status !== 'in_progress') continue;
       drawRouteOnMap(group, route, driverProgress?.get(route.driverId));
     }
 
@@ -171,23 +170,33 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
 
 function drawRouteOnMap(group: L.LayerGroup, route: DemoRoutePath, currentPathIndex?: number) {
   const pathLatLngs = route.path.map(([lat, lng]) => L.latLng(lat, lng));
+  const isCompleted = route.status === 'completed';
 
-  // Full route: dashed amber polyline
-  L.polyline(pathLatLngs, {
-    color: MAP_AMBER,
-    weight: 2.5,
-    opacity: 0.4,
-    dashArray: '8, 6',
-  }).addTo(group);
-
-  // Completed portion: solid green
-  if (currentPathIndex != null && currentPathIndex > 0) {
-    const completedLatLngs = pathLatLngs.slice(0, currentPathIndex + 1);
-    L.polyline(completedLatLngs, {
+  if (isCompleted) {
+    // Completed route: solid green, dimmer
+    L.polyline(pathLatLngs, {
       color: MAP_GREEN,
-      weight: 3,
-      opacity: 0.7,
+      weight: 2,
+      opacity: 0.25,
     }).addTo(group);
+  } else {
+    // In-progress route: dashed amber polyline
+    L.polyline(pathLatLngs, {
+      color: MAP_AMBER,
+      weight: 2.5,
+      opacity: 0.4,
+      dashArray: '8, 6',
+    }).addTo(group);
+
+    // Completed portion: solid green
+    if (currentPathIndex != null && currentPathIndex > 0) {
+      const completedLatLngs = pathLatLngs.slice(0, currentPathIndex + 1);
+      L.polyline(completedLatLngs, {
+        color: MAP_GREEN,
+        weight: 3,
+        opacity: 0.7,
+      }).addTo(group);
+    }
   }
 
   // Stop markers

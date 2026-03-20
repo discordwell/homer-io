@@ -168,23 +168,33 @@ export default function LiveMap() {
         });
         changed = true;
 
-        // Check if driver passed a stop → fire delivery event
-        for (const stop of route.stops) {
-          if (stop.completed) continue;
-          const key = `${route.driverId}:${stop.orderId}`;
-          if (passedStopsRef.current.has(key)) continue;
-
-          if (result.pathIndex >= stop.pathIndex) {
+        // If looped, fire events for any remaining stops from the previous lap
+        // BEFORE resetting, since pathIndex has already wrapped to a low value
+        if (result.looped) {
+          for (const stop of route.stops) {
+            if (stop.completed) continue;
+            const key = `${route.driverId}:${stop.orderId}`;
+            if (passedStopsRef.current.has(key)) continue;
+            // This stop was passed during the loop-through — fire its event
             passedStopsRef.current.add(key);
             fireStopEvent(route, stop, Math.random() < 0.1);
           }
-        }
-
-        // If looped, reset non-completed stop tracking for new lap
-        if (result.looped) {
+          // Reset non-completed stop tracking for new lap
           for (const stop of route.stops) {
             if (!stop.completed) {
               passedStopsRef.current.delete(`${route.driverId}:${stop.orderId}`);
+            }
+          }
+        } else {
+          // Normal (non-looped) stop checking
+          for (const stop of route.stops) {
+            if (stop.completed) continue;
+            const key = `${route.driverId}:${stop.orderId}`;
+            if (passedStopsRef.current.has(key)) continue;
+
+            if (result.pathIndex >= stop.pathIndex) {
+              passedStopsRef.current.add(key);
+              fireStopEvent(route, stop, Math.random() < 0.1);
             }
           }
         }
