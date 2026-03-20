@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { C, F } from '../theme.js';
 import { useSocket } from '../hooks/useSocket.js';
 import { useTrackingStore } from '../stores/tracking.js';
+import { useAuthStore } from '../stores/auth.js';
 import { LiveFleetMap } from '../components/LiveFleetMap.js';
 import { DeliveryEventFeed } from '../components/DeliveryEventFeed.js';
 
@@ -12,6 +13,7 @@ export default function LiveMap() {
   const subscribeToUpdates = useTrackingStore((s) => s.subscribeToUpdates);
   const unsubscribe = useTrackingStore((s) => s.unsubscribe);
   const loading = useTrackingStore((s) => s.loading);
+  const isDemo = useAuthStore((s) => s.user?.isDemo);
 
   // Fetch initial driver locations on mount
   useEffect(() => {
@@ -30,6 +32,49 @@ export default function LiveMap() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
+
+  // Demo mode: simulate driver movement for on_route drivers
+  const headingsRef = useRef<Map<string, number>>(new Map());
+  useEffect(() => {
+    if (!isDemo) return;
+    const interval = setInterval(() => {
+      const store = useTrackingStore.getState();
+      const updated = new Map(store.driverLocations);
+      let changed = false;
+      updated.forEach((driver, id) => {
+        if (driver.driverStatus !== 'on_route') return;
+        // Get or initialize heading
+        let heading = headingsRef.current.get(id) ?? (Math.random() * 360);
+        // Slight random heading drift (-15 to +15 degrees)
+        heading = (heading + (Math.random() - 0.5) * 30) % 360;
+        headingsRef.current.set(id, heading);
+        // Move ~200m in the heading direction
+        const dist = 0.002 + Math.random() * 0.001;
+        const rad = (heading * Math.PI) / 180;
+        const newLat = driver.lat + dist * Math.cos(rad);
+        const newLng = driver.lng + dist * Math.sin(rad);
+        // Keep within Bay Area bounds
+        if (newLat > 37.2 && newLat < 38.0 && newLng > -122.6 && newLng < -121.7) {
+          updated.set(id, {
+            ...driver,
+            lat: newLat,
+            lng: newLng,
+            heading: Math.round(heading),
+            speed: 25 + Math.random() * 20,
+            updatedAt: new Date().toISOString(),
+          });
+          changed = true;
+        } else {
+          // Reverse heading if hitting bounds
+          headingsRef.current.set(id, (heading + 180) % 360);
+        }
+      });
+      if (changed) {
+        useTrackingStore.setState({ driverLocations: updated });
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [isDemo]);
 
   const driverCount = driverLocations.size;
 
@@ -91,7 +136,7 @@ export default function LiveMap() {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              backgroundColor: socket ? C.green : C.red,
+              backgroundColor: socket ? C.green : isDemo ? C.accent : C.red,
             }}
           />
           <span
@@ -101,7 +146,7 @@ export default function LiveMap() {
               color: C.dim,
             }}
           >
-            {socket ? 'Live' : 'Disconnected'}
+            {socket ? 'Live' : isDemo ? 'Demo' : 'Disconnected'}
           </span>
         </div>
       </div>

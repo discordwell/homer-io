@@ -131,14 +131,21 @@ export async function seedDemoOrg(tenantId: string): Promise<void> {
 
   // --- Drivers ---
   const driverNames = generateDemoDriverNames();
+  const driverStatuses = ['available', 'on_route', 'on_route', 'available', 'offline'] as const;
+  const driverLocations = [...BAY_AREA_LOCATIONS].sort(() => Math.random() - 0.5).slice(0, 5);
   const insertedDrivers = await db
     .insert(drivers)
     .values(
       driverNames.map((name, i) => ({
         tenantId,
         name,
-        status: i < 3 ? ('available' as const) : ('offline' as const),
+        email: `${name.toLowerCase().replace(' ', '.')}@demo.homer.io`,
+        phone: `555-${String(2000 + i).slice(-4)}`,
+        status: driverStatuses[i],
         currentVehicleId: i < insertedVehicles.length ? insertedVehicles[i].id : null,
+        currentLat: String(driverLocations[i].lat + (Math.random() - 0.5) * 0.01),
+        currentLng: String(driverLocations[i].lng + (Math.random() - 0.5) * 0.01),
+        lastLocationAt: new Date(),
       })),
     )
     .returning({ id: drivers.id });
