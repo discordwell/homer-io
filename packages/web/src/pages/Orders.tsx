@@ -13,7 +13,7 @@ import { CsvImportWizard } from '../components/CsvImportWizard.js';
 import { useToast } from '../components/Toast.js';
 import { api } from '../api/client.js';
 import { hashAddressBrowser } from '../utils/address-hash.js';
-import { C, F, alpha } from '../theme.js';
+import { C, F, alpha, primaryBtnStyle, secondaryBtnStyle } from '../theme.js';
 
 interface AddressIntelligence {
   addressHash: string;
@@ -335,16 +335,6 @@ export function OrdersPage() {
     </div>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.text, cursor: 'pointer', fontFamily: F.body, fontSize: 14,
-};
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,

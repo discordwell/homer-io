@@ -8,7 +8,7 @@ import { FormField } from '../components/FormField.js';
 import { SelectField } from '../components/SelectField.js';
 import { KPICard } from '../components/KPICard.js';
 import { useToast } from '../components/Toast.js';
-import { C, F } from '../theme.js';
+import { C, F, primaryBtnStyle, secondaryBtnStyle } from '../theme.js';
 
 interface Stop {
   lat: number;
@@ -206,16 +206,6 @@ export function RouteBuilderPage() {
     </div>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.text, cursor: 'pointer', fontFamily: F.body, fontSize: 14,
-};
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,

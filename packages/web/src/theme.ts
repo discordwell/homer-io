@@ -1,3 +1,5 @@
+import type React from 'react';
+
 // Design tokens — CSS variable references
 // Actual values defined in app.css :root
 // These let existing inline-style components pick up the new theme automatically.
@@ -35,8 +37,10 @@ const rgbMap: Record<string, string> = {
   'var(--yellow)': 'var(--yellow-rgb)',
   'var(--orange)': 'var(--orange-rgb)',
   'var(--purple)': 'var(--purple-rgb)',
+  'var(--t1)': 'var(--t1-rgb)',
   'var(--t2)': 'var(--t2-rgb)',
   'var(--t3)': 'var(--t3-rgb)',
+  'var(--border)': 'var(--border-rgb)',
 };
 
 /** Create a semi-transparent version of a theme color.
@@ -44,6 +48,17 @@ const rgbMap: Record<string, string> = {
 export function alpha(color: string, opacity: number): string {
   const rgb = rgbMap[color];
   if (rgb) return `rgba(${rgb}, ${opacity})`;
-  // Fallback: return the color as-is (won't have alpha but won't crash)
+  if (import.meta.env.DEV) console.warn(`alpha(): no RGB mapping for "${color}"`);
   return color;
 }
+
+// Shared button styles — use these instead of duplicating per-component
+export const primaryBtnStyle: React.CSSProperties = {
+  padding: '10px 20px', borderRadius: 8, background: C.accent,
+  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
+};
+
+export const secondaryBtnStyle: React.CSSProperties = {
+  padding: '10px 20px', borderRadius: 8, background: C.bg3,
+  border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body, fontSize: 14,
+};

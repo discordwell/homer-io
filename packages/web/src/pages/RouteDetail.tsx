@@ -11,7 +11,7 @@ import { useToast } from '../components/Toast.js';
 import { DegradedRoutingBanner } from '../components/DegradedRoutingBanner.js';
 import { RiskBadge, riskSummary } from '../components/RiskBadge.js';
 import { api } from '../api/client.js';
-import { C, F, alpha } from '../theme.js';
+import { C, F, alpha, primaryBtnStyle, secondaryBtnStyle } from '../theme.js';
 
 interface RiskScore {
   orderId: string;
@@ -215,13 +215,3 @@ export function RouteDetailPage() {
     </div>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.text, cursor: 'pointer', fontFamily: F.body, fontSize: 14,
-};

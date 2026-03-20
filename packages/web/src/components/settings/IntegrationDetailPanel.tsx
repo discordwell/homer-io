@@ -4,7 +4,7 @@ import { Badge } from '../Badge.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
 import { useIntegrationsStore } from '../../stores/integrations.js';
-import { C, F, alpha } from '../../theme.js';
+import { C, F, alpha, primaryBtnStyle } from '../../theme.js';
 import type { ConnectionResponse, IntegrationOrderResponse } from '@homer-io/shared';
 
 interface IntegrationDetailPanelProps {
@@ -285,11 +285,6 @@ const statCardStyle: React.CSSProperties = {
 const statLabelStyle: React.CSSProperties = {
   color: C.dim, fontSize: 12, fontFamily: F.body, textTransform: 'uppercase',
   letterSpacing: '0.5px',
-};
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
 };
 
 const paginationBtnStyle: React.CSSProperties = {

@@ -6,7 +6,7 @@ import { useToast } from '../Toast.js';
 import { useIntegrationsStore } from '../../stores/integrations.js';
 import { IntegrationConnectForm } from './IntegrationConnectForm.js';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel.js';
-import { C, F, alpha } from '../../theme.js';
+import { C, F, alpha, primaryBtnStyle, secondaryBtnStyle } from '../../theme.js';
 import type { PlatformInfo, ConnectionResponse } from '@homer-io/shared';
 
 // Platform icons (simple SVG inline)
@@ -239,12 +239,3 @@ export function IntegrationsTab() {
   );
 }
 
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: 'transparent',
-  border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body, fontSize: 14,
-};

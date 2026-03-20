@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../Modal.js';
 import { FormField, inputStyle } from '../FormField.js';
 import { SelectField } from '../SelectField.js';
-import { C, F, alpha } from '../../theme.js';
+import { C, F, alpha, primaryBtnStyle } from '../../theme.js';
 import type { NotificationTemplate, CreateTemplateInput, UpdateTemplateInput } from '../../stores/customer-notifications.js';
 
 const triggerOptions = [
@@ -227,11 +227,6 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
     </Modal>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,

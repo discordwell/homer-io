@@ -7,23 +7,8 @@
 html { scroll-behavior: smooth; }
 
 .hp {
-  --bg: #06090F;
-  --bg2: #0C1220;
-  --bg-card: #111827;
-  --bg-card-h: #172033;
-  --accent: #F59E0B;
-  --accent-h: #D97706;
-  --accent-bg: rgba(245,158,11,0.1);
-  --green: #10B981;
-  --red: #EF4444;
-  --t1: #F1F5F9;
-  --t2: #94A3B8;
-  --t3: #64748B;
-  --border: #1E293B;
-  --border2: #141F30;
-  --fd: 'Cabinet Grotesk', sans-serif;
+  /* Override body font to Satoshi for landing page (dashboard uses Inter) */
   --fb: 'Satoshi', sans-serif;
-  --fm: 'JetBrains Mono', monospace;
 
   background: var(--bg);
   color: var(--t1);

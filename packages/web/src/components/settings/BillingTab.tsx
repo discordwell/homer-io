@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useBillingStore } from '../../stores/billing.js';
 import { PlanSelector } from './PlanSelector.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
-import { C, F, alpha } from '../../theme.js';
+import { C, F, alpha, primaryBtnStyle, secondaryBtnStyle } from '../../theme.js';
 
 function formatCents(cents: number, currency = 'usd'): string {
   return new Intl.NumberFormat('en-US', {
@@ -330,30 +330,6 @@ function UsageCard({ label, value, subtitle }: { label: string; value: number; s
     </div>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px',
-  borderRadius: 8,
-  background: C.accent,
-  border: 'none',
-  color: '#000',
-  cursor: 'pointer',
-  fontFamily: F.body,
-  fontWeight: 600,
-  fontSize: 14,
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px',
-  borderRadius: 8,
-  background: 'transparent',
-  border: `1px solid ${C.muted}`,
-  color: C.text,
-  cursor: 'pointer',
-  fontFamily: F.body,
-  fontWeight: 600,
-  fontSize: 14,
-};
 
 const thStyle: React.CSSProperties = {
   textAlign: 'left',

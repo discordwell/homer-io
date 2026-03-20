@@ -9,7 +9,7 @@ import { SelectField } from '../SelectField.js';
 import { ConfirmDialog } from '../ConfirmDialog.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
-import { C, F } from '../../theme.js';
+import { C, F, primaryBtnStyle } from '../../theme.js';
 import type { Role } from '@homer-io/shared';
 
 const roleOptions = [
@@ -251,11 +251,6 @@ export function TeamTab() {
     </div>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,

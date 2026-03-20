@@ -10,7 +10,7 @@ import { EmptyState } from '../components/EmptyState.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
 import { useToast } from '../components/Toast.js';
 import { AutoDispatchPanel } from '../components/dispatch/AutoDispatchPanel.js';
-import { C, F } from '../theme.js';
+import { C, F, primaryBtnStyle } from '../theme.js';
 
 const statusColors: Record<string, string> = {
   draft: 'dim', planned: 'blue', in_progress: 'yellow', completed: 'green', cancelled: 'red',
@@ -107,8 +107,3 @@ export function RoutesPage() {
     </div>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};

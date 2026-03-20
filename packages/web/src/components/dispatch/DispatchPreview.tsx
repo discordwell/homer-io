@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DegradedRoutingBanner } from '../DegradedRoutingBanner.js';
 import { RiskBadge } from '../RiskBadge.js';
-import { C, F, alpha } from '../../theme.js';
+import { C, F, alpha, primaryBtnStyle, secondaryBtnStyle } from '../../theme.js';
 import { api } from '../../api/client.js';
 
 interface RiskScore {
@@ -314,30 +314,6 @@ const containerStyle: React.CSSProperties = {
   border: `1px solid ${C.muted}`,
   borderRadius: 12,
   padding: 20,
-};
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px',
-  borderRadius: 8,
-  background: C.green,
-  border: 'none',
-  color: '#fff',
-  cursor: 'pointer',
-  fontFamily: F.body,
-  fontWeight: 600,
-  fontSize: 14,
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px',
-  borderRadius: 8,
-  background: 'transparent',
-  border: `1px solid ${C.muted}`,
-  color: C.dim,
-  cursor: 'pointer',
-  fontFamily: F.body,
-  fontWeight: 500,
-  fontSize: 14,
 };
 
 const smallBtnStyle: React.CSSProperties = {

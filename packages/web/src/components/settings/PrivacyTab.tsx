@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
-import { C, F, alpha } from '../../theme.js';
+import { C, F, alpha, primaryBtnStyle, secondaryBtnStyle } from '../../theme.js';
 
 interface ExportRequest {
   id: string;
@@ -339,30 +339,6 @@ export function PrivacyTab() {
     </div>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px',
-  borderRadius: 8,
-  background: C.accent,
-  border: 'none',
-  color: '#000',
-  cursor: 'pointer',
-  fontFamily: F.body,
-  fontWeight: 600,
-  fontSize: 14,
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px',
-  borderRadius: 8,
-  background: 'transparent',
-  border: `1px solid ${C.muted}`,
-  color: C.text,
-  cursor: 'pointer',
-  fontFamily: F.body,
-  fontWeight: 600,
-  fontSize: 14,
-};
 
 const dangerBtnStyle: React.CSSProperties = {
   padding: '10px 20px',

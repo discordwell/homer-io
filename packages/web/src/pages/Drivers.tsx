@@ -9,7 +9,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog.js';
 import { EmptyState } from '../components/EmptyState.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
 import { useToast } from '../components/Toast.js';
-import { C, F } from '../theme.js';
+import { C, F, primaryBtnStyle } from '../theme.js';
 import type { CreateDriverInput } from '@homer-io/shared';
 
 const statusColors: Record<string, string> = {
@@ -165,11 +165,6 @@ export function DriversPage() {
     </div>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,

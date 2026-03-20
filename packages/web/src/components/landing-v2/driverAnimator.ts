@@ -75,13 +75,13 @@ export class DriverAnimator {
   }
 
   private extractRoads(): [number, number][][] {
-    let features;
+    let features: GeoJSON.Feature[] = [];
     try {
       features = this.map.queryRenderedFeatures(undefined, {
         layers: ['road-primary'],
       });
     } catch {
-      features = [];
+      // queryRenderedFeatures can throw if map isn't ready
     }
 
     const paths: [number, number][][] = [];

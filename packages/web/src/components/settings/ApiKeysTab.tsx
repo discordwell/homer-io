@@ -7,7 +7,7 @@ import { FormField } from '../FormField.js';
 import { ConfirmDialog } from '../ConfirmDialog.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
-import { C, F, alpha } from '../../theme.js';
+import { C, F, alpha, primaryBtnStyle } from '../../theme.js';
 
 const availableScopes = [
   { value: 'orders:read', label: 'Orders (Read)' },
@@ -249,11 +249,6 @@ export function ApiKeysTab() {
     </div>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,

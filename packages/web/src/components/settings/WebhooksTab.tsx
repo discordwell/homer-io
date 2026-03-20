@@ -7,7 +7,7 @@ import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
 import { WebhookEndpointForm } from './WebhookEndpointForm.js';
 import { WebhookDeliveryLog } from './WebhookDeliveryLog.js';
-import { C, F, alpha } from '../../theme.js';
+import { C, F, alpha, primaryBtnStyle } from '../../theme.js';
 
 interface WebhookEndpoint {
   id: string;
@@ -263,11 +263,6 @@ export function WebhooksTab() {
     </div>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};
 
 const actionBtnStyle: React.CSSProperties = {
   background: 'none', border: 'none', color: C.accent, cursor: 'pointer',

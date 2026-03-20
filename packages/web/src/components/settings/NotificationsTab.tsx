@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../ConfirmDialog.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { NotificationTemplateEditor } from './NotificationTemplateEditor.js';
 import { useToast } from '../Toast.js';
-import { C, F } from '../../theme.js';
+import { C, F, primaryBtnStyle, secondaryBtnStyle } from '../../theme.js';
 import type { NotificationTemplate, CreateTemplateInput, UpdateTemplateInput } from '../../stores/customer-notifications.js';
 
 const triggerLabels: Record<string, string> = {
@@ -251,16 +251,6 @@ function ProviderStatus({ label, configured }: { label: string; configured: bool
     </div>
   );
 }
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body, fontSize: 14,
-};
 
 const actionBtnStyle: React.CSSProperties = {
   background: 'none', border: 'none', color: C.accent, cursor: 'pointer',

@@ -3,7 +3,7 @@ import { Modal } from '../Modal.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
 import { useIntegrationsStore } from '../../stores/integrations.js';
-import { C, F, alpha } from '../../theme.js';
+import { C, F, alpha, primaryBtnStyle, secondaryBtnStyle } from '../../theme.js';
 import type { PlatformInfo } from '@homer-io/shared';
 
 interface IntegrationConnectFormProps {
@@ -189,12 +189,3 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: 8, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body, fontSize: 14,
-};
