@@ -1,18 +1,11 @@
 import { create } from 'zustand';
 import { api } from '../api/client.js';
 import type {
-  AnalyticsOverview, DriverPerformance, RouteEfficiency, TrendPoint,
   EnhancedOverview, EnhancedDriverPerformance, EnhancedRouteEfficiency,
   EnhancedTrendPoint, HeatmapCell, Insight, DeliveryOutcomes,
 } from '@homer-io/shared';
 
 interface AnalyticsState {
-  // Legacy (kept for backward compat)
-  overview: AnalyticsOverview | null;
-  drivers: DriverPerformance[];
-  routeEfficiency: RouteEfficiency | null;
-  trends: TrendPoint[];
-
   // Enhanced
   enhancedOverview: EnhancedOverview | null;
   enhancedDrivers: EnhancedDriverPerformance[];
@@ -24,20 +17,16 @@ interface AnalyticsState {
 
   range: '7d' | '30d' | '90d';
   loading: boolean;
+  error: string | null;
   activeTab: 'drivers' | 'routes' | 'outcomes';
 
   setRange: (range: '7d' | '30d' | '90d') => void;
   setActiveTab: (tab: 'drivers' | 'routes' | 'outcomes') => void;
-  fetchAll: () => Promise<void>;
   fetchEnhanced: () => Promise<void>;
   exportCsv: () => Promise<void>;
 }
 
 export const useAnalyticsStore = create<AnalyticsState>()((set, get) => ({
-  overview: null,
-  drivers: [],
-  routeEfficiency: null,
-  trends: [],
   enhancedOverview: null,
   enhancedDrivers: [],
   enhancedRoutes: null,
@@ -47,30 +36,14 @@ export const useAnalyticsStore = create<AnalyticsState>()((set, get) => ({
   outcomes: null,
   range: '7d',
   loading: false,
+  error: null,
   activeTab: 'drivers',
 
   setRange: (range) => set({ range }),
   setActiveTab: (tab) => set({ activeTab: tab }),
 
-  fetchAll: async () => {
-    set({ loading: true });
-    try {
-      const { range } = get();
-      const params = `?range=${range}`;
-      const [overview, drivers, routeEfficiency, trends] = await Promise.all([
-        api.get<AnalyticsOverview>(`/analytics/overview${params}`),
-        api.get<DriverPerformance[]>(`/analytics/drivers${params}`),
-        api.get<RouteEfficiency>(`/analytics/routes${params}`),
-        api.get<TrendPoint[]>(`/analytics/trends${params}`),
-      ]);
-      set({ overview, drivers, routeEfficiency, trends });
-    } finally {
-      set({ loading: false });
-    }
-  },
-
   fetchEnhanced: async () => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const { range } = get();
       const params = `?range=${range}`;
@@ -83,7 +56,10 @@ export const useAnalyticsStore = create<AnalyticsState>()((set, get) => ({
         api.get<Insight[]>(`/analytics/insights${params}`),
         api.get<DeliveryOutcomes>(`/analytics/outcomes${params}`),
       ]);
-      set({ enhancedOverview, enhancedDrivers, enhancedRoutes, enhancedTrends, heatmap, insights, outcomes });
+      set({ enhancedOverview, enhancedDrivers, enhancedRoutes, enhancedTrends, heatmap, insights, outcomes, error: null });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load analytics';
+      set({ error: message });
     } finally {
       set({ loading: false });
     }

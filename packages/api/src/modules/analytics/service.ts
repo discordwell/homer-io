@@ -264,7 +264,7 @@ export async function getEnhancedOverview(tenantId: string, range: '7d' | '30d' 
   const activeDriverCount = Number(driverCounts[0].active);
 
   // Previous period overview for deltas
-  const [prevDelivered, prevFailed, prevAvgTime, prevRoutes, prevOrders, prevOnTime] = await Promise.all([
+  const [prevDelivered, prevFailed, prevAvgTime, prevRoutes, prevOrders, prevOnTime, prevActiveDriversResult] = await Promise.all([
     db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
       eq(orders.tenantId, tenantId), eq(orders.status, 'delivered'),
       gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
@@ -295,6 +295,12 @@ export async function getEnhancedOverview(tenantId: string, range: '7d' | '30d' 
       gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
       sql`${orders.timeWindowEnd} IS NOT NULL`,
     )),
+    // Previous period active drivers: distinct drivers assigned to routes
+    db.select({ count: sql<number>`count(DISTINCT ${routes.driverId})` }).from(routes).where(and(
+      eq(routes.tenantId, tenantId),
+      sql`${routes.driverId} IS NOT NULL`,
+      gte(routes.createdAt, prevCutoff), lt(routes.createdAt, cutoff),
+    )),
   ]);
 
   const pDel = Number(prevDelivered[0].count);
@@ -305,6 +311,7 @@ export async function getEnhancedOverview(tenantId: string, range: '7d' | '30d' 
   const pOnTimeTotal = Number(prevOnTime[0].total);
   const pOnTimeCount = Number(prevOnTime[0].onTime);
   const pOnTimeRate = pOnTimeTotal > 0 ? Math.round((pOnTimeCount / pOnTimeTotal) * 100 * 10) / 10 : 0;
+  const prevActiveDriverCount = Number(prevActiveDriversResult[0].count);
 
   function delta(curr: number, prev: number): number {
     if (prev === 0) return curr > 0 ? 100 : 0;
@@ -343,7 +350,10 @@ export async function getEnhancedOverview(tenantId: string, range: '7d' | '30d' 
         return total > 0 ? Math.round((d.deliveries / total) * 100) : 0;
       }),
       onTimeRate: dailyData.map(d => d.onTimeRate ?? 0),
-      avgDeliveryTime: dailyData.map(d => d.deliveries), // placeholder — avg time isn't daily in trends
+      avgDeliveryTime: dailyData.map(d => {
+        const total = d.deliveries + d.failedDeliveries;
+        return total > 0 ? Math.round((d.deliveries / total) * 100) : 0;
+      }), // reuse success-rate shape — daily avg time not available
       activeDrivers: activeDriverSparkline,
       ordersReceived: dailyData.map(d => d.newOrders),
     },
@@ -352,7 +362,7 @@ export async function getEnhancedOverview(tenantId: string, range: '7d' | '30d' 
       successRate: Math.round((current.successRate - pSuccessRate) * 10) / 10,
       onTimeRate: Math.round((onTimeRate - pOnTimeRate) * 10) / 10,
       avgDeliveryTime: delta(current.avgDeliveryTime ?? 0, pAvgTime),
-      activeDrivers: delta(activeDriverCount, activeDriverCount), // same snapshot
+      activeDrivers: delta(activeDriverCount, prevActiveDriverCount),
       ordersReceived: delta(current.ordersReceived, Number(prevOrders[0].count)),
     },
   };
@@ -452,7 +462,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
   const nextInsightId = () => `insight-${++insightId}`;
 
   // Get base data in parallel
-  const [dayOfWeekFailures, hourlyVolume, driverPerf, overview, prevOverview, failureCats] = await Promise.all([
+  const [dayOfWeekFailures, hourlyVolume, driverPerf, overview, failureCats] = await Promise.all([
     // Failures by day of week
     db.execute(sql`
       SELECT (EXTRACT(ISODOW FROM created_at) - 1)::int AS dow,
@@ -473,7 +483,6 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
     `),
     getDriverPerformance(tenantId, range),
     getAnalyticsOverview(tenantId, range),
-    getAnalyticsOverview(tenantId, range), // We'll compute prev separately below
     // Failure categories
     db.execute(sql`
       SELECT COALESCE(failure_category::text, 'unknown') AS category, count(*)::int AS cnt
