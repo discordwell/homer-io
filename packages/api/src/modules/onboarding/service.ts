@@ -9,10 +9,10 @@ import { notificationTemplates } from '../../lib/db/schema/notification-template
 import type { OnboardingStatus } from '@homer-io/shared';
 
 export async function getOnboardingStatus(tenantId: string): Promise<OnboardingStatus> {
-  const [tenant] = await db.select({ onboardingCompletedAt: tenants.onboardingCompletedAt })
+  const [tenant] = await db.select({ onboardingCompletedAt: tenants.onboardingCompletedAt, isDemo: tenants.isDemo })
     .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
 
-  if (tenant?.onboardingCompletedAt) {
+  if (tenant?.onboardingCompletedAt || tenant?.isDemo) {
     return {
       completed: true,
       currentStep: 5,
