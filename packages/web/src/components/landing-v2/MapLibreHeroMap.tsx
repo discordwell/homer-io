@@ -15,10 +15,12 @@ export default function MapLibreHeroMap({ lat, lng, onReady }: MapLibreHeroMapPr
   const mapRef = useRef<maplibregl.Map | null>(null);
   const animatorRef = useRef<DriverAnimator | null>(null);
   const onReadyRef = useRef(onReady);
+  const readyFired = useRef(false);
   onReadyRef.current = onReady;
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    const container = containerRef.current;
+    if (!container || mapRef.current) return;
 
     const apiKey = import.meta.env.VITE_MAPTILER_KEY;
     if (!apiKey) {
@@ -27,7 +29,7 @@ export default function MapLibreHeroMap({ lat, lng, onReady }: MapLibreHeroMapPr
     }
 
     const map = new maplibregl.Map({
-      container: containerRef.current,
+      container,
       style: buildHeroStyle(apiKey),
       center: [lng, lat],
       zoom: 10,
@@ -38,28 +40,27 @@ export default function MapLibreHeroMap({ lat, lng, onReady }: MapLibreHeroMapPr
 
     mapRef.current = map;
 
-    // Use 'load' (style + sources ready) instead of 'idle' (all tiles painted)
-    // 'idle' can stall when container starts at opacity:0
-    map.on('load', () => {
-      if (!containerRef.current) return;
+    const handleReady = () => {
+      if (readyFired.current) return;
+      readyFired.current = true;
 
-      // Brief delay to let initial tiles render into the canvas
-      setTimeout(() => {
-        if (!containerRef.current || !mapRef.current) return;
+      const animator = new DriverAnimator(map, container);
+      animatorRef.current = animator;
+      animator.start();
 
-        const animator = new DriverAnimator(map, containerRef.current);
-        animatorRef.current = animator;
-        animator.start();
+      onReadyRef.current();
+    };
 
-        onReadyRef.current();
-      }, 300);
-    });
+    map.on('load', handleReady);
+    // Fallback: if load doesn't fire within 5s, show map anyway
+    const fallbackTimer = setTimeout(handleReady, 5000);
 
     map.on('error', (e) => {
       console.warn('[HeroMap] MapLibre error:', e.error?.message || e);
     });
 
     return () => {
+      clearTimeout(fallbackTimer);
       animatorRef.current?.destroy();
       animatorRef.current = null;
       map.remove();
