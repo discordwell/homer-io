@@ -97,6 +97,7 @@ export function App() {
           <Route path="fleet/vehicles" element={<DemoVehiclesPage />} />
           <Route path="fleet/drivers" element={<DemoDriversPage />} />
           <Route path="analytics" element={<DemoAnalyticsPage />} />
+          <Route path="live" element={<LiveMapPage />} />
         </Route>
         <Route path="*" element={<CatchAllRedirect />} />
       </Routes>

@@ -101,6 +101,7 @@ export function DemoDashboardLayout() {
 
 const demoNavItems = [
   { label: 'Dashboard', path: '/demo', icon: '\u{1F4CA}' },
+  { label: 'Live Map', path: '/demo/live', icon: '\u{1F4E1}' },
   { label: 'Orders', path: '/demo/orders', icon: '\u{1F4E6}' },
   { label: 'Routes', path: '/demo/routes', icon: '\u{1F5FA}\uFE0F' },
   {
