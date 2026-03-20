@@ -46,9 +46,14 @@ export async function register(
 
   // Create tenant + user in transaction
   const result = await db.transaction(async (tx) => {
+    const domain = extractDomain(input.email);
     const [tenant] = await tx
       .insert(tenants)
-      .values({ name: input.orgName, slug: slugify(input.orgName) })
+      .values({
+        name: input.orgName,
+        slug: slugify(input.orgName),
+        orgDomain: isGenericDomain(domain) ? null : domain,
+      })
       .returning();
 
     const [user] = await tx
