@@ -58,6 +58,7 @@ jobs:
           host: ${{ secrets.OVH2_HOST }}
           username: ${{ secrets.OVH2_USER }}
           key: ${{ secrets.OVH2_KEY }}
+          port: 41022
           command_timeout: 8m
           script: |
             cd /opt/homer-io
@@ -107,6 +108,7 @@ jobs:
           host: ${{ secrets.OVH2_HOST }}
           username: ${{ secrets.OVH2_USER }}
           key: ${{ secrets.OVH2_KEY }}
+          port: 41022
           command_timeout: 8m
           script: |
             cd /opt/homer-io
