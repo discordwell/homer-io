@@ -5,26 +5,34 @@ import './heroMap.css';
 
 const MapLibreHeroMap = lazy(() => import('./MapLibreHeroMap.js'));
 
+// Bay Area default center
+const BAY_AREA = { lat: 37.56, lng: -122.15 };
+
+const hasApiKey = !!import.meta.env.VITE_MAPTILER_KEY;
+
 export function HeroMap() {
   const { lat, lng, status } = useHeroGeolocation();
   const [mapReady, setMapReady] = useState(false);
 
   const onReady = useCallback(() => setMapReady(true), []);
 
-  const showMapLibre = status === 'granted' && lat !== null && lng !== null;
+  // Determine map center: user location if granted, Bay Area otherwise
+  const settled = status !== 'pending';
+  const centerLat = status === 'granted' && lat !== null ? lat : BAY_AREA.lat;
+  const centerLng = status === 'granted' && lng !== null ? lng : BAY_AREA.lng;
 
   return (
     <div className="hero-map-container">
-      {/* SVG fallback — always rendered initially, fades out when MapLibre is ready */}
+      {/* SVG fallback — shown until MapLibre is ready (or permanently if no API key) */}
       <div className={`hero-map-svg ${mapReady ? 'faded' : ''}`}>
         <BayAreaMap />
       </div>
 
-      {/* MapLibre — only loaded if geolocation granted */}
-      {showMapLibre && (
+      {/* MapLibre — loads once geolocation resolves (granted or denied) */}
+      {hasApiKey && settled && (
         <div className={`hero-map-gl ${mapReady ? 'visible' : ''}`}>
           <Suspense fallback={null}>
-            <MapLibreHeroMap lat={lat} lng={lng} onReady={onReady} />
+            <MapLibreHeroMap lat={centerLat} lng={centerLng} onReady={onReady} />
           </Suspense>
         </div>
       )}

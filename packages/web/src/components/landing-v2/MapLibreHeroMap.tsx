@@ -38,16 +38,25 @@ export default function MapLibreHeroMap({ lat, lng, onReady }: MapLibreHeroMapPr
 
     mapRef.current = map;
 
-    map.once('idle', () => {
+    // Use 'load' (style + sources ready) instead of 'idle' (all tiles painted)
+    // 'idle' can stall when container starts at opacity:0
+    map.on('load', () => {
       if (!containerRef.current) return;
 
-      // Start driver animation on roads
-      const animator = new DriverAnimator(map, containerRef.current);
-      animatorRef.current = animator;
-      animator.start();
+      // Brief delay to let initial tiles render into the canvas
+      setTimeout(() => {
+        if (!containerRef.current || !mapRef.current) return;
 
-      // Signal parent to crossfade
-      onReadyRef.current();
+        const animator = new DriverAnimator(map, containerRef.current);
+        animatorRef.current = animator;
+        animator.start();
+
+        onReadyRef.current();
+      }, 300);
+    });
+
+    map.on('error', (e) => {
+      console.warn('[HeroMap] MapLibre error:', e.error?.message || e);
     });
 
     return () => {
