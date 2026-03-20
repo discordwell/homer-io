@@ -17,6 +17,8 @@ export const users = pgTable('users', {
   lockedUntil: timestamp('locked_until', { withTimezone: true }),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  googleId: varchar('google_id', { length: 255 }).unique(),
+  avatarUrl: varchar('avatar_url', { length: 500 }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index('idx_users_tenant_id').on(table.tenantId),

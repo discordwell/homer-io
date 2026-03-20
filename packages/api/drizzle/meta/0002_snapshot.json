@@ -4,6 +4,6 @@
   "tables": {},
   "enums": {},
   "schemas": {},
-  "id": "0001_add_learning_layer",
-  "prevId": "0000000000000"
+  "id": "0002_add_google_auth_columns",
+  "prevId": "0001_add_learning_layer"
 }

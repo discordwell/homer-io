@@ -1,1 +1,1 @@
-{"version":"7","dialect":"postgresql","entries":[{"idx":0,"version":"0001","when":1710547200000,"tag":"0001_add_learning_layer","breakpoints":true}]}
+{"version":"7","dialect":"postgresql","entries":[{"idx":0,"version":"0001","when":1710547200000,"tag":"0001_add_learning_layer","breakpoints":true},{"idx":1,"version":"0002","when":1710633600000,"tag":"0002_add_google_auth_columns","breakpoints":true}]}
