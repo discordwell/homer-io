@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNLOpsStore, type NLOpsMessage, type NLOpsToolActivity, type NLOpsConfirmation } from '../stores/nlops.js';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 // --- Tool name → friendly label ---
 const TOOL_LABELS: Record<string, string> = {
@@ -86,7 +86,7 @@ export function AIChatPanel() {
       <button onClick={toggle} style={{
         position: 'fixed', bottom: 24, right: 24, width: 48, height: 48,
         borderRadius: '50%', background: C.accent, border: 'none',
-        color: '#fff', fontSize: 16, cursor: 'pointer', zIndex: 999,
+        color: '#000', fontSize: 16, cursor: 'pointer', zIndex: 999,
         boxShadow: C.accentGlow, display: isOpen ? 'none' : 'flex',
         alignItems: 'center', justifyContent: 'center',
         fontFamily: F.display, fontWeight: 700, letterSpacing: 1,
@@ -112,7 +112,7 @@ export function AIChatPanel() {
             <div style={{ display: 'flex', gap: 4 }}>
               <button onClick={toggleThought} title="Toggle thought process" style={{
                 background: showThought ? C.accent : 'none', border: `1px solid ${showThought ? C.accent : C.muted}`,
-                color: showThought ? '#fff' : C.dim, cursor: 'pointer',
+                color: showThought ? '#000' : C.dim, cursor: 'pointer',
                 padding: '4px 8px', borderRadius: 4, fontSize: 12, fontFamily: F.mono,
               }}>
                 {'{ }'}
@@ -168,7 +168,7 @@ export function AIChatPanel() {
             />
             <button onClick={handleSend} disabled={loading || !input.trim()} style={{
               padding: '10px 16px', borderRadius: 8, background: C.accent,
-              border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body,
+              border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body,
               opacity: loading || !input.trim() ? 0.5 : 1, fontSize: 14,
             }}>
               Go
@@ -191,7 +191,7 @@ function MessageBubble({ msg, onConfirm, onDeny }: {
   if (msg.role === 'user') {
     return (
       <div style={{
-        alignSelf: 'flex-end', background: C.accent, color: '#fff',
+        alignSelf: 'flex-end', background: C.accent, color: '#000',
         padding: '10px 14px', borderRadius: 12, fontSize: 14,
         maxWidth: '85%', lineHeight: 1.5, whiteSpace: 'pre-wrap',
       }}>
@@ -211,7 +211,7 @@ function MessageBubble({ msg, onConfirm, onDeny }: {
     return (
       <div style={{
         padding: '10px 14px', borderRadius: 10,
-        background: ar.success ? 'rgba(52,211,153,0.1)' : 'rgba(248,113,113,0.1)',
+        background: ar.success ? alpha(C.green, 0.1) : alpha(C.red, 0.1),
         border: `1px solid ${ar.success ? C.green : C.red}`,
         fontSize: 13, color: C.text,
       }}>
@@ -286,7 +286,7 @@ function ConfirmationCard({ conf, onConfirm, onDeny }: {
     }}>
       <div style={{
         padding: '10px 14px',
-        background: isDestructive ? 'rgba(251,146,60,0.08)' : 'rgba(91,164,245,0.08)',
+        background: isDestructive ? alpha(C.orange, 0.08) : alpha(C.accent, 0.08),
         borderBottom: `1px solid ${C.border}`,
       }}>
         <div style={{
@@ -404,7 +404,7 @@ function ThoughtEntry({ msg }: { msg: NLOpsMessage }) {
       {msg.confirmation && (
         <div style={{
           padding: '8px 12px', borderRadius: 6,
-          background: 'rgba(251,146,60,0.08)', border: `1px solid ${C.orange}`,
+          background: alpha(C.orange, 0.08), border: `1px solid ${C.orange}`,
           fontSize: 13, color: C.orange, fontFamily: F.mono,
         }}>
           AWAITING CONFIRMATION: {msg.confirmation.toolName}
@@ -415,7 +415,7 @@ function ThoughtEntry({ msg }: { msg: NLOpsMessage }) {
       {msg.actionResult && (
         <div style={{
           padding: '8px 12px', borderRadius: 6,
-          background: msg.actionResult.success ? 'rgba(52,211,153,0.08)' : 'rgba(248,113,113,0.08)',
+          background: msg.actionResult.success ? alpha(C.green, 0.08) : alpha(C.red, 0.08),
           border: `1px solid ${msg.actionResult.success ? C.green : C.red}`,
           fontSize: 13, color: msg.actionResult.success ? C.green : C.red,
           fontFamily: F.mono,

@@ -6,7 +6,7 @@ import { useToast } from '../Toast.js';
 import { useIntegrationsStore } from '../../stores/integrations.js';
 import { IntegrationConnectForm } from './IntegrationConnectForm.js';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 import type { PlatformInfo, ConnectionResponse } from '@homer-io/shared';
 
 // Platform icons (simple SVG inline)
@@ -108,7 +108,7 @@ export function IntegrationsTab() {
             <div
               key={platform.platform}
               style={{
-                background: C.bg2, borderRadius: 14, border: `1px solid ${isConnected ? statusColor + '40' : C.muted}`,
+                background: C.bg2, borderRadius: 14, border: `1px solid ${isConnected ? alpha(statusColor, 0.25) : C.muted}`,
                 padding: 20, display: 'flex', flexDirection: 'column', gap: 14,
                 transition: 'border-color 0.2s',
               }}
@@ -130,7 +130,7 @@ export function IntegrationsTab() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div style={{
                       width: 8, height: 8, borderRadius: '50%', background: statusColor,
-                      boxShadow: conn.syncStatus === 'syncing' ? `0 0 8px ${statusColor}60` : undefined,
+                      boxShadow: conn.syncStatus === 'syncing' ? `0 0 8px ${alpha(statusColor, 0.38)}` : undefined,
                     }} />
                     <Badge color={conn.syncStatus === 'syncing' ? 'green' : conn.syncStatus === 'error' ? 'red' : 'yellow'}>
                       {conn.syncStatus}
@@ -166,7 +166,7 @@ export function IntegrationsTab() {
               {isConnected && conn?.lastSyncError && (
                 <div style={{
                   padding: '8px 12px', borderRadius: 6, fontSize: 12, fontFamily: F.mono,
-                  background: `${C.red}10`, color: C.red, border: `1px solid ${C.red}25`,
+                  background: alpha(C.red, 0.06), color: C.red, border: `1px solid ${alpha(C.red, 0.15)}`,
                   wordBreak: 'break-word',
                 }}>
                   {conn.lastSyncError}
@@ -192,7 +192,7 @@ export function IntegrationsTab() {
                     </button>
                     <button
                       onClick={() => setDisconnectId(conn.id)}
-                      style={{ ...secondaryBtnStyle, color: C.red, borderColor: `${C.red}40` }}
+                      style={{ ...secondaryBtnStyle, color: C.red, borderColor: alpha(C.red, 0.25) }}
                     >
                       Disconnect
                     </button>
@@ -241,7 +241,7 @@ export function IntegrationsTab() {
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
+  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
 };
 
 const secondaryBtnStyle: React.CSSProperties = {

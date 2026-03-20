@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 import { KPICard } from '../KPICard.js';
 
 interface CarbonOverview {
@@ -197,9 +197,9 @@ export function CarbonDashboard({ range }: CarbonDashboardProps) {
       {/* Trend comparison hint */}
       {overview.routeCount > 0 && overview.evSavingsKg > 0 && (
         <div style={{
-          background: `${C.green}0A`,
+          background: alpha(C.green, 0.04),
           borderRadius: 12,
-          border: `1px solid ${C.green}25`,
+          border: `1px solid ${alpha(C.green, 0.15)}`,
           padding: 16,
           display: 'flex',
           alignItems: 'center',

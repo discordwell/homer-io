@@ -6,7 +6,7 @@ import { PODFlow } from '../../components/driver/PODFlow.js';
 import { DeliveryFailureFlow } from '../../components/driver/DeliveryFailureFlow.js';
 import { LoadingSpinner } from '../../components/LoadingSpinner.js';
 import { Badge } from '../../components/Badge.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 
 function formatAddress(addr: { street?: string; city?: string; state?: string; zip?: string } | null): string {
   if (!addr) return 'No address';
@@ -31,8 +31,8 @@ export function DriverStopDetailPage() {
     return (
       <div style={{ padding: 16 }}>
         <div style={{
-          padding: 16, borderRadius: 10, background: `${C.red}15`,
-          border: `1px solid ${C.red}30`, color: C.red, fontSize: 14,
+          padding: 16, borderRadius: 10, background: alpha(C.red, 0.08),
+          border: `1px solid ${alpha(C.red, 0.19)}`, color: C.red, fontSize: 14,
         }}>
           Stop not found
         </div>
@@ -256,8 +256,8 @@ export function DriverStopDetailPage() {
         }}>
           <div style={{
             padding: 14, borderRadius: 10,
-            background: stop.status === 'delivered' ? `${C.green}15` : `${C.red}15`,
-            border: `1px solid ${stop.status === 'delivered' ? `${C.green}30` : `${C.red}30`}`,
+            background: stop.status === 'delivered' ? alpha(C.green, 0.08) : alpha(C.red, 0.08),
+            border: `1px solid ${stop.status === 'delivered' ? alpha(C.green, 0.19) : alpha(C.red, 0.19)}`,
             color: stop.status === 'delivered' ? C.green : C.red,
             fontSize: 14, fontWeight: 600,
           }}>

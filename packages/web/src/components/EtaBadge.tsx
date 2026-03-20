@@ -1,4 +1,4 @@
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 interface EtaBadgeProps {
   /** ETA in minutes. If <= 2, shows "Arriving" */
@@ -20,9 +20,9 @@ export function EtaBadge({ etaMinutes, size = 'sm', source }: EtaBadgeProps) {
         fontSize: size === 'sm' ? 11 : 13,
         fontWeight: 600,
         fontFamily: F.mono,
-        background: `${C.dim}18`,
+        background: alpha(C.dim, 0.09),
         color: C.dim,
-        border: `1px solid ${C.dim}30`,
+        border: `1px solid ${alpha(C.dim, 0.19)}`,
       }}>
         --
       </span>
@@ -44,9 +44,9 @@ export function EtaBadge({ etaMinutes, size = 'sm', source }: EtaBadgeProps) {
       fontSize: size === 'sm' ? 11 : 13,
       fontWeight: 600,
       fontFamily: F.mono,
-      background: `${color}18`,
+      background: alpha(color, 0.09),
       color,
-      border: `1px solid ${color}30`,
+      border: `1px solid ${alpha(color, 0.19)}`,
     }}>
       {isDegraded && <span title="Approximate — routing engine unavailable">⚠</span>}
       {label}

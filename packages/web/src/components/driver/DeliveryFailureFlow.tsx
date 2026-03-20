@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PhotoCapture } from './PhotoCapture.js';
 import { useDriverStore } from '../../stores/driver.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 
 interface DeliveryFailureFlowProps {
@@ -130,7 +130,7 @@ export function DeliveryFailureFlow({ orderId, routeId, onComplete, onCancel }: 
                 alignItems: 'center',
                 gap: 10,
                 padding: '12px 14px',
-                background: reason === r.value ? `${C.red}15` : C.bg3,
+                background: reason === r.value ? alpha(C.red, 0.08) : C.bg3,
                 border: `1px solid ${reason === r.value ? C.red : C.border}`,
                 borderRadius: 8,
                 color: reason === r.value ? C.red : C.text,
@@ -194,8 +194,8 @@ export function DeliveryFailureFlow({ orderId, routeId, onComplete, onCancel }: 
 
       {error && (
         <div style={{
-          padding: 12, borderRadius: 8, background: `${C.red}15`,
-          border: `1px solid ${C.red}30`, color: C.red, fontSize: 13,
+          padding: 12, borderRadius: 8, background: alpha(C.red, 0.08),
+          border: `1px solid ${alpha(C.red, 0.19)}`, color: C.red, fontSize: 13,
         }}>
           {error}
         </div>

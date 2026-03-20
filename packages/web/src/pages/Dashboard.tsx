@@ -7,7 +7,7 @@ import { Badge } from '../components/Badge.js';
 import { EmptyState } from '../components/EmptyState.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
 import { IntelligenceWidget } from '../components/IntelligenceWidget.js';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 const statusColors: Record<string, string> = {
   received: 'blue', assigned: 'purple', in_transit: 'yellow', delivered: 'green', failed: 'red', returned: 'orange',
@@ -52,7 +52,7 @@ export function DashboardPage() {
 
       {error && (
         <div style={{
-          background: 'rgba(248,113,113,0.1)', border: `1px solid ${C.red}`,
+          background: alpha(C.red, 0.1), border: `1px solid ${C.red}`,
           color: C.red, padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 14,
         }}>{error}</div>
       )}

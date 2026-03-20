@@ -163,6 +163,6 @@ const inputStyle: React.CSSProperties = {
 
 const sendBtnStyle: React.CSSProperties = {
   padding: '10px 18px', borderRadius: 10, background: C.accent,
-  border: 'none', color: '#fff', cursor: 'pointer',
+  border: 'none', color: '#000', cursor: 'pointer',
   fontFamily: F.body, fontWeight: 600, fontSize: 14,
 };

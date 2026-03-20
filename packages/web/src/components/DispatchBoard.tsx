@@ -3,7 +3,7 @@ import { api } from '../api/client.js';
 import { Badge } from './Badge.js';
 import { LoadingSpinner } from './LoadingSpinner.js';
 import { useToast } from './Toast.js';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 interface Order {
   id: string;
@@ -184,7 +184,7 @@ export function DispatchBoard() {
               style={{
                 ...columnStyle,
                 borderColor: isOver ? C.accent : C.border,
-                background: isOver ? `${C.accent}08` : C.bg2,
+                background: isOver ? alpha(C.accent, 0.03) : C.bg2,
               }}
               onDragOver={(e) => handleDragOver(e, colId)}
               onDragLeave={handleDragLeave}

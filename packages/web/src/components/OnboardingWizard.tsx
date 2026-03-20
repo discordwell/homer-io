@@ -88,7 +88,7 @@ export function OnboardingWizard() {
                 onClick={() => navigate(STEP_LINKS[step.key] || '/dashboard')}
                 style={{
                   padding: '4px 12px', borderRadius: 6,
-                  background: C.accent, border: 'none', color: '#fff',
+                  background: C.accent, border: 'none', color: '#000',
                   cursor: 'pointer', fontFamily: F.body, fontSize: 12, fontWeight: 600,
                 }}
               >

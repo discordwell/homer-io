@@ -2,6 +2,19 @@
 
 ## Session Summaries
 
+### 2026-03-20T00:15 UTC — Backend Aesthetic Redesign (Match Homepage)
+- Unified all three surfaces (dashboard, auth, driver app) with the homepage's golden amber design system.
+- **CSS Variables Migration**: Created `app.css` with `:root` custom properties for all design tokens. Updated `theme.ts` to export `var(--xxx)` references — all 97 importing components cascade automatically. Added `alpha()` helper for semi-transparent colors (replaces broken `${C.color}XX` hex alpha pattern with `rgba(var(--color-rgb), opacity)`).
+- **Color shift**: Accent from electric blue (#5BA4F5) to golden amber (#F59E0B). Backgrounds from #03080F to #06090F. Text from #EEF3FC to #F1F5F9 slate palette. Borders updated. Status colors preserved (green/red/yellow/orange/purple).
+- **Typography**: Display font Syne → Cabinet Grotesk. Dashboard body stays Inter. Auth/driver body → Satoshi. JetBrains Mono unchanged.
+- **Nav restructure**: New fixed top nav bar with "HOMER." branding (amber dot). Sidebar now collapsible (240px ↔ 64px). DashboardLayout restructured with margin-based content offset.
+- **Auth pages**: Full rewrite from inline styles to CSS classes (`.auth-page`, `.auth-card`, etc.). Removed all theme.ts imports. Satoshi font family.
+- **Driver layout**: Added `.driver-app` CSS class for Satoshi font override.
+- **Button color fix**: All accent-background buttons changed from `color: '#fff'` to `color: '#000'` (amber needs dark text for contrast) — 37 instances across 31 files.
+- **Alpha helper migration**: ~50 components updated from `${C.color}XX` hex suffix to `alpha(C.color, decimal)`. RGB component CSS variables added (`--accent-rgb`, `--red-rgb`, etc.).
+- **Favicon**: Updated SVG inline icon from blue to amber with new background color.
+- Build passes (zero TS errors from changes). Vite build clean.
+
 ### 2026-03-19T21:30 UTC — Geolocation Hero Map for Landing Page
 - Added personalized hero map: detects visitor's geolocation, shows MapLibre GL map of their area with animated driver dots on real local roads. Falls back to existing Bay Area SVG if denied/timeout.
 - **Architecture**: `useHeroGeolocation` (one-shot, 3s timeout) → `React.lazy` loads MapLibre chunk → `queryRenderedFeatures` extracts road geometries → `DriverAnimator` canvas overlay with 10 dots (7 amber, 3 green) → 800ms CSS crossfade. Zero bundle penalty on denial.
@@ -248,7 +261,7 @@
 
 ## Key Findings
 
-- **Demo design tokens**: Colors at `C` object (bg: #03080F, accent: #5BA4F5, etc.), fonts at `F` (Syne display, Inter body, JetBrains Mono). Replicated in `packages/web/src/theme.ts`.
+- **Design token system**: `app.css` defines CSS custom properties (`:root`). `theme.ts` exports `C` (colors as `var(--xxx)`) and `F` (fonts as `var(--xxx)`) plus `alpha(color, opacity)` helper. Accent: golden amber (#F59E0B). Display: Cabinet Grotesk. Body: Inter (dashboard) / Satoshi (auth, driver). Old blue (#5BA4F5) only in legacy `landing/` components.
 - **Demo API calls**: Direct to `api.anthropic.com` with `claude-sonnet-4-20250514` — needs to be proxied through our API in the product.
 - **Demo never modified**: All new code in `packages/`. Root vite.config.js and src/ untouched.
 - **Fastify reply helpers**: Using `@fastify/sensible` for `reply.unauthorized()`, `reply.forbidden()`, etc.

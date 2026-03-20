@@ -5,7 +5,7 @@ import { StopCard } from '../../components/driver/StopCard.js';
 import { DriverChat } from '../../components/driver/DriverChat.js';
 import { LoadingSpinner } from '../../components/LoadingSpinner.js';
 import { EmptyState } from '../../components/EmptyState.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 
 function formatAddress(addr: { street?: string; city?: string; state?: string; zip?: string } | null): string {
   if (!addr) return 'No address';
@@ -28,8 +28,8 @@ export function DriverRoutePage() {
     return (
       <div style={{ padding: 16 }}>
         <div style={{
-          padding: 16, borderRadius: 10, background: `${C.red}15`,
-          border: `1px solid ${C.red}30`, color: C.red, fontSize: 14,
+          padding: 16, borderRadius: 10, background: alpha(C.red, 0.08),
+          border: `1px solid ${alpha(C.red, 0.19)}`, color: C.red, fontSize: 14,
         }}>
           {error}
         </div>
@@ -142,8 +142,8 @@ export function DriverRoutePage() {
           position: 'fixed', bottom: 20, right: 20,
           width: 52, height: 52, borderRadius: 26,
           background: C.accent, border: 'none',
-          color: '#fff', fontSize: 22, cursor: 'pointer',
-          boxShadow: '0 4px 12px rgba(91,164,245,0.4)',
+          color: '#000', fontSize: 22, cursor: 'pointer',
+          boxShadow: `0 4px 12px ${alpha(C.accent, 0.4)}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 50,
         }}

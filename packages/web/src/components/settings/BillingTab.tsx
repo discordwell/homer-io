@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useBillingStore } from '../../stores/billing.js';
 import { PlanSelector } from './PlanSelector.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 
 function formatCents(cents: number, currency = 'usd'): string {
   return new Intl.NumberFormat('en-US', {
@@ -106,7 +106,7 @@ export function BillingTab() {
                 fontSize: 12,
                 fontWeight: 600,
                 fontFamily: F.body,
-                background: `${statusColors[subscription.status] || C.dim}20`,
+                background: alpha(statusColors[subscription.status] || C.dim, 0.13),
                 color: statusColors[subscription.status] || C.dim,
               }}>
                 {statusLabels[subscription.status] || subscription.status}
@@ -191,7 +191,7 @@ export function BillingTab() {
               padding: '8px 20px',
               borderRadius: 8,
               border: `1px solid ${subscription.payAsYouGoEnabled ? C.green : C.muted}`,
-              background: subscription.payAsYouGoEnabled ? `${C.green}15` : 'transparent',
+              background: subscription.payAsYouGoEnabled ? alpha(C.green, 0.08) : 'transparent',
               color: subscription.payAsYouGoEnabled ? C.green : C.dim,
               cursor: 'pointer',
               fontFamily: F.body,
@@ -336,7 +336,7 @@ const primaryBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   background: C.accent,
   border: 'none',
-  color: '#fff',
+  color: '#000',
   cursor: 'pointer',
   fontFamily: F.body,
   fontWeight: 600,

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 
 interface ExportRequest {
   id: string;
@@ -244,7 +244,7 @@ export function PrivacyTab() {
       <div style={{
         background: C.bg2,
         borderRadius: 12,
-        border: `1px solid ${C.red}40`,
+        border: `1px solid ${alpha(C.red, 0.25)}`,
         padding: 24,
       }}>
         <h3 style={{ fontFamily: F.display, fontSize: 18, color: C.red, margin: '0 0 4px' }}>
@@ -257,10 +257,10 @@ export function PrivacyTab() {
 
         {activeDeletion ? (
           <div style={{
-            background: `${C.red}10`,
+            background: alpha(C.red, 0.06),
             borderRadius: 8,
             padding: 16,
-            border: `1px solid ${C.red}30`,
+            border: `1px solid ${alpha(C.red, 0.19)}`,
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -283,10 +283,10 @@ export function PrivacyTab() {
           </div>
         ) : showDeleteConfirm ? (
           <div style={{
-            background: `${C.red}10`,
+            background: alpha(C.red, 0.06),
             borderRadius: 8,
             padding: 16,
-            border: `1px solid ${C.red}30`,
+            border: `1px solid ${alpha(C.red, 0.19)}`,
           }}>
             <p style={{ color: C.text, fontSize: 14, margin: '0 0 12px' }}>
               Type <strong style={{ color: C.red }}>DELETE MY ACCOUNT</strong> to confirm:
@@ -345,7 +345,7 @@ const primaryBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   background: C.accent,
   border: 'none',
-  color: '#fff',
+  color: '#000',
   cursor: 'pointer',
   fontFamily: F.body,
   fontWeight: 600,

@@ -115,7 +115,7 @@ export function CsvImportWizard({ open, onClose, onImport }: CsvImportWizardProp
             }}>Back</button>
             <button onClick={handleImport} disabled={importing} style={{
               padding: '8px 20px', borderRadius: 8, background: C.accent,
-              border: 'none', color: '#fff', cursor: importing ? 'wait' : 'pointer',
+              border: 'none', color: '#000', cursor: importing ? 'wait' : 'pointer',
               fontFamily: F.body, fontWeight: 600, opacity: importing ? 0.7 : 1,
             }}>{importing ? 'Importing...' : `Import ${rows.length} Orders`}</button>
           </div>
@@ -128,7 +128,7 @@ export function CsvImportWizard({ open, onClose, onImport }: CsvImportWizardProp
           <p style={{ color: C.text, fontSize: 16, marginBottom: 20 }}>Successfully imported {rows.length} orders!</p>
           <button onClick={handleClose} style={{
             padding: '10px 24px', borderRadius: 8, background: C.accent,
-            border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600,
+            border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600,
           }}>Done</button>
         </div>
       )}

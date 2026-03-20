@@ -3,7 +3,7 @@ import { Modal } from '../Modal.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
 import { useIntegrationsStore } from '../../stores/integrations.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 import type { PlatformInfo } from '@homer-io/shared';
 
 interface IntegrationConnectFormProps {
@@ -144,9 +144,9 @@ export function IntegrationConnectForm({ open, onClose, platform }: IntegrationC
         {testResult !== null && (
           <div style={{
             padding: '8px 12px', borderRadius: 8, fontSize: 13, fontFamily: F.body,
-            background: testResult ? `${C.green}15` : `${C.red}15`,
+            background: testResult ? alpha(C.green, 0.08) : alpha(C.red, 0.08),
             color: testResult ? C.green : C.red,
-            border: `1px solid ${testResult ? C.green : C.red}30`,
+            border: `1px solid ${testResult ? alpha(C.green, 0.19) : alpha(C.red, 0.19)}`,
           }}>
             {testResult ? 'Fields validated — credentials will be verified on save' : 'Please check your inputs'}
           </div>
@@ -191,7 +191,7 @@ const inputStyle: React.CSSProperties = {
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
+  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
 };
 
 const secondaryBtnStyle: React.CSSProperties = {

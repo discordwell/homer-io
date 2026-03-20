@@ -1,4 +1,4 @@
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 interface DegradedRoutingBannerProps {
   /** What was degraded: 'optimization', 'dispatch', or 'eta' */
@@ -12,8 +12,8 @@ interface DegradedRoutingBannerProps {
 export function DegradedRoutingBanner({ context }: DegradedRoutingBannerProps) {
   return (
     <div style={{
-      background: `${C.red}12`,
-      border: `2px solid ${C.red}60`,
+      background: alpha(C.red, 0.07),
+      border: `2px solid ${alpha(C.red, 0.38)}`,
       borderRadius: 12,
       padding: '14px 18px',
       marginBottom: 16,

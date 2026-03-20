@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 import { StatusTimeline } from '../components/tracking/StatusTimeline.js';
 import { TrackingMap } from '../components/tracking/TrackingMap.js';
 
@@ -229,13 +229,13 @@ export function PublicTrackingPage() {
               {data.status === 'delivered' && data.completedAt && (
                 <div
                   style={{
-                    background: `${C.green}11`,
+                    background: alpha(C.green, 0.07),
                     borderRadius: 8,
                     padding: '12px 16px',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    border: `1px solid ${C.green}33`,
+                    border: `1px solid ${alpha(C.green, 0.20)}`,
                   }}
                 >
                   <span style={{ fontSize: 13, color: C.dim }}>Delivered</span>

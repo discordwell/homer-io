@@ -25,7 +25,7 @@ export function BillingBlockedModal() {
         <p style={{ color: C.dim, fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>{message}</p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
           <button onClick={() => setVisible(false)} style={{ padding: '10px 20px', borderRadius: 8, background: C.bg3, border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body }}>Dismiss</button>
-          <button onClick={() => { setVisible(false); navigate('/dashboard/settings?tab=billing'); }} style={{ padding: '10px 20px', borderRadius: 8, background: C.accent, border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600 }}>Go to Billing</button>
+          <button onClick={() => { setVisible(false); navigate('/dashboard/settings?tab=billing'); }} style={{ padding: '10px 20px', borderRadius: 8, background: C.accent, border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600 }}>Go to Billing</button>
         </div>
       </div>
     </div>

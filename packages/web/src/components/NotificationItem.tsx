@@ -1,4 +1,4 @@
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 interface NotificationItemProps {
   id: string;
@@ -43,13 +43,13 @@ export function NotificationItem({ id, type, title, body, readAt, createdAt, onM
       style={{
         display: 'flex', gap: 12, padding: '12px 16px',
         borderLeft: isUnread ? `3px solid ${C.accent}` : '3px solid transparent',
-        background: isUnread ? `${C.accent}08` : 'transparent',
+        background: isUnread ? alpha(C.accent, 0.03) : 'transparent',
         cursor: isUnread ? 'pointer' : 'default',
         transition: 'background 0.15s ease',
         borderBottom: `1px solid ${C.border}`,
       }}
-      onMouseEnter={e => { if (isUnread) e.currentTarget.style.background = `${C.accent}12`; }}
-      onMouseLeave={e => { e.currentTarget.style.background = isUnread ? `${C.accent}08` : 'transparent'; }}
+      onMouseEnter={e => { if (isUnread) e.currentTarget.style.background = alpha(C.accent, 0.07); }}
+      onMouseLeave={e => { e.currentTarget.style.background = isUnread ? alpha(C.accent, 0.03) : 'transparent'; }}
     >
       <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>

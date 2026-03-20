@@ -13,7 +13,7 @@ import { CsvImportWizard } from '../components/CsvImportWizard.js';
 import { useToast } from '../components/Toast.js';
 import { api } from '../api/client.js';
 import { hashAddressBrowser } from '../utils/address-hash.js';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 interface AddressIntelligence {
   addressHash: string;
@@ -244,7 +244,7 @@ export function OrdersPage() {
       {selectedIds.size > 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
-          background: `${C.accent}15`, border: `1px solid ${C.accent}33`,
+          background: alpha(C.accent, 0.08), border: `1px solid ${alpha(C.accent, 0.20)}`,
           borderRadius: 8, marginBottom: 16,
         }}>
           <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>
@@ -338,7 +338,7 @@ export function OrdersPage() {
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
+  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
 };
 
 const secondaryBtnStyle: React.CSSProperties = {
@@ -424,8 +424,8 @@ function AddressIntelligencePanel({ data, loading, onClose }: {
                     display: 'inline-flex', alignItems: 'center', gap: 4,
                     padding: '2px 8px', borderRadius: 999, fontSize: 11,
                     fontWeight: 600, fontFamily: F.body,
-                    background: `${C.red}18`, color: C.red,
-                    border: `1px solid ${C.red}30`,
+                    background: alpha(C.red, 0.09), color: C.red,
+                    border: `1px solid ${alpha(C.red, 0.19)}`,
                   }}>
                     {r.reason.replace(/_/g, ' ')} ({r.count})
                   </span>

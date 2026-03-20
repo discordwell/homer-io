@@ -7,7 +7,7 @@ import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
 import { WebhookEndpointForm } from './WebhookEndpointForm.js';
 import { WebhookDeliveryLog } from './WebhookDeliveryLog.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 
 interface WebhookEndpoint {
   id: string;
@@ -119,7 +119,7 @@ export function WebhooksTab() {
             width: 10, height: 10, borderRadius: '50%',
             background: ep.isActive ? healthColor(ep.failureCount) : C.dim,
             boxShadow: ep.isActive && ep.failureCount === 0
-              ? `0 0 6px ${C.green}60`
+              ? `0 0 6px ${alpha(C.green, 0.38)}`
               : undefined,
           }}
         />
@@ -266,7 +266,7 @@ export function WebhooksTab() {
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
+  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
 };
 
 const actionBtnStyle: React.CSSProperties = {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { PhotoCapture } from './PhotoCapture.js';
 import { SignaturePad } from './SignaturePad.js';
 import { useDriverStore } from '../../stores/driver.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 
 interface PODFlowProps {
@@ -265,8 +265,8 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
 
             {error && (
               <div style={{
-                padding: 12, borderRadius: 8, background: `${C.red}15`,
-                border: `1px solid ${C.red}30`, color: C.red, fontSize: 13,
+                padding: 12, borderRadius: 8, background: alpha(C.red, 0.08),
+                border: `1px solid ${alpha(C.red, 0.19)}`, color: C.red, fontSize: 13,
               }}>
                 {error}
               </div>
@@ -350,7 +350,7 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
               background: C.accent,
               border: 'none',
               borderRadius: 8,
-              color: '#fff',
+              color: '#000',
               fontSize: 14,
               fontWeight: 600,
               fontFamily: F.body,

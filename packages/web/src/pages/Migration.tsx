@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Papa from 'papaparse';
 import { useMigrationStore } from '../stores/migration.js';
 import type { MigrationJobResponse, CreateMigrationJobInput, MigrationPlatform, MigrationPlatformInfo } from '@homer-io/shared';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 type WizardStep = 'select' | 'configure' | 'review' | 'progress' | 'complete';
 type ImportMode = 'api' | 'csv';
@@ -201,7 +201,7 @@ export function MigrationPage() {
 
   const btnPrimary: React.CSSProperties = {
     padding: '10px 24px', borderRadius: 8, background: C.accent,
-    border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600,
+    border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600,
     fontSize: 14,
   };
 
@@ -228,7 +228,7 @@ export function MigrationPage() {
 
       {error && (
         <div style={{
-          background: 'rgba(248,113,113,0.1)', border: `1px solid ${C.red}`,
+          background: alpha(C.red, 0.1), border: `1px solid ${C.red}`,
           color: C.red, padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 14,
         }}>{error}</div>
       )}
@@ -250,7 +250,7 @@ export function MigrationPage() {
                   style={{
                     padding: 20, borderRadius: 10, cursor: 'pointer',
                     border: `2px solid ${selectedPlatform === p.id ? C.accent : C.border}`,
-                    background: selectedPlatform === p.id ? 'rgba(91,164,245,0.05)' : C.bg2,
+                    background: selectedPlatform === p.id ? alpha(C.accent, 0.05) : C.bg2,
                     transition: 'border-color 0.15s, background 0.15s',
                   }}
                 >
@@ -260,7 +260,7 @@ export function MigrationPage() {
                     }} />
                     <span style={{ fontSize: 16, fontWeight: 600 }}>{p.name}</span>
                     {info?.supportsApi && (
-                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(52,211,153,0.15)', color: C.green, fontWeight: 600 }}>API</span>
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: alpha(C.green, 0.15), color: C.green, fontWeight: 600 }}>API</span>
                     )}
                   </div>
                   <p style={{ color: C.dim, fontSize: 13 }}>{p.description}</p>
@@ -606,7 +606,7 @@ export function MigrationPage() {
                       <td style={tdStyle}>
                         <span style={{
                           padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600,
-                          background: 'rgba(91,164,245,0.1)', color: C.accent,
+                          background: alpha(C.accent, 0.1), color: C.accent,
                         }}>
                           {job.sourcePlatform}
                         </span>
@@ -663,7 +663,7 @@ function FileDropZone({ label, hint, fileRef, rowCount, onFile, onClear }: {
         <div style={{
           border: `1px solid ${C.green}`, borderRadius: 8, padding: 16,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'rgba(52,211,153,0.05)',
+          background: alpha(C.green, 0.05),
         }}>
           <span style={{ color: C.green, fontSize: 14 }}>{rowCount} rows loaded</span>
           <button onClick={onClear} style={{

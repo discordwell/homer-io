@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DegradedRoutingBanner } from '../DegradedRoutingBanner.js';
 import { RiskBadge } from '../RiskBadge.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 import { api } from '../../api/client.js';
 
 interface RiskScore {
@@ -179,8 +179,8 @@ export function DispatchPreview({
       {/* Unassigned warning */}
       {unassignedOrderIds.length > 0 && (
         <div style={{
-          background: 'rgba(251, 191, 36, 0.1)',
-          border: `1px solid ${C.yellow}33`,
+          background: alpha(C.yellow, 0.1),
+          border: `1px solid ${alpha(C.yellow, 0.20)}`,
           borderRadius: 8,
           padding: '10px 14px',
           marginBottom: 16,
@@ -276,8 +276,8 @@ export function DispatchPreview({
       {/* Error */}
       {error && (
         <div style={{
-          background: 'rgba(248, 113, 113, 0.1)',
-          border: `1px solid ${C.red}33`,
+          background: alpha(C.red, 0.1),
+          border: `1px solid ${alpha(C.red, 0.20)}`,
           borderRadius: 8,
           padding: '10px 14px',
           marginBottom: 16,

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useBillingStore } from '../../stores/billing.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 
 interface PlanSelectorProps {
   open: boolean;
@@ -164,7 +164,7 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
               <span style={{
                 marginLeft: 6,
                 fontSize: 11,
-                background: `${C.green}20`,
+                background: alpha(C.green, 0.13),
                 color: C.green,
                 padding: '2px 6px',
                 borderRadius: 4,
@@ -201,7 +201,7 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
                     left: '50%',
                     transform: 'translateX(-50%)',
                     background: C.accent,
-                    color: '#fff',
+                    color: '#000',
                     fontSize: 11,
                     fontWeight: 700,
                     fontFamily: F.body,

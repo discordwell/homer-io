@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../Modal.js';
 import { FormField, inputStyle } from '../FormField.js';
 import { useToast } from '../Toast.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 
 const webhookEvents = [
   'order.created', 'order.updated', 'order.assigned', 'order.delivered', 'order.failed',
@@ -138,7 +138,7 @@ export function WebhookEndpointForm({ open, onClose, onSave, endpoint }: Webhook
     return (
       <Modal open={open} onClose={onClose} title="Webhook Endpoint Created" size="md">
         <div style={{
-          background: `${C.yellow}10`, border: `1px solid ${C.yellow}40`,
+          background: alpha(C.yellow, 0.06), border: `1px solid ${alpha(C.yellow, 0.25)}`,
           borderRadius: 8, padding: 12, marginBottom: 16,
         }}>
           <p style={{ color: C.yellow, fontSize: 13, margin: 0 }}>
@@ -266,7 +266,7 @@ export function WebhookEndpointForm({ open, onClose, onSave, endpoint }: Webhook
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8,
                           padding: '6px 10px', borderRadius: 6,
-                          background: selectedEvents.includes(event) ? `${C.accent}15` : C.bg,
+                          background: selectedEvents.includes(event) ? alpha(C.accent, 0.08) : C.bg,
                           border: `1px solid ${selectedEvents.includes(event) ? C.accent : C.border}`,
                           cursor: 'pointer', fontSize: 12, color: C.text,
                           fontFamily: F.mono, transition: 'all 0.15s ease',
@@ -305,7 +305,7 @@ export function WebhookEndpointForm({ open, onClose, onSave, endpoint }: Webhook
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
+  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
 };
 
 const cancelBtnStyle: React.CSSProperties = {

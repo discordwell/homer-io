@@ -7,7 +7,7 @@ import { FormField } from '../FormField.js';
 import { ConfirmDialog } from '../ConfirmDialog.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 
 const availableScopes = [
   { value: 'orders:read', label: 'Orders (Read)' },
@@ -165,7 +165,7 @@ export function ApiKeysTab() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '8px 12px', borderRadius: 8,
-                    background: selectedScopes.includes(scope.value) ? `${C.accent}15` : C.bg,
+                    background: selectedScopes.includes(scope.value) ? alpha(C.accent, 0.08) : C.bg,
                     border: `1px solid ${selectedScopes.includes(scope.value) ? C.accent : C.muted}`,
                     cursor: 'pointer', fontSize: 13, color: C.text,
                     fontFamily: F.body, transition: 'all 0.15s ease',
@@ -197,7 +197,7 @@ export function ApiKeysTab() {
         size="md"
       >
         <div style={{
-          background: `${C.yellow}10`, border: `1px solid ${C.yellow}40`,
+          background: alpha(C.yellow, 0.06), border: `1px solid ${alpha(C.yellow, 0.25)}`,
           borderRadius: 8, padding: 12, marginBottom: 16,
         }}>
           <p style={{ color: C.yellow, fontSize: 13, margin: 0 }}>
@@ -252,7 +252,7 @@ export function ApiKeysTab() {
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
+  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
 };
 
 const cancelBtnStyle: React.CSSProperties = {

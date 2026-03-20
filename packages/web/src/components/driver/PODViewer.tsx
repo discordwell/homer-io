@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal } from '../Modal.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { api } from '../../api/client.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 
 interface PodData {
   id: string;
@@ -52,8 +52,8 @@ export function PODViewer({ orderId, open, onClose }: PODViewerProps) {
 
         {error && (
           <div style={{
-            padding: 16, borderRadius: 8, background: `${C.red}15`,
-            border: `1px solid ${C.red}30`, color: C.red, fontSize: 14,
+            padding: 16, borderRadius: 8, background: alpha(C.red, 0.08),
+            border: `1px solid ${alpha(C.red, 0.19)}`, color: C.red, fontSize: 14,
           }}>
             {error}
           </div>

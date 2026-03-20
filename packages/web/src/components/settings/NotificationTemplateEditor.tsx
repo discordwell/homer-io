@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../Modal.js';
 import { FormField, inputStyle } from '../FormField.js';
 import { SelectField } from '../SelectField.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 import type { NotificationTemplate, CreateTemplateInput, UpdateTemplateInput } from '../../stores/customer-notifications.js';
 
 const triggerOptions = [
@@ -163,7 +163,7 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
                 onClick={() => insertVariable(v.key)}
                 style={{
                   padding: '4px 10px', borderRadius: 6,
-                  background: `${C.accent}15`, border: `1px solid ${C.accent}30`,
+                  background: alpha(C.accent, 0.08), border: `1px solid ${alpha(C.accent, 0.19)}`,
                   color: C.accent, cursor: 'pointer', fontSize: 12,
                   fontFamily: F.mono,
                 }}
@@ -230,7 +230,7 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
+  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
 };
 
 const cancelBtnStyle: React.CSSProperties = {

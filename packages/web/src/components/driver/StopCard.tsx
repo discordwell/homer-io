@@ -1,4 +1,4 @@
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 import { Badge } from '../Badge.js';
 
 interface StopCardProps {
@@ -37,7 +37,7 @@ export function StopCard({
         gap: 12,
         width: '100%',
         padding: '14px 16px',
-        background: isNextStop ? `${C.accent}10` : C.bg2,
+        background: isNextStop ? alpha(C.accent, 0.06) : C.bg2,
         border: `1px solid ${isNextStop ? C.accent : C.border}`,
         borderLeft: isNextStop ? `3px solid ${C.accent}` : `1px solid ${isNextStop ? C.accent : C.border}`,
         borderRadius: 10,

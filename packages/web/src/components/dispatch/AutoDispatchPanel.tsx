@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 import { api } from '../../api/client.js';
 import { DispatchPreview } from './DispatchPreview.js';
 
@@ -111,7 +111,7 @@ export function AutoDispatchPanel() {
           width: 32,
           height: 32,
           borderRadius: 8,
-          background: `${C.accent}22`,
+          background: alpha(C.accent, 0.13),
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -174,8 +174,8 @@ export function AutoDispatchPanel() {
       {/* Error */}
       {error && (
         <div style={{
-          background: 'rgba(248, 113, 113, 0.1)',
-          border: `1px solid ${C.red}33`,
+          background: alpha(C.red, 0.1),
+          border: `1px solid ${alpha(C.red, 0.20)}`,
           borderRadius: 8,
           padding: '10px 14px',
           marginBottom: 16,
@@ -263,7 +263,7 @@ const runBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   background: C.accent,
   border: 'none',
-  color: '#fff',
+  color: '#000',
   fontFamily: F.body,
   fontWeight: 600,
   fontSize: 14,

@@ -4,7 +4,7 @@ import { Badge } from '../Badge.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
 import { useIntegrationsStore } from '../../stores/integrations.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 import type { ConnectionResponse, IntegrationOrderResponse } from '@homer-io/shared';
 
 interface IntegrationDetailPanelProps {
@@ -118,7 +118,7 @@ export function IntegrationDetailPanel({ open, onClose, connection }: Integratio
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{
                 width: 10, height: 10, borderRadius: '50%', background: statusColor,
-                boxShadow: `0 0 6px ${statusColor}60`,
+                boxShadow: `0 0 6px ${alpha(statusColor, 0.38)}`,
               }} />
               <span style={{ color: statusColor, fontWeight: 600, fontSize: 15, fontFamily: F.body }}>
                 {syncStatusLabel(connection.syncStatus)}
@@ -145,7 +145,7 @@ export function IntegrationDetailPanel({ open, onClose, connection }: Integratio
         {connection.lastSyncError && (
           <div style={{
             padding: '10px 14px', borderRadius: 8, fontSize: 13, fontFamily: F.mono,
-            background: `${C.red}12`, color: C.red, border: `1px solid ${C.red}30`,
+            background: alpha(C.red, 0.07), color: C.red, border: `1px solid ${alpha(C.red, 0.19)}`,
             wordBreak: 'break-word',
           }}>
             {connection.lastSyncError}
@@ -289,7 +289,7 @@ const statLabelStyle: React.CSSProperties = {
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
+  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
 };
 
 const paginationBtnStyle: React.CSSProperties = {

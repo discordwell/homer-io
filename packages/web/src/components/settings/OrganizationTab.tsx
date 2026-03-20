@@ -35,7 +35,7 @@ export function OrganizationTab() {
     timezone: 'America/Los_Angeles',
     units: 'imperial',
     companyName: '',
-    primaryColor: '#5BA4F5',
+    primaryColor: '#F59E0B',
   });
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export function OrganizationTab() {
         timezone: orgSettings.timezone,
         units: orgSettings.units,
         companyName: branding.companyName || '',
-        primaryColor: branding.primaryColor || '#5BA4F5',
+        primaryColor: branding.primaryColor || '#F59E0B',
       });
     }
   }, [orgSettings]);
@@ -137,7 +137,7 @@ export function OrganizationTab() {
               onChange={(e) => setForm({ ...form, primaryColor: e.target.value })}
               style={{ ...inputStyle, width: 140 }}
               pattern="^#[0-9a-fA-F]{6}$"
-              placeholder="#5BA4F5"
+              placeholder="#F59E0B"
             />
           </div>
         </label>
@@ -145,7 +145,7 @@ export function OrganizationTab() {
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
           <button type="submit" disabled={saving} style={{
             padding: '10px 24px', borderRadius: 8, background: C.accent,
-            border: 'none', color: '#fff', cursor: saving ? 'not-allowed' : 'pointer',
+            border: 'none', color: '#000', cursor: saving ? 'not-allowed' : 'pointer',
             fontFamily: F.body, fontWeight: 600, fontSize: 14,
             opacity: saving ? 0.7 : 1,
           }}>

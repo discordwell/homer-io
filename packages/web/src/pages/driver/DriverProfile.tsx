@@ -41,7 +41,7 @@ export function DriverProfilePage() {
           width: 72, height: 72, borderRadius: '50%',
           background: C.accent, margin: '0 auto 12px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 28, fontWeight: 700, color: '#fff',
+          fontSize: 28, fontWeight: 700, color: '#000',
         }}>
           {(profile?.name || user?.name || 'D')[0].toUpperCase()}
         </div>

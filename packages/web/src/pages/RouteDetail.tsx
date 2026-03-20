@@ -11,7 +11,7 @@ import { useToast } from '../components/Toast.js';
 import { DegradedRoutingBanner } from '../components/DegradedRoutingBanner.js';
 import { RiskBadge, riskSummary } from '../components/RiskBadge.js';
 import { api } from '../api/client.js';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 interface RiskScore {
   orderId: string;
@@ -68,7 +68,7 @@ export function RouteDetailPage() {
         <p style={{ color: C.dim, fontSize: 14, marginBottom: 20 }}>{error || 'This route does not exist or was deleted.'}</p>
         <button onClick={() => navigate('/dashboard/routes')} style={{
           padding: '10px 20px', borderRadius: 8, background: C.accent,
-          border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600,
+          border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600,
         }}>Back to Routes</button>
       </div>
     );
@@ -170,7 +170,7 @@ export function RouteDetailPage() {
         const summary = riskScores.length > 0 ? riskSummary(riskScores) : null;
         return summary ? (
           <div style={{
-            background: `${C.orange}12`, border: `1px solid ${C.orange}40`,
+            background: alpha(C.orange, 0.07), border: `1px solid ${alpha(C.orange, 0.25)}`,
             borderRadius: 10, padding: '12px 16px', marginBottom: 16,
             display: 'flex', alignItems: 'center', gap: 10,
           }}>
@@ -218,7 +218,7 @@ export function RouteDetailPage() {
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.accent,
-  border: 'none', color: '#fff', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
+  border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body, fontWeight: 600, fontSize: 14,
 };
 
 const secondaryBtnStyle: React.CSSProperties = {

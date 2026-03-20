@@ -35,7 +35,7 @@ export function NavigateButton({ lat, lng, address }: NavigateButtonProps) {
         background: C.accent,
         border: 'none',
         borderRadius: 10,
-        color: '#fff',
+        color: '#000',
         fontSize: 15,
         fontWeight: 600,
         fontFamily: F.body,

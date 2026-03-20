@@ -89,7 +89,7 @@ export function ReportDownload() {
         onClick={() => setOpen(!open)}
         style={{
           background: C.accent,
-          color: '#fff',
+          color: '#000',
           border: 'none',
           borderRadius: 8,
           padding: '8px 16px',

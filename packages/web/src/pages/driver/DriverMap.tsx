@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { useDriverStore } from '../../stores/driver.js';
 import { useGeoLocation } from '../../hooks/useGeoLocation.js';
 import { LoadingSpinner } from '../../components/LoadingSpinner.js';
-import { C } from '../../theme.js';
+import { C, alpha } from '../../theme.js';
 
 export function DriverMapPage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -153,7 +153,7 @@ export function DriverMapPage() {
         <div style={{
           position: 'absolute', top: 12, left: 12, right: 12,
           padding: '10px 14px', borderRadius: 8,
-          background: `${C.yellow}20`, border: `1px solid ${C.yellow}40`,
+          background: alpha(C.yellow, 0.13), border: `1px solid ${alpha(C.yellow, 0.25)}`,
           color: C.yellow, fontSize: 12, zIndex: 500,
         }}>
           GPS: {geo.error}
