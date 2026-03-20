@@ -1,7 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
-import { registerSchema, loginSchema, refreshTokenSchema, requestPasswordResetSchema, resetPasswordSchema, verifyEmailSchema } from '@homer-io/shared';
+import { registerSchema, loginSchema, refreshTokenSchema, requestPasswordResetSchema, resetPasswordSchema, verifyEmailSchema, googleAuthSchema, orgChoiceSchema, emailLinkRequestSchema, emailLinkVerifySchema } from '@homer-io/shared';
 import { register, login, refreshToken, getMe, logout, verifyEmail, resendVerification, requestPasswordReset, resetPassword } from './service.js';
+import { googleAuth, googleOrgChoice } from './google.js';
+import { requestEmailLink, verifyEmailLink } from './email-link.js';
 import { authenticate } from '../../plugins/auth.js';
 import { z } from 'zod';
 
@@ -61,5 +63,29 @@ export async function authRoutes(app: FastifyInstance) {
   app.post('/logout', { preHandler: [authenticate] }, async (request, reply) => {
     await logout(request.user.id);
     reply.send({ success: true });
+  });
+
+  app.post('/google', async (request, reply) => {
+    const body = googleAuthSchema.parse(request.body);
+    const result = await googleAuth(app, body);
+    reply.send(result);
+  });
+
+  app.post('/google/org-choice', async (request, reply) => {
+    const body = orgChoiceSchema.parse(request.body);
+    const result = await googleOrgChoice(app, body);
+    reply.code(201).send(result);
+  });
+
+  app.post('/email-link/request', { preHandler: [authenticate] }, async (request, reply) => {
+    const body = emailLinkRequestSchema.parse(request.body);
+    const result = await requestEmailLink(app, request.user.id, body.workEmail);
+    reply.send(result);
+  });
+
+  app.post('/email-link/verify', async (request, reply) => {
+    const body = emailLinkVerifySchema.parse(request.body);
+    const result = await verifyEmailLink(app, body.token);
+    reply.send(result);
   });
 }

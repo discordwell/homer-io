@@ -68,3 +68,30 @@ describe('Google Auth - Org options', () => {
     });
   });
 });
+
+describe('Google Auth - Route schemas', () => {
+  it('validates googleAuthSchema', async () => {
+    const { googleAuthSchema } = await import('@homer-io/shared');
+    expect(() => googleAuthSchema.parse({ credential: '' })).toThrow();
+    expect(() => googleAuthSchema.parse({ credential: 'valid-token' })).not.toThrow();
+  });
+
+  it('validates orgChoiceSchema', async () => {
+    const { orgChoiceSchema } = await import('@homer-io/shared');
+    expect(() => orgChoiceSchema.parse({
+      credential: 'token',
+      choice: 'fresh',
+      orgName: 'My Org',
+    })).not.toThrow();
+
+    expect(() => orgChoiceSchema.parse({
+      credential: 'token',
+      choice: 'join',
+    })).not.toThrow();
+
+    expect(() => orgChoiceSchema.parse({
+      credential: 'token',
+      choice: 'invalid',
+    })).toThrow();
+  });
+});
