@@ -22,6 +22,15 @@ export function RouteMap({ stops = [], center = [40.7128, -74.006], zoom = 12, h
     }).addTo(map);
     mapRef.current = map;
 
+    // Try to center on user's location if no custom center was provided
+    if (center[0] === 40.7128 && center[1] === -74.006) {
+      navigator.geolocation?.getCurrentPosition(
+        (pos) => { map.setView([pos.coords.latitude, pos.coords.longitude], zoom); },
+        () => {}, // keep default on denial
+        { timeout: 3000 },
+      );
+    }
+
     map.on('click', (e: L.LeafletMouseEvent) => {
       onClickRef.current?.(e.latlng.lat, e.latlng.lng);
     });
