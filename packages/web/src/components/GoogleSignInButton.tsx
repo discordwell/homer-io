@@ -22,7 +22,9 @@ export function GoogleSignInButton({ onSuccess, onError, text = 'continue_with' 
         onError={() => onError?.('Google sign-in was cancelled')}
         text={text}
         shape="rectangular"
-        theme="outline"
+        theme="filled_black"
+        size="large"
+        width="300"
       />
     </div>
   );
