@@ -34,9 +34,10 @@ describe('Mobile Responsive: CSS media queries', () => {
     expect(appCss).toContain('.sidebar-backdrop');
   });
 
-  it('has mobile breakpoint for KPI grids', () => {
+  it('has fluid KPI grid with auto-fit', () => {
     expect(appCss).toContain('.kpi-grid');
-    expect(appCss).toContain('repeat(2, 1fr)');
+    expect(appCss).toContain('auto-fit');
+    expect(appCss).toContain('minmax');
   });
 
   it('has mobile breakpoint for page headers', () => {
