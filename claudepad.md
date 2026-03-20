@@ -2,6 +2,36 @@
 
 ## Session Summaries
 
+### 2026-03-20T23:30 UTC — Mobile App Phase 0+1: Expo/React Native Foundation + Driver Core
+- **New package**: `packages/mobile/` — Expo SDK 55, React Native 0.83, Expo Router (file-based navigation)
+- **Phase 0 (Foundation)**: app.config.ts (io.homer.mobile), metro.config.js (monorepo watchFolders), eas.json (3 build profiles), turbo.json (mobile tasks), theme.ts (raw hex tokens from web CSS vars), MMKV v4 Zustand adapter
+- **Phase 1 (Auth + Driver Core)**: API client with expo-secure-store JWT storage + token refresh, auth store (MMKV persist + secure tokens), driver store (identical shape to web), role-based auth gating in root layout
+- **Screens**: Login, Register, Driver Route (FlatList + StopCards + progress bar), Stop Detail (recipient info + navigate + POD/failure actions), Driver Profile (status toggle + break + sign out)
+- **Components**: StopCard, NavigateButton (platform-aware Maps link), PhotoCapture (expo-image-picker camera), SignaturePad (react-native-signature-canvas), PODFlow (4-step wizard), DeliveryFailureFlow (reason selector + photo + notes), Badge, LoadingSpinner, EmptyState
+- **Navigation**: 3 route groups — (auth) stack, (driver) bottom tabs (Route/Map/Profile), (dispatch) bottom tabs (Dashboard/Orders/Map/AI/More) with sub-screens
+- **40 source files** total. TypeScript compiles clean. iOS + Android bundles export successfully (2.8MB).
+- **Next**: Phase 2 (background GPS, push notifications, biometric, offline POD, live map)
+
+### 2026-03-20T22:00 UTC — Fluid Responsive (Smooth Resize)
+- **Approach**: Replaced hard-snap breakpoints with fluid CSS inspired by Vercel/Linear patterns.
+- **CSS tokens**: Added `--page-pad`, `--page-heading`, `--card-gap`, `--section-gap` as `clamp()` values in `:root`.
+- **KPI grids**: Switched from `repeat(4, 1fr)` + breakpoint overrides to `auto-fit/minmax(min(180px, 100%), 1fr)` — cards flow naturally as viewport changes. Same for 6-column, intelligence, and migration grids.
+- **Two-column layouts**: Analytics chart grid uses `clamp(240px, 30vw, 320px)` for heatmap; Route builder uses `clamp(300px, 35vw, 400px)` for controls. Both stack below 900px.
+- **Typography**: Page heading `h2` elements scale via `var(--page-heading)` = `clamp(18px, 2.5vw, 24px)`.
+- **Spacing**: Main content padding uses `var(--page-pad)` = `clamp(16px, 3vw, 32px)`. Gap uses `var(--card-gap)`.
+- **Fixed widths removed**: DispatchBoard columns (was 280px → `clamp(220px, 25vw, 280px)`), LiveMap feed minWidth (was 240px → 0), Dispatch AI panel (was 480px → `min(480px, 100%)`).
+- **Form grids**: `auto-fit/minmax` instead of hard 1fr at 640px.
+- **10 files modified**. Deployed as commit a631ade.
+
+### 2026-03-20T21:15 UTC — Comprehensive Mobile Responsive Support
+- **Scope**: All pages and layouts now work at mobile/tablet widths (375px–1024px).
+- **CSS foundation** (`app.css`): Added 13 new responsive media query blocks for: analytics chart grids, route builder grid, route detail header/stops, form grids in modals, bulk action bar, intelligence widget KPIs, migration page, dispatch board, 6-column KPI variant, demo main layout, search rows, driver leaderboard rows, public tracking.
+- **DemoDashboardLayout**: Full mobile sidebar support — hamburger menu toggle, slide-out drawer with backdrop, `useIsMobile` hook, body scroll lock, Escape key close, route-change auto-close. Matches DashboardLayout's mobile behavior.
+- **17 files modified**: app.css + DemoDashboardLayout + Analytics + RouteBuilder + RouteDetail + Orders + Vehicles + Migration + LiveMap + DispatchBoard + IntelligenceWidget + DemoDashboard + DemoAnalytics + DemoOrders + DemoRoutes + DemoFleet + PublicTracking.
+- **Pattern**: Added CSS class names to inline-styled elements, then media queries override `grid-template-columns`, `flex-direction`, etc. with `!important`.
+- **Breakpoints used**: 1024px (tablet), 768px (mobile sidebar/layout), 640px (form grids, small cards), 480px (notifications, auth), 374px (extra-small).
+- **Deployed**: Commit c56ed66, deployed via SSH to ovh2. All CSS/JS verified on production.
+
 ### 2026-03-20T18:00 UTC — Per-User Demo Tenants with Live AI Copilot
 - **Backend**: New `POST /api/auth/demo-session` anonymous endpoint — creates real tenant (isDemo=true) + visitor user, seeds location-aware data, returns JWT. Rate limited 5/min/IP, 1hr Redis cache to prevent refresh spam.
 - **Geocoding**: New `packages/api/src/lib/geocoding.ts` — MapTiler reverse geocoding with 60-city fallback, `generateLocalAddresses()` generates 24 addresses within 15km of visitor's coordinates.

@@ -9,6 +9,14 @@
       "cache": false,
       "persistent": true
     },
+    "mobile:start": {
+      "cache": false,
+      "persistent": true
+    },
+    "mobile:build": {
+      "dependsOn": ["^build"],
+      "outputs": [".expo/**"]
+    },
     "test": {
       "dependsOn": ["^build"]
     },

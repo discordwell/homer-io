@@ -1,0 +1,43 @@
+{
+  "name": "@homer-io/mobile",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@homer-io/shared": "*",
+    "@react-native-community/netinfo": "11.5.2",
+    "expo": "~55.0.8",
+    "expo-constants": "~55.0.9",
+    "expo-device": "~55.0.10",
+    "expo-haptics": "~55.0.9",
+    "expo-image-picker": "~55.0.13",
+    "expo-local-authentication": "~55.0.9",
+    "expo-location": "~55.1.4",
+    "expo-notifications": "~55.0.13",
+    "expo-router": "~55.0.7",
+    "expo-secure-store": "~55.0.9",
+    "expo-splash-screen": "~55.0.12",
+    "expo-status-bar": "~55.0.4",
+    "react": "19.2.0",
+    "react-native": "0.83.2",
+    "react-native-maps": "1.27.2",
+    "react-native-mmkv": "^4.3.0",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-signature-canvas": "^5.0.2",
+    "socket.io-client": "^4.8.3",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "babel-plugin-module-resolver": "^5.0.3",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}
