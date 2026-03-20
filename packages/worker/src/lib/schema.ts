@@ -139,6 +139,17 @@ export const webhookEndpoints = pgTable('webhook_endpoints', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Device tokens (needed by notification worker for push notifications)
+export const deviceTokens = pgTable('device_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  tenantId: uuid('tenant_id').notNull(),
+  token: varchar('token', { length: 500 }).unique().notNull(),
+  platform: varchar('platform', { length: 10 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Users (needed by notification worker for email lookup)
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),

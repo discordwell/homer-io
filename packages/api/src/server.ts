@@ -20,6 +20,7 @@ import { apiKeyRoutes } from './modules/api-keys/routes.js';
 import { notificationRoutes } from './modules/notifications/routes.js';
 import { customerNotificationTemplateRoutes, customerNotificationLogRoutes } from './modules/customer-notifications/routes.js';
 import { driverRoutes } from './modules/driver/routes.js';
+import { deviceRoutes } from './modules/devices/routes.js';
 import { podRoutes } from './modules/pod/routes.js';
 import { dispatchRoutes } from './modules/dispatch/routes.js';
 import { initSocketIO } from './lib/ws/index.js';
@@ -134,6 +135,7 @@ await app.register(async (api) => {
   await api.register(customerNotificationTemplateRoutes, { prefix: '/settings/notification-templates' });
   await api.register(customerNotificationLogRoutes, { prefix: '/notifications/customer-log' });
   await api.register(driverRoutes, { prefix: '/driver' });
+  await api.register(deviceRoutes, { prefix: '/devices' });
   await api.register(podRoutes, { prefix: '/pod' });
   // AI-powered auto-dispatch — tighter rate limit (5/min)
   await api.register(async (dispatchScope) => {

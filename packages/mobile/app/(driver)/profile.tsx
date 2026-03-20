@@ -5,6 +5,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDriverStore } from '@/stores/driver';
 import { useAuthStore } from '@/stores/auth';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import {
+  isBiometricAvailable,
+  isBiometricEnabled,
+  setBiometricEnabled,
+  getBiometricType,
+} from '@/services/biometric';
 import { C, Size, Spacing, Radius, Base } from '@/theme';
 
 export default function DriverProfileScreen() {
@@ -12,6 +18,20 @@ export default function DriverProfileScreen() {
   const { profile, loadingProfile, fetchProfile, updateStatus } = useDriverStore();
   const { user, logout } = useAuthStore();
   const [toggling, setToggling] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricOn, setBiometricOn] = useState(isBiometricEnabled());
+  const [biometricLabel, setBiometricLabel] = useState('Biometric');
+
+  useEffect(() => {
+    (async () => {
+      const available = await isBiometricAvailable();
+      setBiometricAvailable(available);
+      if (available) {
+        const label = await getBiometricType();
+        setBiometricLabel(label);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     fetchProfile();
@@ -99,6 +119,24 @@ export default function DriverProfileScreen() {
               {profile?.status === 'on_break' ? 'End Break' : 'Take a Break'}
             </Text>
           </Pressable>
+        )}
+
+        {/* Biometric unlock */}
+        {biometricAvailable && (
+          <View style={styles.toggleCard}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleTitle}>{biometricLabel} Unlock</Text>
+              <Text style={styles.toggleSub}>
+                {biometricOn ? `Unlock with ${biometricLabel}` : 'Use password to unlock'}
+              </Text>
+            </View>
+            <Switch
+              value={biometricOn}
+              onValueChange={(v) => { setBiometricOn(v); setBiometricEnabled(v); }}
+              trackColor={{ false: C.muted, true: C.accent }}
+              thumbColor="#fff"
+            />
+          </View>
         )}
 
         {/* Sign out */}

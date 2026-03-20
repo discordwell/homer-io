@@ -1,8 +1,9 @@
 import type { Job } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { db } from '../lib/db.js';
-import { notifications, users } from '../lib/schema.js';
+import { notifications, users, deviceTokens } from '../lib/schema.js';
 import { sendEmail } from './providers/email.js';
+import { sendPushNotifications } from './providers/push.js';
 import { config } from '../lib/config.js';
 import { logger } from '../lib/logger.js';
 
@@ -40,6 +41,23 @@ export async function processNotification(job: Job<NotificationJobData>) {
   });
 
   log.info('Saved notification', { title, userId });
+
+  // Send push notification to mobile devices
+  const tokens = await db
+    .select({ token: deviceTokens.token })
+    .from(deviceTokens)
+    .where(eq(deviceTokens.userId, userId));
+
+  if (tokens.length > 0) {
+    await sendPushNotifications(
+      tokens.map((t) => t.token),
+      title,
+      body,
+      { type, ...data },
+    ).catch(err =>
+      log.error('Push notification failed', { userId, error: err instanceof Error ? err.message : 'Unknown error' }),
+    );
+  }
 
   // Send email for important notification types
   if (EMAIL_WORTHY_TYPES.has(type)) {
