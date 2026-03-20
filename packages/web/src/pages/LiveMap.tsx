@@ -3,6 +3,7 @@ import { C, F } from '../theme.js';
 import { useSocket } from '../hooks/useSocket.js';
 import { useTrackingStore, type DeliveryEventItem } from '../stores/tracking.js';
 import { useAuthStore } from '../stores/auth.js';
+import { useDemoStore } from '../stores/demo.js';
 import { LiveFleetMap } from '../components/LiveFleetMap.js';
 import { DeliveryEventFeed } from '../components/DeliveryEventFeed.js';
 import { DEMO_ROUTE_PATHS, advanceAlongPath, type DemoRoutePath } from '../data/demo-route-paths.js';
@@ -78,7 +79,7 @@ export default function LiveMap() {
   const subscribeToUpdates = useTrackingStore((s) => s.subscribeToUpdates);
   const unsubscribe = useTrackingStore((s) => s.unsubscribe);
   const loading = useTrackingStore((s) => s.loading);
-  const isDemo = useAuthStore((s) => s.user?.isDemo);
+  const isDemo = useDemoStore((s) => s.isDemoMode);
 
   // Track driver progress for the map visualization
   const [driverProgress, setDriverProgress] = useState<Map<string, number>>(new Map());

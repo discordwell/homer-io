@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Socket } from 'socket.io-client';
 import { api } from '../api/client.js';
-import { useAuthStore } from './auth.js';
+import { useDemoStore } from './demo.js';
 import { DEMO_DRIVERS } from '../data/demo-data.js';
 
 export interface DriverLocation {
@@ -55,7 +55,7 @@ export const useTrackingStore = create<TrackingState>()((set) => ({
   fetchDriverLocations: async () => {
     set({ loading: true });
     try {
-      const isDemo = useAuthStore.getState().user?.isDemo;
+      const isDemo = useDemoStore.getState().isDemoMode;
       let data: DriverLocation[] = [];
       try {
         data = await api.get<DriverLocation[]>('/tracking/drivers');

@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { C, F } from '../theme.js';
 import { useTrackingStore, type DriverLocation } from '../stores/tracking.js';
-import { useAuthStore } from '../stores/auth.js';
+import { useDemoStore } from '../stores/demo.js';
 import { DriverMarker } from './DriverMarker.js';
 import { DEMO_ROUTE_PATHS, type DemoRoutePath } from '../data/demo-route-paths.js';
 
@@ -23,7 +23,7 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
   const mapRef = useRef<L.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const driverLocations = useTrackingStore((s) => s.driverLocations);
-  const isDemo = useAuthStore((s) => s.user?.isDemo);
+  const isDemo = useDemoStore((s) => s.isDemoMode);
 
   // Track layers for cleanup
   const routeLayersRef = useRef<L.LayerGroup | null>(null);
