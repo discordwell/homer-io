@@ -1,10 +1,75 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { C, F } from '../theme.js';
 import { useSocket } from '../hooks/useSocket.js';
-import { useTrackingStore } from '../stores/tracking.js';
+import { useTrackingStore, type DeliveryEventItem } from '../stores/tracking.js';
 import { useAuthStore } from '../stores/auth.js';
 import { LiveFleetMap } from '../components/LiveFleetMap.js';
 import { DeliveryEventFeed } from '../components/DeliveryEventFeed.js';
+import { DEMO_ROUTE_PATHS, advanceAlongPath, type DemoRoutePath } from '../data/demo-route-paths.js';
+
+// Per-driver simulation state
+interface SimState {
+  pathIndex: number;
+  fraction: number;
+}
+
+// Distance per tick in degrees (~0.0012° ≈ 133m, gives brisk visual movement)
+const DISTANCE_PER_TICK = 0.0012;
+// Jitter interval for available drivers (every N ticks)
+const JITTER_INTERVAL = 8;
+
+let demoEventCounter = 100;
+
+function seedInitialEvents() {
+  const now = new Date();
+  const events: DeliveryEventItem[] = [];
+
+  for (const route of DEMO_ROUTE_PATHS) {
+    for (const stop of route.stops) {
+      if (!stop.completed) continue;
+
+      demoEventCounter++;
+      const minutesAgo = Math.floor(Math.random() * 60) + 5;
+      const isFailed = stop.orderId === 'demo-010'; // Walnut Creek was a failure
+
+      events.push({
+        id: `demo-evt-${demoEventCounter}`,
+        routeId: route.routeId,
+        routeName: route.routeName,
+        orderId: stop.orderId,
+        recipientName: stop.recipientName,
+        status: isFailed ? 'failed' : 'delivered',
+        failureReason: isFailed ? 'Customer not available' : null,
+        timestamp: new Date(now.getTime() - minutesAgo * 60000).toISOString(),
+      });
+    }
+  }
+
+  events.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  const seeded = events.slice(0, 6);
+
+  useTrackingStore.setState((state) => ({
+    deliveryEvents: [...seeded, ...state.deliveryEvents].slice(0, 50),
+  }));
+}
+
+function fireStopEvent(route: DemoRoutePath, stop: DemoRoutePath['stops'][0], isFailed: boolean) {
+  demoEventCounter++;
+  const event: DeliveryEventItem = {
+    id: `demo-evt-${demoEventCounter}`,
+    routeId: route.routeId,
+    routeName: route.routeName,
+    orderId: stop.orderId,
+    recipientName: stop.recipientName,
+    status: isFailed ? 'failed' : 'delivered',
+    failureReason: isFailed ? 'Customer not available' : null,
+    timestamp: new Date().toISOString(),
+  };
+
+  useTrackingStore.setState((state) => ({
+    deliveryEvents: [event, ...state.deliveryEvents].slice(0, 50),
+  }));
+}
 
 export default function LiveMap() {
   const socket = useSocket();
@@ -15,6 +80,9 @@ export default function LiveMap() {
   const loading = useTrackingStore((s) => s.loading);
   const isDemo = useAuthStore((s) => s.user?.isDemo);
 
+  // Track driver progress for the map visualization
+  const [driverProgress, setDriverProgress] = useState<Map<string, number>>(new Map());
+
   // Fetch initial driver locations on mount
   useEffect(() => {
     fetchDriverLocations();
@@ -24,55 +92,123 @@ export default function LiveMap() {
   // Subscribe to real-time updates when socket connects
   useEffect(() => {
     if (!socket) return;
-
     subscribeToUpdates(socket);
-
-    return () => {
-      unsubscribe(socket);
-    };
+    return () => { unsubscribe(socket); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
 
-  // Demo mode: simulate driver movement for on_route drivers
-  const headingsRef = useRef<Map<string, number>>(new Map());
+  // Demo mode: route-following simulation
+  const simStateRef = useRef<Map<string, SimState>>(new Map());
+  const tickRef = useRef(0);
+  const seededRef = useRef(false);
+  const passedStopsRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     if (!isDemo) return;
+
+    // Initialize sim state for each route driver
+    for (const route of DEMO_ROUTE_PATHS) {
+      if (!simStateRef.current.has(route.driverId)) {
+        simStateRef.current.set(route.driverId, {
+          pathIndex: route.initialPathIndex,
+          fraction: 0,
+        });
+      }
+    }
+
+    // Mark already-completed stops as passed so we don't re-fire events
+    for (const route of DEMO_ROUTE_PATHS) {
+      for (const stop of route.stops) {
+        if (stop.completed) {
+          passedStopsRef.current.add(`${route.driverId}:${stop.orderId}`);
+        }
+      }
+    }
+
+    // Seed initial delivery events from completed stops
+    if (!seededRef.current) {
+      seededRef.current = true;
+      seedInitialEvents();
+    }
+
     const interval = setInterval(() => {
+      tickRef.current++;
       const store = useTrackingStore.getState();
       const updated = new Map(store.driverLocations);
       let changed = false;
-      updated.forEach((driver, id) => {
-        if (driver.driverStatus !== 'on_route') return;
-        // Get or initialize heading
-        let heading = headingsRef.current.get(id) ?? (Math.random() * 360);
-        // Slight random heading drift (-15 to +15 degrees)
-        heading = (heading + (Math.random() - 0.5) * 30) % 360;
-        headingsRef.current.set(id, heading);
-        // Move ~200m in the heading direction
-        const dist = 0.002 + Math.random() * 0.001;
-        const rad = (heading * Math.PI) / 180;
-        const newLat = driver.lat + dist * Math.cos(rad);
-        const newLng = driver.lng + dist * Math.sin(rad);
-        // Keep within Bay Area bounds
-        if (newLat > 37.2 && newLat < 38.0 && newLng > -122.6 && newLng < -121.7) {
+      const progressMap = new Map<string, number>();
+
+      // Advance on_route drivers along their paths
+      for (const route of DEMO_ROUTE_PATHS) {
+        const driver = updated.get(route.driverId);
+        if (!driver || driver.driverStatus !== 'on_route') continue;
+
+        const sim = simStateRef.current.get(route.driverId);
+        if (!sim) continue;
+
+        const result = advanceAlongPath(
+          sim.pathIndex,
+          sim.fraction,
+          route.path,
+          DISTANCE_PER_TICK + (Math.random() - 0.5) * 0.0003,
+        );
+
+        sim.pathIndex = result.pathIndex;
+        sim.fraction = result.fraction;
+        progressMap.set(route.driverId, result.pathIndex);
+
+        updated.set(route.driverId, {
+          ...driver,
+          lat: result.lat,
+          lng: result.lng,
+          heading: Math.round(result.heading),
+          speed: 25 + Math.random() * 15,
+          updatedAt: new Date().toISOString(),
+        });
+        changed = true;
+
+        // Check if driver passed a stop → fire delivery event
+        for (const stop of route.stops) {
+          if (stop.completed) continue;
+          const key = `${route.driverId}:${stop.orderId}`;
+          if (passedStopsRef.current.has(key)) continue;
+
+          if (result.pathIndex >= stop.pathIndex) {
+            passedStopsRef.current.add(key);
+            fireStopEvent(route, stop, Math.random() < 0.1);
+          }
+        }
+
+        // If looped, reset non-completed stop tracking for new lap
+        if (result.looped) {
+          for (const stop of route.stops) {
+            if (!stop.completed) {
+              passedStopsRef.current.delete(`${route.driverId}:${stop.orderId}`);
+            }
+          }
+        }
+      }
+
+      // Available drivers: tiny jitter every JITTER_INTERVAL ticks
+      if (tickRef.current % JITTER_INTERVAL === 0) {
+        updated.forEach((driver, id) => {
+          if (driver.driverStatus !== 'available') return;
           updated.set(id, {
             ...driver,
-            lat: newLat,
-            lng: newLng,
-            heading: Math.round(heading),
-            speed: 25 + Math.random() * 20,
+            lat: driver.lat + (Math.random() - 0.5) * 0.0003,
+            lng: driver.lng + (Math.random() - 0.5) * 0.0003,
             updatedAt: new Date().toISOString(),
           });
           changed = true;
-        } else {
-          // Reverse heading if hitting bounds
-          headingsRef.current.set(id, (heading + 180) % 360);
-        }
-      });
+        });
+      }
+
       if (changed) {
         useTrackingStore.setState({ driverLocations: updated });
       }
-    }, 2000);
+      setDriverProgress(progressMap);
+    }, 1000);
+
     return () => clearInterval(interval);
   }, [isDemo]);
 
@@ -165,7 +301,7 @@ export default function LiveMap() {
       >
         {/* Map - 70% width */}
         <div className="live-map-pane" style={{ flex: 7, minWidth: 0 }}>
-          <LiveFleetMap height="100%" />
+          <LiveFleetMap height="100%" driverProgress={driverProgress} />
         </div>
 
         {/* Event feed - 30% width */}

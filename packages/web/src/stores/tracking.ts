@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { Socket } from 'socket.io-client';
 import { api } from '../api/client.js';
+import { useAuthStore } from './auth.js';
+import { DEMO_DRIVERS } from '../data/demo-data.js';
 
 export interface DriverLocation {
   driverId: string;
@@ -53,7 +55,28 @@ export const useTrackingStore = create<TrackingState>()((set) => ({
   fetchDriverLocations: async () => {
     set({ loading: true });
     try {
-      const data = await api.get<DriverLocation[]>('/tracking/drivers');
+      const isDemo = useAuthStore.getState().user?.isDemo;
+      let data: DriverLocation[] = [];
+      try {
+        data = await api.get<DriverLocation[]>('/tracking/drivers');
+      } catch {
+        // API may fail in demo mode — fall through to demo fallback
+      }
+      if (data.length === 0 && isDemo) {
+        // Populate from static demo drivers when API returns nothing
+        data = DEMO_DRIVERS
+          .filter((d) => d.status !== 'offline' && d.lat != null && d.lng != null)
+          .map((d) => ({
+            driverId: d.id,
+            driverName: d.name,
+            driverStatus: d.status,
+            lat: d.lat!,
+            lng: d.lng!,
+            speed: d.speed,
+            heading: d.heading,
+            updatedAt: new Date().toISOString(),
+          }));
+      }
       const locations = new Map<string, DriverLocation>();
       for (const d of data) {
         locations.set(d.driverId, d);

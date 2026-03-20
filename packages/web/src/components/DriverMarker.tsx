@@ -3,6 +3,17 @@ import L from 'leaflet';
 import { C } from '../theme.js';
 import type { DriverLocation } from '../stores/tracking.js';
 
+// Inject global CSS for smooth marker movement (once)
+let cssInjected = false;
+function injectMarkerCSS() {
+  if (cssInjected) return;
+  cssInjected = true;
+  const style = document.createElement('style');
+  style.textContent = `.driver-marker-anim { transition: transform 0.9s linear !important; }`;
+  document.head.appendChild(style);
+}
+
+
 interface DriverMarkerProps {
   driver: DriverLocation;
   map: L.Map;
@@ -29,7 +40,7 @@ function createArrowIcon(heading: number | null, color: string): L.DivIcon {
 
   return L.divIcon({
     html: arrowSvg,
-    className: '',
+    className: 'driver-marker-anim',
     iconSize: [32, 32],
     iconAnchor: [16, 16],
     popupAnchor: [0, -16],
@@ -49,6 +60,7 @@ export function DriverMarker({ driver, map, onClick }: DriverMarkerProps) {
       markerRef.current.setIcon(icon);
     } else {
       // Create new marker
+      injectMarkerCSS();
       const marker = L.marker([driver.lat, driver.lng], { icon }).addTo(map);
 
       marker.bindTooltip(driver.driverName, {
