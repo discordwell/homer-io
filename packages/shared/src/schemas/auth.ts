@@ -35,6 +35,7 @@ export const userResponseSchema = z.object({
   tenantId: z.string().uuid(),
   createdAt: z.string().datetime(),
   avatarUrl: z.string().nullable().optional(),
+  isDemo: z.boolean().optional(),
 });
 export type UserResponse = z.infer<typeof userResponseSchema>;
 

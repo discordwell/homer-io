@@ -176,8 +176,10 @@ export async function getMe(userId: string): Promise<UserResponse> {
       tenantId: users.tenantId,
       createdAt: users.createdAt,
       avatarUrl: users.avatarUrl,
+      isDemo: tenants.isDemo,
     })
     .from(users)
+    .innerJoin(tenants, eq(users.tenantId, tenants.id))
     .where(eq(users.id, userId))
     .limit(1);
 
@@ -189,6 +191,7 @@ export async function getMe(userId: string): Promise<UserResponse> {
     ...user,
     createdAt: user.createdAt.toISOString(),
     avatarUrl: user.avatarUrl || null,
+    isDemo: user.isDemo,
   };
 }
 
@@ -276,6 +279,13 @@ export async function generateAuthResponse(
     expiresAt,
   });
 
+  // Look up tenant isDemo flag
+  const [tenant] = await db
+    .select({ isDemo: tenants.isDemo })
+    .from(tenants)
+    .where(eq(tenants.id, user.tenantId))
+    .limit(1);
+
   return {
     accessToken,
     refreshToken: rawRefreshToken,
@@ -287,6 +297,7 @@ export async function generateAuthResponse(
       tenantId: user.tenantId,
       createdAt: user.createdAt.toISOString(),
       avatarUrl: user.avatarUrl || null,
+      isDemo: tenant?.isDemo ?? false,
     },
   };
 }
