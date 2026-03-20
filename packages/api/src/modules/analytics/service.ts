@@ -1,4 +1,4 @@
-import { eq, and, sql, gte, lt } from 'drizzle-orm';
+import { eq, and, sql, gte, lt, inArray } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
 import { orders } from '../../lib/db/schema/orders.js';
 import { routes } from '../../lib/db/schema/routes.js';
@@ -21,6 +21,56 @@ function cutoffDate(range: '7d' | '30d' | '90d'): Date {
   const d = new Date();
   d.setDate(d.getDate() - rangeToDays(range));
   return d;
+}
+
+// ---------------------------------------------------------------------------
+// Shared helper — previous-period stats used across multiple functions
+// ---------------------------------------------------------------------------
+
+async function getPreviousPeriodStats(
+  tenantId: string,
+  cutoff: Date,
+  prevCutoff: Date,
+): Promise<{
+  delivered: number; failed: number; successRate: number; avgDeliveryTime: number;
+  routes: number; orders: number;
+}> {
+  const [delResult, failResult, avgResult, routeResult, orderResult] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
+      eq(orders.tenantId, tenantId), eq(orders.status, 'delivered'),
+      gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
+    )),
+    db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
+      eq(orders.tenantId, tenantId), eq(orders.status, 'failed'),
+      gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
+    )),
+    db.select({ avg: sql<number>`avg(EXTRACT(EPOCH FROM (${orders.completedAt} - ${orders.createdAt})) / 60)` })
+      .from(orders).where(and(
+        eq(orders.tenantId, tenantId), eq(orders.status, 'delivered'),
+        sql`${orders.completedAt} IS NOT NULL`,
+        gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
+      )),
+    db.select({ count: sql<number>`count(*)` }).from(routes).where(and(
+      eq(routes.tenantId, tenantId),
+      gte(routes.createdAt, prevCutoff), lt(routes.createdAt, cutoff),
+    )),
+    db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
+      eq(orders.tenantId, tenantId),
+      gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
+    )),
+  ]);
+
+  const delivered = Number(delResult[0].count);
+  const failed = Number(failResult[0].count);
+  const total = delivered + failed;
+  return {
+    delivered,
+    failed,
+    successRate: total > 0 ? Math.round((delivered / total) * 100 * 10) / 10 : 0,
+    avgDeliveryTime: avgResult[0].avg != null ? Math.round(Number(avgResult[0].avg)) : 0,
+    routes: Number(routeResult[0].count),
+    orders: Number(orderResult[0].count),
+  };
 }
 
 export async function getAnalyticsOverview(tenantId: string, range: '7d' | '30d' | '90d'): Promise<AnalyticsOverview> {
