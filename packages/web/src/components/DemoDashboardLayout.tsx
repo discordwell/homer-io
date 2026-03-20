@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet, Link, useLocation, useSearchParams, NavLink } from 'react-router-dom';
 import { Sidebar } from './Sidebar.js';
 import { DemoBanner } from './DemoBanner.js';
@@ -7,6 +7,20 @@ import { useDemoStore } from '../stores/demo.js';
 import { useAuthStore } from '../stores/auth.js';
 import { DEMO_USER } from '../data/demo-data.js';
 import { C } from '../theme.js';
+
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    setIsMobile(mql.matches);
+    return () => mql.removeEventListener('change', handler);
+  }, [breakpoint]);
+  return isMobile;
+}
 
 /**
  * Dashboard layout for public demo mode.
@@ -18,11 +32,45 @@ import { C } from '../theme.js';
  */
 export function DemoDashboardLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchParams] = useSearchParams();
   const enterDemo = useDemoStore((s) => s.enterDemo);
   const exitDemo = useDemoStore((s) => s.exitDemo);
   const provisionTenant = useDemoStore((s) => s.provisionTenant);
   const logout = useAuthStore((s) => s.logout);
+  const isMobile = useIsMobile();
+  const location = useLocation();
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [location.pathname]);
+
+  // Close mobile sidebar on Escape
+  useEffect(() => {
+    if (!mobileSidebarOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileSidebarOpen(false); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [mobileSidebarOpen]);
+
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (mobileSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileSidebarOpen]);
+
+  const handleSidebarToggle = useCallback(() => {
+    if (isMobile) {
+      setMobileSidebarOpen((prev) => !prev);
+    } else {
+      setSidebarCollapsed((prev) => !prev);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     // Enter demo mode and inject synthetic user (instant browse)
@@ -56,9 +104,18 @@ export function DemoDashboardLayout() {
 
       {/* Top nav */}
       <header className="topnav">
-        <Link to="/demo" className="topnav-logo">
-          HOMER<span className="dot">.</span>
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            className="mobile-menu-toggle"
+            onClick={handleSidebarToggle}
+            aria-label="Toggle navigation menu"
+          >
+            {mobileSidebarOpen ? '\u2715' : '\u2630'}
+          </button>
+          <Link to="/demo" className="topnav-logo">
+            HOMER<span className="dot">.</span>
+          </Link>
+        </div>
         <span style={{
           background: 'rgba(91, 164, 245, 0.15)',
           color: C.accent,
@@ -88,19 +145,35 @@ export function DemoDashboardLayout() {
         </div>
       </header>
 
+      {/* Mobile sidebar backdrop */}
+      {isMobile && mobileSidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar — use demo-aware paths */}
-      <DemoSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+      <DemoSidebar
+        collapsed={isMobile ? false : sidebarCollapsed}
+        onToggle={handleSidebarToggle}
+        mobileOpen={mobileSidebarOpen}
+      />
 
       {/* Main content */}
-      <div style={{
-        marginLeft: sidebarCollapsed ? 'var(--sidebar-w-collapsed)' : 'var(--sidebar-w)',
-        paddingTop: 'calc(var(--topnav-h) + 41px)', /* extra height for demo banner */
-        transition: 'margin-left 0.2s ease',
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100vh',
-      }}>
-        <main style={{ flex: 1, padding: '20px 32px 32px', overflow: 'auto', height: 'calc(100vh - var(--topnav-h) - 41px)' }}>
+      <div
+        className="demo-main"
+        style={{
+          marginLeft: isMobile ? 0 : (sidebarCollapsed ? 'var(--sidebar-w-collapsed)' : 'var(--sidebar-w)'),
+          paddingTop: 'calc(var(--topnav-h) + 41px)',
+          transition: 'margin-left 0.2s ease',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100vh',
+        }}
+      >
+        <main style={{ flex: 1, padding: isMobile ? '16px' : '20px 32px 32px', overflow: 'auto', height: 'calc(100vh - var(--topnav-h) - 41px)' }}>
           <Outlet />
         </main>
       </div>
@@ -127,12 +200,12 @@ const demoNavItems = [
   { label: 'Analytics', path: '/demo/analytics', icon: '\u{1F4C8}' },
 ];
 
-function DemoSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+function DemoSidebar({ collapsed, onToggle, mobileOpen }: { collapsed: boolean; onToggle: () => void; mobileOpen?: boolean }) {
   const location = useLocation();
   const [fleetOpen, setFleetOpen] = useState(location.pathname.includes('/fleet'));
 
   return (
-    <nav className={`sidebar${collapsed ? ' collapsed' : ''}`} style={{ top: 'calc(var(--topnav-h) + 41px)' }}>
+    <nav className={`sidebar${collapsed ? ' collapsed' : ''}${mobileOpen ? ' mobile-open' : ''}`} style={{ top: 'calc(var(--topnav-h) + 41px)' }}>
       <button className="sidebar-toggle" onClick={onToggle} aria-label="Toggle sidebar">
         {collapsed ? '\u25B6' : '\u25C0'}
       </button>

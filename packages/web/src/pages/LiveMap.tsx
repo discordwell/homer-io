@@ -237,6 +237,7 @@ export default function LiveMap() {
     >
       {/* Header */}
       <div
+        className="live-map-header"
         style={{
           padding: '16px 24px',
           display: 'flex',

@@ -83,7 +83,7 @@ export function IntelligenceWidget() {
       </div>
 
       {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+      <div className="intel-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
         <KPICard icon="🧠" label="Addresses Learned" value={summary.totalAddressesLearned} color={C.accent} />
         <KPICard icon="📊" label="Deliveries Tracked" value={summary.totalDeliveriesTracked} color={C.green} />
         <KPICard icon="⏱️" label="Avg Service Time" value={avgServiceMin} color={C.yellow} />

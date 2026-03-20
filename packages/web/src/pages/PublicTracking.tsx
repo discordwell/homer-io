@@ -121,6 +121,7 @@ export function PublicTrackingPage() {
 
       {/* Content */}
       <main
+        className="tracking-main"
         style={{
           maxWidth: 560,
           margin: '0 auto',

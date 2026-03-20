@@ -112,12 +112,12 @@ export function RouteBuilderPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h2 style={{ fontFamily: F.display, fontSize: 24, marginBottom: 4 }}>Route Builder</h2>
           <p style={{ color: C.dim, fontSize: 14 }}>Click the map or add orders to build a route</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="page-header-actions" style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => navigate('/dashboard/routes')} style={cancelBtnStyle}>Cancel</button>
           <button onClick={handleSave} disabled={saving} style={primaryBtnStyle}>
             {saving ? 'Saving...' : 'Save Route'}
@@ -125,7 +125,7 @@ export function RouteBuilderPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 24 }}>
+      <div className="route-builder-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 24 }}>
         {/* Left: Map */}
         <div>
           <RouteMap stops={stops} onClick={addMapStop} height="500px" />

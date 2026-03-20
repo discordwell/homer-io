@@ -135,8 +135,8 @@ export function DispatchBoard() {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
-      <div style={{ display: 'flex', gap: 16, minWidth: 'max-content' }}>
+    <div style={{ overflowX: 'auto', paddingBottom: 16, WebkitOverflowScrolling: 'touch' }}>
+      <div className="dispatch-board-columns" style={{ display: 'flex', gap: 16, minWidth: 'max-content' }}>
         {/* Unassigned column */}
         <div style={columnStyle}>
           <div style={columnHeaderStyle}>

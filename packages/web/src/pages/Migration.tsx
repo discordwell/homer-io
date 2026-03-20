@@ -220,7 +220,7 @@ export function MigrationPage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: 32, maxWidth: 1100, margin: '0 auto' }}>
+    <div className="migration-page" style={{ padding: 32, maxWidth: 1100, margin: '0 auto' }}>
       <h1 style={{ fontFamily: F.display, fontSize: 28, marginBottom: 8 }}>Migrate Data</h1>
       <p style={{ color: C.dim, fontSize: 14, marginBottom: 32 }}>
         Import your orders, drivers, and vehicles from another platform via API or CSV export.
@@ -321,7 +321,7 @@ export function MigrationPage() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="migration-date-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={{ fontSize: 14, fontWeight: 500, marginBottom: 6, display: 'block' }}>Date Range Start (optional)</label>
                   <input type="date" value={dateRangeStart} onChange={e => setDateRangeStart(e.target.value)} style={inputStyle} />
@@ -463,7 +463,7 @@ export function MigrationPage() {
             {' '}&middot;{' '}Mode: <strong style={{ color: C.text }}>{importMode === 'api' ? 'API Import' : 'CSV Import'}</strong>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+          <div className="migration-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
             <SummaryCard label="Orders" count={importOrders ? reviewOrderCount : 0} active={importOrders} />
             <SummaryCard label="Drivers" count={importDrivers ? reviewDriverCount : 0} active={importDrivers} />
             <SummaryCard label="Vehicles" count={importVehicles ? reviewVehicleCount : 0} active={importVehicles} />
@@ -538,7 +538,7 @@ export function MigrationPage() {
           </div>
 
           {progress && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+            <div className="migration-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
               {progress.orders.total > 0 && <ResultCard label="Orders" imported={progress.orders.imported} failed={progress.orders.failed} total={progress.orders.total} />}
               {progress.drivers.total > 0 && <ResultCard label="Drivers" imported={progress.drivers.imported} failed={progress.drivers.failed} total={progress.drivers.total} />}
               {progress.vehicles.total > 0 && <ResultCard label="Vehicles" imported={progress.vehicles.imported} failed={progress.vehicles.failed} total={progress.vehicles.total} />}
@@ -586,7 +586,7 @@ export function MigrationPage() {
         )}
         {!loading && jobs.length > 0 && (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <table className="migration-history-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${C.muted}` }}>
                   <th style={thStyle}>Platform</th>

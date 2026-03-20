@@ -142,7 +142,7 @@ export function VehiclesPage() {
           <SelectField label="Type" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as CreateVehicleInput['type'] })} options={vehicleTypes} required />
           <FormField label="License Plate" value={form.licensePlate || ''} onChange={(e) => setForm({ ...form, licensePlate: e.target.value })} />
           <SelectField label="Fuel Type" value={form.fuelType!} onChange={(e) => setForm({ ...form, fuelType: e.target.value as CreateVehicleInput['fuelType'] })} options={fuelTypes} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div className="form-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <FormField label="Weight Cap (kg)" type="number" value={form.capacityWeight ?? ''} onChange={(e) => setForm({ ...form, capacityWeight: e.target.value ? Number(e.target.value) : undefined })} />
             <FormField label="Volume Cap (m³)" type="number" value={form.capacityVolume ?? ''} onChange={(e) => setForm({ ...form, capacityVolume: e.target.value ? Number(e.target.value) : undefined })} step="0.1" />
             <FormField label="Package Cap" type="number" value={form.capacityCount ?? ''} onChange={(e) => setForm({ ...form, capacityCount: e.target.value ? Number(e.target.value) : undefined })} />

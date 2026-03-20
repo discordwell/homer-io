@@ -101,7 +101,7 @@ export function RouteDetailPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="route-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={() => navigate('/dashboard/routes')}
             style={{ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', fontSize: 18 }}>←</button>
@@ -192,7 +192,7 @@ export function RouteDetailPage() {
             {(route.orders || []).map((order, i) => {
               const risk = riskScores.find(r => r.orderId === order.id);
               return (
-                <div key={order.id} style={{
+                <div key={order.id} className="route-detail-stop" style={{
                   display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
                   background: C.bg3, borderRadius: 8,
                 }}>

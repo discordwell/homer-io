@@ -33,7 +33,7 @@ export function DemoDashboardPage() {
       <p style={{ color: C.dim, marginBottom: 32 }}>Explore the logistics command center with sample data</p>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
+      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
         <KPICard icon="&#x1F5FA;&#xFE0F;" label="Active Routes" value={stats.activeRoutes} color={C.accent} />
         <KPICard icon="&#x1F4E6;" label="Orders Today" value={stats.ordersToday} color={C.green} />
         <KPICard icon="&#x1F464;" label="Active Drivers" value={stats.activeDrivers} color={C.yellow} />

@@ -227,7 +227,7 @@ export function OrdersPage() {
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div className="search-row" style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         <input value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
           placeholder="Search by recipient name..."
@@ -242,7 +242,7 @@ export function OrdersPage() {
 
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (
-        <div style={{
+        <div className="bulk-action-bar" style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
           background: alpha(C.accent, 0.08), border: `1px solid ${alpha(C.accent, 0.20)}`,
           borderRadius: 8, marginBottom: 16,
@@ -302,17 +302,17 @@ export function OrdersPage() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add Order" size="md">
         <form onSubmit={handleSubmit}>
           <FormField label="Recipient Name" value={form.recipientName} onChange={(e) => setForm({ ...form, recipientName: e.target.value })} required />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <FormField label="Phone" value={form.recipientPhone} onChange={(e) => setForm({ ...form, recipientPhone: e.target.value })} />
             <FormField label="Email" type="email" value={form.recipientEmail} onChange={(e) => setForm({ ...form, recipientEmail: e.target.value })} />
           </div>
           <FormField label="Street Address" value={form.street} onChange={(e) => setForm({ ...form, street: e.target.value })} required />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div className="form-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <FormField label="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required />
             <FormField label="State" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} required />
             <FormField label="ZIP" value={form.zip} onChange={(e) => setForm({ ...form, zip: e.target.value })} required />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <FormField label="Packages" type="number" value={form.packageCount} onChange={(e) => setForm({ ...form, packageCount: parseInt(e.target.value) || 1 })} min={1} />
             <SelectField label="Priority" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as typeof emptyForm.priority })}
               options={[

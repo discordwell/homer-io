@@ -76,7 +76,7 @@ export function AnalyticsPage() {
 
       {/* KPI Cards (6 animated) */}
       {ov && (
-        <div className="kpi-grid" style={{
+        <div className="kpi-grid kpi-grid-6" style={{
           display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 24,
         }}>
           <AnimatedKPICard
@@ -142,7 +142,7 @@ export function AnalyticsPage() {
       {/* ── Zone B: The Story ── */}
 
       {/* Trend Chart + Heatmap */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16, marginBottom: 24 }}>
+      <div className="analytics-chart-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16, marginBottom: 24 }}>
         <EnhancedTrendChart data={enhancedTrends} />
         <DeliveryHeatmap data={heatmap} />
       </div>
@@ -153,7 +153,7 @@ export function AnalyticsPage() {
       {/* ── Zone C: The Detail ── */}
 
       {/* Tab bar */}
-      <div style={{
+      <div className="analytics-tab-bar" style={{
         display: 'flex', gap: 0, marginBottom: 20, borderBottom: `1px solid ${C.muted}`,
       }}>
         {([

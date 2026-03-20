@@ -42,7 +42,7 @@ export function DemoRoutesPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h2 style={{ fontFamily: F.display, fontSize: 24, margin: 0 }}>Routes</h2>
         <button onClick={handleDemoAction} style={{
           padding: '10px 20px', borderRadius: 8, background: C.accent,

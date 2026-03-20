@@ -8,7 +8,7 @@ import { C, F } from '../theme.js';
 export function DemoAnalyticsPage() {
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ fontFamily: F.display, fontSize: 24, marginBottom: 4 }}>Analytics</h2>
           <p style={{ color: C.dim, margin: 0, fontSize: 13 }}>Performance metrics from 90 days of sample data</p>
@@ -34,7 +34,7 @@ export function DemoAnalyticsPage() {
       </div>
 
       {/* KPI Cards */}
-      <div style={{
+      <div className="kpi-grid" style={{
         display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32,
       }}>
         <KPICard icon="&#x1F4E6;" label="Total Deliveries" value="1,247" color={C.accent} sub="+12% vs prior period" />
@@ -54,7 +54,7 @@ export function DemoAnalyticsPage() {
             { name: 'Sam Okafor', deliveries: 221, successRate: 85, avgTime: '42 min', rank: 4 },
             { name: 'Casey Nguyen', deliveries: 181, successRate: 90, avgTime: '38 min', rank: 5 },
           ].map((d) => (
-            <div key={d.name} style={{
+            <div key={d.name} className="driver-leaderboard-row" style={{
               display: 'grid', gridTemplateColumns: '40px 1fr 100px 100px 100px',
               alignItems: 'center', padding: '12px 16px',
               background: C.bg3, borderRadius: 8, border: `1px solid ${C.muted}`,
@@ -71,7 +71,7 @@ export function DemoAnalyticsPage() {
       </div>
 
       {/* Delivery Outcomes Breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+      <div className="analytics-chart-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
         <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 24 }}>
           <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 16 }}>Delivery Outcomes</h3>
           <div style={{ display: 'grid', gap: 10 }}>
@@ -127,7 +127,7 @@ export function DemoAnalyticsPage() {
       {/* Intelligence Summary */}
       <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 24 }}>
         <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 16 }}>Address Intelligence</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div className="intel-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 28, fontFamily: F.display, color: C.accent }}>847</div>
             <div style={{ color: C.dim, fontSize: 13 }}>Addresses Learned</div>

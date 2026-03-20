@@ -802,6 +802,16 @@ h1, h2, h3, h4, h5, h6 {
 /* ---- Mobile Responsive: Live Map ---- */
 
 @media (max-width: 768px) {
+  .live-map-header {
+    padding: 12px 16px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .live-map-header h1 {
+    font-size: 18px !important;
+  }
+
   .live-map-content {
     flex-direction: column !important;
     padding: 0 12px 12px !important;
@@ -835,6 +845,218 @@ h1, h2, h3, h4, h5, h6 {
     max-height: 90dvh !important;
     border-radius: 16px 16px 0 0 !important;
     margin: 0 !important;
+  }
+}
+
+/* ---- Mobile Responsive: Analytics / two-column grids ---- */
+
+@media (max-width: 768px) {
+  .analytics-chart-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .analytics-tab-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .analytics-tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .analytics-tab-bar button {
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 44px;
+  }
+}
+
+/* ---- Mobile Responsive: Route Builder two-column layout ---- */
+
+@media (max-width: 768px) {
+  .route-builder-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .route-builder-grid > div:first-child {
+    min-height: 300px;
+  }
+}
+
+/* ---- Mobile Responsive: Route Detail ---- */
+
+@media (max-width: 640px) {
+  .route-detail-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .route-detail-header > div:last-child {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .route-detail-header > div:last-child button {
+    flex: 1;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .route-detail-stop {
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+
+  .route-detail-stop > div:first-child {
+    flex: 1 1 100%;
+  }
+}
+
+/* ---- Mobile Responsive: Form grids in modals ---- */
+
+@media (max-width: 640px) {
+  .form-grid-2,
+  .form-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ---- Mobile Responsive: Bulk action bar ---- */
+
+@media (max-width: 640px) {
+  .bulk-action-bar {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .bulk-action-bar select,
+  .bulk-action-bar button {
+    min-height: 44px;
+  }
+}
+
+/* ---- Mobile Responsive: Intelligence widget ---- */
+
+@media (max-width: 640px) {
+  .intel-kpi-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+}
+
+/* ---- Mobile Responsive: Migration page ---- */
+
+@media (max-width: 640px) {
+  .migration-page {
+    padding: 16px !important;
+  }
+
+  .migration-summary-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .migration-date-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .migration-history-table {
+    font-size: 12px;
+  }
+
+  .migration-history-table th,
+  .migration-history-table td {
+    padding: 8px 6px !important;
+  }
+}
+
+/* ---- Mobile Responsive: Dispatch Board ---- */
+
+@media (max-width: 640px) {
+  .dispatch-board-columns {
+    gap: 12px !important;
+  }
+
+  .dispatch-board-columns > div {
+    min-width: 240px !important;
+    width: 240px !important;
+  }
+}
+
+/* ---- Mobile Responsive: KPI grid (6-column variant) ---- */
+
+@media (max-width: 1024px) {
+  .kpi-grid-6 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-grid-6 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+}
+
+@media (max-width: 374px) {
+  .kpi-grid-6 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ---- Mobile Responsive: Demo Dashboard Layout ---- */
+
+@media (max-width: 768px) {
+  .demo-main {
+    margin-left: 0 !important;
+  }
+
+  .demo-main main {
+    padding: 16px !important;
+    height: auto !important;
+  }
+}
+
+/* ---- Mobile Responsive: Search row ---- */
+
+@media (max-width: 640px) {
+  .search-row {
+    flex-direction: column !important;
+  }
+
+  .search-row input {
+    width: 100% !important;
+  }
+
+  .search-row button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+}
+
+/* ---- Mobile Responsive: Driver leaderboard rows ---- */
+
+@media (max-width: 640px) {
+  .driver-leaderboard-row {
+    grid-template-columns: 32px 1fr !important;
+    gap: 4px 12px !important;
+  }
+
+  .driver-leaderboard-row > span:nth-child(n+3) {
+    grid-column: 2;
+    font-size: 12px !important;
+  }
+}
+
+/* ---- Mobile Responsive: Public tracking ---- */
+
+@media (max-width: 480px) {
+  .tracking-main {
+    padding: 16px 12px !important;
   }
 }
 
