@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { extractDomain, isGenericDomain } from '../modules/auth/domain.js';
 
 describe('Google Auth - Schema columns', () => {
   it('users table has googleId column defined', async () => {
@@ -24,5 +25,26 @@ describe('Google Auth - Schema columns', () => {
   it('tenants table has isDemo column defined', async () => {
     const { tenants } = await import('../lib/db/schema/tenants.js');
     expect(tenants.isDemo).toBeDefined();
+  });
+});
+
+describe('Domain resolution', () => {
+  it('extracts domain from email', () => {
+    expect(extractDomain('user@acme.com')).toBe('acme.com');
+    expect(extractDomain('USER@ACME.COM')).toBe('acme.com');
+  });
+
+  it('identifies generic email domains', () => {
+    expect(isGenericDomain('gmail.com')).toBe(true);
+    expect(isGenericDomain('yahoo.com')).toBe(true);
+    expect(isGenericDomain('hotmail.com')).toBe(true);
+    expect(isGenericDomain('outlook.com')).toBe(true);
+    expect(isGenericDomain('icloud.com')).toBe(true);
+    expect(isGenericDomain('protonmail.com')).toBe(true);
+  });
+
+  it('identifies non-generic domains', () => {
+    expect(isGenericDomain('acme.com')).toBe(false);
+    expect(isGenericDomain('homer.io')).toBe(false);
   });
 });
