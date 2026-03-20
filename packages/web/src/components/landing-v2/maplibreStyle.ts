@@ -7,7 +7,8 @@ export function buildHeroStyle(apiKey: string): StyleSpecification {
     sources: {
       openmaptiles: {
         type: 'vector',
-        url: `https://api.maptiler.com/tiles/v3/tiles.json?key=${apiKey}`,
+        tiles: [`https://api.maptiler.com/tiles/v3/{z}/{x}/{y}.pbf?key=${apiKey}`],
+        maxzoom: 14,
       },
     },
     glyphs: `https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=${apiKey}`,
