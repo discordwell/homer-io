@@ -7,10 +7,10 @@ interface InsightCardProps {
 }
 
 const TYPE_CONFIG: Record<string, { borderColor: string; icon: string }> = {
-  positive: { borderColor: C.green, icon: '\u2714' },
-  warning: { borderColor: C.red, icon: '\u26A0' },
-  anomaly: { borderColor: C.orange, icon: '\u26A1' },
-  suggestion: { borderColor: C.accent, icon: '\uD83D\uDCA1' },
+  positive: { borderColor: C.green, icon: '✔' },
+  warning: { borderColor: C.red, icon: '⚠' },
+  anomaly: { borderColor: C.orange, icon: '⚡' },
+  suggestion: { borderColor: C.accent, icon: '💡' },
 };
 
 export function InsightCard({ insight }: InsightCardProps) {

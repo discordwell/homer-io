@@ -80,7 +80,7 @@ export function AnalyticsPage() {
           display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 24,
         }}>
           <AnimatedKPICard
-            icon="\uD83D\uDCE6"
+            icon="📦"
             label="Deliveries"
             value={ov.totalDeliveries}
             sparkline={ov.sparklines.deliveries}
@@ -89,7 +89,7 @@ export function AnalyticsPage() {
             delay={0}
           />
           <AnimatedKPICard
-            icon="\u2705"
+            icon="✅"
             label="Success Rate"
             value={Math.round(ov.successRate)}
             suffix="%"
@@ -99,7 +99,7 @@ export function AnalyticsPage() {
             delay={80}
           />
           <AnimatedKPICard
-            icon="\u23F1"
+            icon="⏱"
             label="On-Time Rate"
             value={Math.round(ov.onTimeRate)}
             suffix="%"
@@ -109,7 +109,7 @@ export function AnalyticsPage() {
             delay={160}
           />
           <AnimatedKPICard
-            icon="\u26A1"
+            icon="⚡"
             label="Avg Time"
             value={ov.avgDeliveryTime ?? 0}
             suffix="m"
@@ -119,7 +119,7 @@ export function AnalyticsPage() {
             delay={240}
           />
           <AnimatedKPICard
-            icon="\uD83D\uDE97"
+            icon="🚗"
             label="Active Drivers"
             value={ov.activeDriverCount}
             sparkline={ov.sparklines.activeDrivers}
@@ -128,7 +128,7 @@ export function AnalyticsPage() {
             delay={320}
           />
           <AnimatedKPICard
-            icon="\uD83D\uDCCB"
+            icon="📋"
             label="Orders"
             value={ov.ordersReceived}
             sparkline={ov.sparklines.ordersReceived}
