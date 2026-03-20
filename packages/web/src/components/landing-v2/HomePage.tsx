@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { BayAreaMap } from './BayAreaMap.js';
+import { HeroMap } from './HeroMap.js';
 import './home.css';
 
 /* ---- Scroll reveal ---- */
@@ -107,7 +107,7 @@ function ChatPreview() {
 function Hero() {
   return (
     <section className="hero">
-      <div className="hero-map-wrap"><BayAreaMap /></div>
+      <div className="hero-map-wrap"><HeroMap /></div>
       <div className="hero-overlay" />
       <div className="hero-content">
         <div className="hero-text">

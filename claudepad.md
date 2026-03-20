@@ -2,6 +2,25 @@
 
 ## Session Summaries
 
+### 2026-03-19T21:30 UTC — Geolocation Hero Map for Landing Page
+- Added personalized hero map: detects visitor's geolocation, shows MapLibre GL map of their area with animated driver dots on real local roads. Falls back to existing Bay Area SVG if denied/timeout.
+- **Architecture**: `useHeroGeolocation` (one-shot, 3s timeout) → `React.lazy` loads MapLibre chunk → `queryRenderedFeatures` extracts road geometries → `DriverAnimator` canvas overlay with 10 dots (7 amber, 3 green) → 800ms CSS crossfade. Zero bundle penalty on denial.
+- **New files** (all in `landing-v2/`): HeroMap.tsx (orchestrator), MapLibreHeroMap.tsx (lazy-loaded map), useHeroGeolocation.ts, maplibreStyle.ts (dark command-center style), driverAnimator.ts (road extraction + canvas animation), heroMap.css (crossfade + grid + range rings), 2 test files (19 tests).
+- **Modified**: HomePage.tsx (BayAreaMap → HeroMap), package.json (+maplibre-gl).
+- **Code review fixes applied**: C1 (cached pathLength per dot), C2 (onReady ref pattern), I1 (console.warn on missing API key), I4 (exported pure functions, tests import from real module), I5 (debounced resize listener), S1 (null-safe parentElement checks).
+- **Needs**: VITE_MAPTILER_KEY env var on ovh2 for MapLibre to activate (free tier, 100K loads/mo). Without it, SVG fallback works perfectly.
+- Build clean, 19 tests pass.
+
+### 2026-03-19T19:19 UTC — Fresh Homepage: Bay Area Command Center
+- Replaced entire landing page with new design. Did NOT reference old landing components.
+- **Design**: Dark "dispatch command center" aesthetic. Cabinet Grotesk + Satoshi fonts (Fontshare CDN). Amber/gold (#F59E0B) accent on deep navy (#06090F). No shared design tokens with old homepage.
+- **Hero**: Full-viewport Bay Area SVG map as background. 10 animated driver dots (amber=active, green=delivered) moving along real highway paths (US-101, I-80, I-880, I-280, I-580, CA-92). Golden Gate + Bay Bridge highlighted. City labels (SF, Oakland, Berkeley, SFO, San Jose, Palo Alto, Fremont, Richmond, Daly City). Grid overlay + range rings for command-center feel. Auto-playing NLOps chat preview (loops every 15s) showing Oakland pickup assignment flow.
+- **Sections**: Status strip ("LIVE | 12 drivers active | 47 deliveries today | 98.2% on-time | Bay Area, CA"), NLOps demo (Marcus sick scenario with route splitting), Address Intelligence card (1847 Broadway Oakland, 47 deliveries, 91% success, gate code, parking, dog warning, risk 12/100), 3x2 feature grid (SVG icons), pricing cards (4 tiers $0-$699, Growth highlighted), final CTA, footer.
+- **Scroll reveal**: IntersectionObserver-based fade-in (threshold 0.12, 0.7s transition).
+- **Files**: 3 new in `packages/web/src/components/landing-v2/` (BayAreaMap.tsx, HomePage.tsx, home.css ~460 LOC). Updated Landing.tsx (rewired to new component), index.html (added Fontshare font links). Old landing components in `landing/` now unused but preserved.
+- **Deploy**: Built locally, rsync'd dist to ovh2:/opt/homer-io/site/. Live at homer.discordwell.com. Hard refresh needed to bypass PWA service worker cache.
+- Build: zero TS errors. 1672 lines added.
+
 ### 2026-03-17T03:15 UTC — ESLint TypeScript Coverage Fix
 - ESLint config only matched `**/*.{js,jsx}` — all TypeScript source files were invisible to lint.
 - Installed `typescript-eslint`, expanded file pattern to `**/*.{ts,tsx}`, swapped `no-unused-vars` for `@typescript-eslint/no-unused-vars`.
