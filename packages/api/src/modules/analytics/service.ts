@@ -405,7 +405,7 @@ export async function getEnhancedTrends(tenantId: string, range: '7d' | '30d' | 
 // ---------------------------------------------------------------------------
 
 export async function getHeatmapData(tenantId: string, range: '7d' | '30d' | '90d'): Promise<HeatmapCell[]> {
-  const cutoff = cutoffDate(range);
+  const cutoff = cutoffDate(range).toISOString();
 
   const result = await db.execute(sql`
     SELECT
@@ -416,7 +416,7 @@ export async function getHeatmapData(tenantId: string, range: '7d' | '30d' | '90
     WHERE ${orders.tenantId} = ${tenantId}
       AND ${orders.status} = 'delivered'
       AND ${orders.completedAt} IS NOT NULL
-      AND ${orders.createdAt} >= ${cutoff}
+      AND ${orders.createdAt} >= ${cutoff}::timestamptz
     GROUP BY 1, 2
     ORDER BY 1, 2
   `);
@@ -443,6 +443,7 @@ export async function getHeatmapData(tenantId: string, range: '7d' | '30d' | '90
 export async function generateInsights(tenantId: string, range: '7d' | '30d' | '90d'): Promise<Insight[]> {
   const days = rangeToDays(range);
   const cutoff = cutoffDate(range);
+  const cutoffISO = cutoff.toISOString();
   const prevCutoff = new Date(cutoff);
   prevCutoff.setDate(prevCutoff.getDate() - days);
 
@@ -458,7 +459,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
         count(*) FILTER (WHERE status = 'failed')::int AS failed,
         count(*) FILTER (WHERE status IN ('delivered','failed'))::int AS total
       FROM ${orders}
-      WHERE tenant_id = ${tenantId} AND created_at >= ${cutoff}
+      WHERE tenant_id = ${tenantId} AND created_at >= ${cutoffISO}::timestamptz
         AND status IN ('delivered', 'failed')
       GROUP BY 1 ORDER BY 1
     `),
@@ -467,7 +468,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
       SELECT EXTRACT(HOUR FROM completed_at)::int AS hour, count(*)::int AS cnt
       FROM ${orders}
       WHERE tenant_id = ${tenantId} AND status = 'delivered'
-        AND completed_at IS NOT NULL AND created_at >= ${cutoff}
+        AND completed_at IS NOT NULL AND created_at >= ${cutoffISO}::timestamptz
       GROUP BY 1 ORDER BY cnt DESC
     `),
     getDriverPerformance(tenantId, range),
@@ -477,7 +478,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
     db.execute(sql`
       SELECT COALESCE(failure_category, 'unknown') AS category, count(*)::int AS cnt
       FROM ${orders}
-      WHERE tenant_id = ${tenantId} AND status = 'failed' AND created_at >= ${cutoff}
+      WHERE tenant_id = ${tenantId} AND status = 'failed' AND created_at >= ${cutoffISO}::timestamptz
       GROUP BY 1 ORDER BY cnt DESC
     `),
   ]);
@@ -613,7 +614,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
     const activeResult = await db.execute(sql`
       SELECT count(DISTINCT r.driver_id)::int AS active
       FROM ${routes} r
-      WHERE r.tenant_id = ${tenantId} AND r.created_at >= ${cutoff} AND r.driver_id IS NOT NULL
+      WHERE r.tenant_id = ${tenantId} AND r.created_at >= ${cutoffISO}::timestamptz AND r.driver_id IS NOT NULL
     `);
     const activeInPeriod = Number((activeResult as unknown as any[])[0]?.active ?? 0);
     const utilRate = Math.round((activeInPeriod / totalDrivers) * 100);
@@ -662,10 +663,11 @@ export async function getDeliveryOutcomes(tenantId: string, range: '7d' | '30d' 
 
   // Failure categories
   const cutoff = cutoffDate(range);
+  const cutoffISO = cutoff.toISOString();
   const failCatResult = await db.execute(sql`
     SELECT COALESCE(failure_category, 'unknown') AS category, count(*)::int AS cnt
     FROM ${orders}
-    WHERE tenant_id = ${tenantId} AND status = 'failed' AND created_at >= ${cutoff}
+    WHERE tenant_id = ${tenantId} AND status = 'failed' AND created_at >= ${cutoffISO}::timestamptz
     GROUP BY 1 ORDER BY cnt DESC
   `);
 
