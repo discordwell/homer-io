@@ -55,6 +55,10 @@ export const config = {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
   },
 
+  maptiler: {
+    apiKey: process.env.MAPTILER_API_KEY || '',
+  },
+
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
   },

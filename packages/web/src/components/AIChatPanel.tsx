@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNLOpsStore, type NLOpsMessage, type NLOpsToolActivity, type NLOpsConfirmation } from '../stores/nlops.js';
+import { useDemoStore, type TenantStatus } from '../stores/demo.js';
 import { C, F, alpha } from '../theme.js';
 
 // --- Tool name → friendly label ---
@@ -31,8 +32,13 @@ const TOOL_LABELS: Record<string, string> = {
 
 export function AIChatPanel() {
   const { messages, loading, isOpen, showThought, send, confirm, deny, toggle, toggleThought } = useNLOpsStore();
+  const isDemoMode = useDemoStore((s) => s.isDemoMode);
+  const tenantStatus = useDemoStore((s) => s.tenantStatus);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // In demo mode, disable input until tenant is provisioned
+  const demoBlocked = isDemoMode && tenantStatus !== 'ready';
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -128,7 +134,44 @@ export function AIChatPanel() {
 
           {/* Messages */}
           <div style={{ flex: 1, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {messages.length === 0 && (
+            {/* Demo warming-up state */}
+            {isDemoMode && tenantStatus === 'provisioning' && (
+              <div style={{ textAlign: 'center', padding: 32, color: C.dim, fontSize: 13 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <Spinner />
+                </div>
+                <p style={{ fontFamily: F.display, fontSize: 15, color: C.text, marginBottom: 8 }}>
+                  Setting up your demo...
+                </p>
+                <p>Seeding delivery data near your location</p>
+              </div>
+            )}
+            {isDemoMode && tenantStatus === 'failed' && (
+              <div style={{ textAlign: 'center', padding: 32, color: C.dim, fontSize: 13 }}>
+                <p style={{ fontFamily: F.display, fontSize: 14, color: C.orange, marginBottom: 8 }}>
+                  AI unavailable in this session
+                </p>
+                <p>
+                  <a href="/register" style={{ color: C.accent, textDecoration: 'none', fontWeight: 600 }}>
+                    Sign up for full access
+                  </a>
+                </p>
+              </div>
+            )}
+            {/* Demo ready welcome */}
+            {isDemoMode && tenantStatus === 'ready' && messages.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 32, color: C.dim, fontSize: 13 }}>
+                <p style={{ fontFamily: F.display, fontSize: 15, color: C.text, marginBottom: 8 }}>
+                  I'm HOMER, your AI copilot
+                </p>
+                <p>This demo has 90 days of delivery data. Try:</p>
+                <p style={{ color: C.text }}>"How did the fleet perform this week?"</p>
+                <p style={{ color: C.text }}>"Who's my best driver?"</p>
+                <p style={{ color: C.text }}>"Assign the next order to Alex Rivera"</p>
+              </div>
+            )}
+            {/* Normal empty state (non-demo) */}
+            {!isDemoMode && messages.length === 0 && (
               <div style={{ textAlign: 'center', padding: 32, color: C.dim, fontSize: 13 }}>
                 <p style={{ fontFamily: F.display, fontSize: 15, color: C.text, marginBottom: 8 }}>
                   What do you need?
@@ -161,17 +204,19 @@ export function AIChatPanel() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder="Tell HOMER what to do..."
+              placeholder={demoBlocked ? 'Setting up...' : 'Tell HOMER what to do...'}
+              disabled={demoBlocked}
               style={{
                 flex: 1, padding: '10px 14px', borderRadius: 8,
                 background: C.bg, border: `1px solid ${C.muted}`,
                 color: C.text, fontSize: 14, outline: 'none', fontFamily: F.body,
+                opacity: demoBlocked ? 0.5 : 1,
               }}
             />
-            <button onClick={handleSend} disabled={loading || !input.trim()} style={{
+            <button onClick={handleSend} disabled={loading || !input.trim() || demoBlocked} style={{
               padding: '10px 16px', borderRadius: 8, background: C.accent,
               border: 'none', color: '#000', cursor: 'pointer', fontFamily: F.body,
-              opacity: loading || !input.trim() ? 0.5 : 1, fontSize: 14,
+              opacity: loading || !input.trim() || demoBlocked ? 0.5 : 1, fontSize: 14,
             }}>
               Go
             </button>

@@ -1,8 +1,8 @@
 import type { Job } from 'bullmq';
 import type { PgColumn } from 'drizzle-orm/pg-core';
-import { lt, sql } from 'drizzle-orm';
+import { lt, sql, and, eq } from 'drizzle-orm';
 import { db } from '../lib/db.js';
-import { locationHistory, activityLog, customerNotificationsLog, webhookDeliveries, passwordResetTokens } from '../lib/schema.js';
+import { locationHistory, activityLog, customerNotificationsLog, webhookDeliveries, passwordResetTokens, tenants } from '../lib/schema.js';
 import { logger } from '../lib/logger.js';
 
 const POLICIES = [
@@ -46,6 +46,29 @@ export async function processDataRetention(job: Job) {
       });
       results[policy.name] = -1;
     }
+  }
+
+  // --- Demo tenant cleanup: delete demo tenants older than 7 days ---
+  // FK cascades handle all child records (orders, routes, drivers, etc.)
+  try {
+    const demoCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const [countResult] = await db.select({ count: sql<number>`count(*)` })
+      .from(tenants)
+      .where(and(eq(tenants.isDemo, true), lt(tenants.createdAt, demoCutoff)));
+    const toDelete = Number(countResult.count);
+
+    if (toDelete > 0) {
+      await db.delete(tenants)
+        .where(and(eq(tenants.isDemo, true), lt(tenants.createdAt, demoCutoff)));
+    }
+
+    results['demo_tenants'] = toDelete;
+    log.info('Demo tenant cleanup complete', { deletedTenants: toDelete });
+  } catch (err) {
+    log.error('Demo tenant cleanup failed', {
+      error: err instanceof Error ? err.message : 'Unknown error',
+    });
+    results['demo_tenants'] = -1;
   }
 
   return results;

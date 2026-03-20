@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation, NavLink } from 'react-router-dom';
+import { Outlet, Link, useLocation, useSearchParams, NavLink } from 'react-router-dom';
 import { Sidebar } from './Sidebar.js';
 import { DemoBanner } from './DemoBanner.js';
+import { AIChatPanel } from './AIChatPanel.js';
 import { useDemoStore } from '../stores/demo.js';
 import { useAuthStore } from '../stores/auth.js';
 import { DEMO_USER } from '../data/demo-data.js';
@@ -12,23 +13,33 @@ import { C } from '../theme.js';
  * - Injects a synthetic demo user into the auth store so components that
  *   read user info (Sidebar, Dashboard greeting) work without real auth.
  * - Shows a persistent DemoBanner at the top.
- * - Omits billing/subscription/onboarding components.
- * - Disables the AI chat panel (it would need real API access).
+ * - Kicks off background tenant provisioning for AI Copilot access.
+ * - Includes <AIChatPanel /> with warming-up state during provisioning.
  */
 export function DemoDashboardLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [searchParams] = useSearchParams();
   const enterDemo = useDemoStore((s) => s.enterDemo);
   const exitDemo = useDemoStore((s) => s.exitDemo);
+  const provisionTenant = useDemoStore((s) => s.provisionTenant);
   const logout = useAuthStore((s) => s.logout);
 
   useEffect(() => {
-    // Enter demo mode and inject synthetic user
+    // Enter demo mode and inject synthetic user (instant browse)
     enterDemo();
     useAuthStore.getState().setAuth({
       accessToken: 'demo-token',
       refreshToken: 'demo-refresh',
       user: DEMO_USER,
     });
+
+    // Background: provision real tenant for AI Copilot
+    const lat = searchParams.get('lat');
+    const lng = searchParams.get('lng');
+    provisionTenant(
+      lat ? parseFloat(lat) : undefined,
+      lng ? parseFloat(lng) : undefined,
+    );
 
     return () => {
       // Clean up on unmount — exit demo mode and clear synthetic auth
@@ -93,6 +104,9 @@ export function DemoDashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* AI Copilot — available in demo with warming-up state */}
+      <AIChatPanel />
     </div>
   );
 }

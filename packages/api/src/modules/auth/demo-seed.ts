@@ -4,6 +4,7 @@ import { vehicles } from '../../lib/db/schema/vehicles.js';
 import { drivers } from '../../lib/db/schema/drivers.js';
 import { orders } from '../../lib/db/schema/orders.js';
 import { routes } from '../../lib/db/schema/routes.js';
+import { generateLocalAddresses, getNearestCity, type GeneratedAddress } from '../../lib/geocoding.js';
 
 // ---------------------------------------------------------------------------
 // Bay Area locations (24 total, all within lat 37.2–38.0, lng -122.6 to -121.7)
@@ -83,13 +84,15 @@ const RECIPIENT_LAST = [
   'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
 ];
 
-export function generateDemoOrders() {
+export function generateDemoOrders(locationOverrides?: GeneratedAddress[]) {
   const count = 15 + Math.floor(Math.random() * 6); // 15–20
   const now = new Date();
-  const locations = [...BAY_AREA_LOCATIONS].sort(() => Math.random() - 0.5);
+  const locs = locationOverrides
+    ? [...locationOverrides].sort(() => Math.random() - 0.5)
+    : [...BAY_AREA_LOCATIONS].sort(() => Math.random() - 0.5);
 
   return Array.from({ length: count }, (_, i) => {
-    const loc = locations[i % locations.length];
+    const loc = locs[i % locs.length];
     const first = RECIPIENT_FIRST[Math.floor(Math.random() * RECIPIENT_FIRST.length)];
     const last = RECIPIENT_LAST[Math.floor(Math.random() * RECIPIENT_LAST.length)];
 
@@ -99,9 +102,13 @@ export function generateDemoOrders() {
       6 + Math.floor(i / 5), (i * 7) % 60, 0, 0,
     ));
 
+    const city = 'city' in loc ? (loc as GeneratedAddress).city : '';
+    const state = 'state' in loc ? (loc as GeneratedAddress).state : 'CA';
+    const zip = 'zip' in loc ? (loc as GeneratedAddress).zip : '';
+
     return {
       recipientName: `${first} ${last}`,
-      deliveryAddress: { street: loc.name, city: '', state: 'CA', zip: '' },
+      deliveryAddress: { street: loc.name, city, state, zip },
       deliveryLat: loc.lat.toString(),
       deliveryLng: loc.lng.toString(),
       createdAt,
@@ -113,8 +120,26 @@ export function generateDemoOrders() {
 // Main seed function — inserts vehicles, drivers, orders, routes
 // ---------------------------------------------------------------------------
 
-export async function seedDemoOrg(tenantId: string): Promise<void> {
+export interface SeedDemoOptions {
+  lat?: number;
+  lng?: number;
+}
+
+export async function seedDemoOrg(tenantId: string, options?: SeedDemoOptions): Promise<void> {
   const now = new Date();
+
+  // Resolve locations: use generated local addresses if lat/lng provided
+  let locationList: Array<{ name: string; lat: number; lng: number; city?: string; state?: string; zip?: string }>;
+  let cityContext: { city: string; state: string };
+
+  if (options?.lat != null && options?.lng != null) {
+    const generated = await generateLocalAddresses(options.lat, options.lng, 24);
+    locationList = generated;
+    cityContext = { city: generated[0].city, state: generated[0].state };
+  } else {
+    locationList = BAY_AREA_LOCATIONS;
+    cityContext = { city: 'San Francisco', state: 'CA' };
+  }
 
   // --- Vehicles ---
   const vehicleData = generateDemoVehicles();
@@ -132,7 +157,7 @@ export async function seedDemoOrg(tenantId: string): Promise<void> {
   // --- Drivers ---
   const driverNames = generateDemoDriverNames();
   const driverStatuses = ['available', 'on_route', 'on_route', 'available', 'offline'] as const;
-  const driverLocations = [...BAY_AREA_LOCATIONS].sort(() => Math.random() - 0.5).slice(0, 5);
+  const driverLocations = [...locationList].sort(() => Math.random() - 0.5).slice(0, 5);
   const insertedDrivers = await db
     .insert(drivers)
     .values(
@@ -151,7 +176,8 @@ export async function seedDemoOrg(tenantId: string): Promise<void> {
     .returning({ id: drivers.id });
 
   // --- Orders ---
-  const orderData = generateDemoOrders();
+  const generatedAddresses = options?.lat != null ? locationList as GeneratedAddress[] : undefined;
+  const orderData = generateDemoOrders(generatedAddresses);
   const insertedOrders = await db
     .insert(orders)
     .values(
@@ -168,16 +194,13 @@ export async function seedDemoOrg(tenantId: string): Promise<void> {
     .returning({ id: orders.id });
 
   // --- Routes (3: completed, in_progress, draft) ---
-  const depotLoc = BAY_AREA_LOCATIONS[0]; // Market St depot
+  const depotLoc = locationList[0];
   const baseRoute = {
     tenantId,
-    depotAddress: { street: depotLoc.name, city: 'San Francisco', state: 'CA', zip: '94105' },
+    depotAddress: { street: depotLoc.name, city: cityContext.city, state: cityContext.state, zip: (depotLoc as GeneratedAddress).zip || '' },
     depotLat: depotLoc.lat.toString(),
     depotLng: depotLoc.lng.toString(),
   };
-
-  // Spread-copy to avoid mutating the exported constant
-  const shuffledLocations = [...BAY_AREA_LOCATIONS].sort(() => Math.random() - 0.5);
 
   // Partition orders across routes: first 6 → completed, next 5 → in_progress, rest → draft
   const completedOrderIds = insertedOrders.slice(0, 6).map(o => o.id);
@@ -189,7 +212,7 @@ export async function seedDemoOrg(tenantId: string): Promise<void> {
     .insert(routes)
     .values({
       ...baseRoute,
-      name: 'Morning SF Route',
+      name: `Morning ${cityContext.city} Route`,
       status: 'completed',
       driverId: insertedDrivers[0]?.id ?? null,
       vehicleId: insertedVehicles[0]?.id ?? null,
@@ -218,7 +241,7 @@ export async function seedDemoOrg(tenantId: string): Promise<void> {
     .insert(routes)
     .values({
       ...baseRoute,
-      name: 'Midday East Bay Route',
+      name: `Midday ${cityContext.city} Route`,
       status: 'in_progress',
       driverId: insertedDrivers[1]?.id ?? null,
       vehicleId: insertedVehicles[1]?.id ?? null,
@@ -247,7 +270,7 @@ export async function seedDemoOrg(tenantId: string): Promise<void> {
     .insert(routes)
     .values({
       ...baseRoute,
-      name: 'Afternoon Peninsula Route',
+      name: `Afternoon ${cityContext.city} Route`,
       status: 'draft',
       totalStops: draftOrderIds.length,
       completedStops: 0,
@@ -276,7 +299,7 @@ export async function seedDemoOrg(tenantId: string): Promise<void> {
   }
 
   // --- Historical analytics data (90 days of realistic orders + routes) ---
-  await seedDemoAnalytics(tenantId, insertedDrivers.map(d => d.id), insertedVehicles.map(v => v.id));
+  await seedDemoAnalytics(tenantId, insertedDrivers.map(d => d.id), insertedVehicles.map(v => v.id), locationList, cityContext);
 }
 
 // ---------------------------------------------------------------------------
@@ -316,7 +339,16 @@ const DRIVER_PROFILES = [
   { successRate: 0.95, avgTimeMin: 30, volumeWeight: 0.5, label: 'part_timer' },
 ];
 
-export async function seedDemoAnalytics(tenantId: string, driverIds: string[], vehicleIds: string[]): Promise<void> {
+export async function seedDemoAnalytics(
+  tenantId: string,
+  driverIds: string[],
+  vehicleIds: string[],
+  locationPool?: Array<{ name: string; lat: number; lng: number; city?: string; state?: string; zip?: string }>,
+  cityCtx?: { city: string; state: string },
+): Promise<void> {
+  const locations = locationPool || BAY_AREA_LOCATIONS;
+  const depotCity = cityCtx?.city || 'San Francisco';
+  const depotState = cityCtx?.state || 'CA';
   const rand = seededRandom(42);
   const now = new Date();
   const allOrders: Array<{
@@ -352,7 +384,7 @@ export async function seedDemoAnalytics(tenantId: string, driverIds: string[], v
     createdAt: Date;
   }> = [];
 
-  const depotLoc = BAY_AREA_LOCATIONS[0];
+  const depotLoc = locations[0];
 
   // Generate 90 days of data (skip today — today's data is the real-time seed above)
   for (let daysAgo = 90; daysAgo >= 1; daysAgo--) {
@@ -387,7 +419,7 @@ export async function seedDemoAnalytics(tenantId: string, driverIds: string[], v
       const routeOrderCount = Math.min(ordersPerRoute, 8); // cap per route
 
       for (let oi = 0; oi < routeOrderCount; oi++) {
-        const loc = BAY_AREA_LOCATIONS[Math.floor(rand() * BAY_AREA_LOCATIONS.length)];
+        const loc = locations[Math.floor(rand() * locations.length)];
         const first = RECIPIENT_FIRST[Math.floor(rand() * RECIPIENT_FIRST.length)];
         const last = RECIPIENT_LAST[Math.floor(rand() * RECIPIENT_LAST.length)];
 
@@ -416,7 +448,7 @@ export async function seedDemoAnalytics(tenantId: string, driverIds: string[], v
         allOrders.push({
           tenantId,
           recipientName: `${first} ${last}`,
-          deliveryAddress: { street: loc.name, city: '', state: 'CA', zip: '' },
+          deliveryAddress: { street: loc.name, city: (loc as GeneratedAddress).city || '', state: (loc as GeneratedAddress).state || depotState, zip: (loc as GeneratedAddress).zip || '' },
           deliveryLat: loc.lat.toString(),
           deliveryLng: loc.lng.toString(),
           status: succeeded ? 'delivered' : 'failed',
@@ -438,7 +470,7 @@ export async function seedDemoAnalytics(tenantId: string, driverIds: string[], v
         status: 'completed',
         driverId,
         vehicleId,
-        depotAddress: { street: depotLoc.name, city: 'San Francisco', state: 'CA', zip: '94105' },
+        depotAddress: { street: depotLoc.name, city: depotCity, state: depotState, zip: (depotLoc as GeneratedAddress).zip || '' },
         depotLat: depotLoc.lat.toString(),
         depotLng: depotLoc.lng.toString(),
         totalStops: routeOrderCount,

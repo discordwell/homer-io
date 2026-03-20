@@ -4,6 +4,7 @@ import { registerSchema, loginSchema, refreshTokenSchema, requestPasswordResetSc
 import { register, login, refreshToken, getMe, logout, verifyEmail, resendVerification, requestPasswordReset, resetPassword } from './service.js';
 import { googleAuth, googleOrgChoice } from './google.js';
 import { requestEmailLink, verifyEmailLink } from './email-link.js';
+import { handleDemoSession, demoSessionSchema } from './demo-session.js';
 import { authenticate } from '../../plugins/auth.js';
 import { z } from 'zod';
 
@@ -46,6 +47,18 @@ export async function authRoutes(app: FastifyInstance) {
       const body = requestPasswordResetSchema.parse(request.body);
       await requestPasswordReset(app, body.email);
       reply.send({ success: true });
+    });
+  });
+
+  // Demo session — rate limited 5/min per IP
+  await app.register(async (demoScope) => {
+    await demoScope.register(rateLimit, { max: 5, timeWindow: '1 minute' });
+
+    demoScope.post('/demo-session', async (request, reply) => {
+      const body = demoSessionSchema.parse(request.body || {});
+      const ip = request.ip;
+      const result = await handleDemoSession(demoScope, ip, body);
+      reply.code(201).send(result);
     });
   });
 

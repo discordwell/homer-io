@@ -106,9 +106,19 @@ function ChatPreview({ city = 'Oakland' }: { city?: string }) {
 
 /* ---- Hero ---- */
 
+/** Build demo URL with geolocation params when available */
+function useDemoUrl(): string {
+  const geo = useHeroGeolocation();
+  if (geo.lat != null && geo.lng != null) {
+    return `/demo?lat=${geo.lat}&lng=${geo.lng}`;
+  }
+  return '/demo';
+}
+
 function Hero() {
   const geo = useHeroGeolocation();
   const city = getNearestCity(geo.lat, geo.lng);
+  const demoUrl = useDemoUrl();
 
   return (
     <section className="hero">
@@ -127,7 +137,7 @@ function Hero() {
           <div className="hero-buttons">
             <Link to="/register" className="btn-primary">Start free &rarr;</Link>
             {/* human-requested: CTA links to interactive demo */}
-            <Link to="/demo" className="btn-outline">See how it works</Link>
+            <Link to={demoUrl} className="btn-outline">See how it works</Link>
           </div>
         </div>
         <ChatPreview city={city} />
@@ -432,6 +442,7 @@ function PricingSection() {
 /* ---- Final CTA ---- */
 
 function FinalCTA() {
+  const demoUrl = useDemoUrl();
   return (
     <div className="final-cta">
       <Reveal>
@@ -441,7 +452,7 @@ function FinalCTA() {
         </p>
         <div className="final-cta-buttons">
           <Link to="/register" className="btn-primary">Get started free &rarr;</Link>
-          <Link to="/demo" className="btn-outline">Try the demo</Link>
+          <Link to={demoUrl} className="btn-outline">Try the demo</Link>
         </div>
       </Reveal>
     </div>

@@ -2,6 +2,30 @@
 
 ## Session Summaries
 
+### 2026-03-20T18:00 UTC — Per-User Demo Tenants with Live AI Copilot
+- **Backend**: New `POST /api/auth/demo-session` anonymous endpoint — creates real tenant (isDemo=true) + visitor user, seeds location-aware data, returns JWT. Rate limited 5/min/IP, 1hr Redis cache to prevent refresh spam.
+- **Geocoding**: New `packages/api/src/lib/geocoding.ts` — MapTiler reverse geocoding with 60-city fallback, `generateLocalAddresses()` generates 24 addresses within 15km of visitor's coordinates.
+- **Location-aware seeding**: `seedDemoOrg()` now accepts `{ lat, lng }` options. Orders, routes, and analytics use generated local addresses instead of Bay Area hardcodes. Route names are city-relative ("Morning Denver Route" etc).
+- **Demo metering skip**: AI routes check `tenant.isDemo` (cached 60s) and skip `recordMeteredUsage`. Rate limits still apply. Notification tool no-ops for demo tenants (no real SMS/email).
+- **Frontend provisioning**: `useDemoStore` gains `tenantStatus: 'static'|'provisioning'|'ready'|'failed'` + `provisionTenant()`. DemoDashboardLayout kicks off background provisioning on mount, reads lat/lng from URL search params.
+- **Copilot in demo**: `<AIChatPanel />` added to DemoDashboardLayout. Shows "Setting up your demo..." spinner during provisioning, demo-specific welcome message when ready, fallback message on failure. Input disabled until tenant ready.
+- **Landing page**: "See how it works" / "Try the demo" links now pass `?lat=X&lng=Y` from `useHeroGeolocation`.
+- **Cleanup**: Data retention worker deletes demo tenants older than 7 days (FK cascades handle all child records).
+- **Files**: 2 new (geocoding.ts, demo-session.ts), 10 modified. All 4 packages type-check + build clean.
+
+### 2026-03-20T12:00 UTC — Live Map Revival
+- **Demo Live Map fully client-driven**: Replaced random-drift simulation with route-following interpolation along pre-computed Bay Area highway waypoints (I-280/US-101/I-80/CA-24/I-880).
+- **New file**: `demo-route-paths.ts` — 2 routes (Morning SF 46 waypoints, Midday East Bay 44 waypoints), 11 stops total, `advanceAlongPath()` pure helper.
+- **Demo driver locations**: Added lat/lng/heading/speed to DemoDriver interface. Tracking store fallback populates from static data when API returns empty in demo mode.
+- **Map center**: Bay Area [37.65, -122.20] zoom 10 for demo, NYC for non-demo.
+- **Route visualization**: Dashed amber polyline for full route, solid green for completed portion, circle markers for stops (green=done, amber=next, dim=future), progress panel overlay showing route name/driver/stops count/progress bar.
+- **Delivery events**: Seeds 6 initial events from completed stops. Fires new events as drivers pass stops during simulation (90% delivered, 10% failed).
+- **Smooth animation**: CSS transition on marker divs (`transition: transform 0.9s linear`).
+- **Demo sidebar**: Added Live Map nav item to DemoDashboardLayout, `/demo/live` route in App.tsx.
+- **Bug fix**: Switched from `useAuthStore(s => s.user?.isDemo)` to `useDemoStore(s => s.isDemoMode)` — the auth store's `onRehydrateStorage` was clearing demo-token and stopping the simulation.
+- **Tests**: 13 new tests (advanceAlongPath logic, route data validation, Bay Area bounds). 28 data tests pass total.
+- 3 commits. Deployed and wet-tested via browser automation. GIF: homer-live-map-demo.gif.
+
 ### 2026-03-20T11:30 UTC — Ship-Blockers & Polish Batch (9 Items)
 - Fixed 9 ship-blocker/polish/growth items using 5 parallel Opus agents + direct fixes.
 - **#1 AI Copilot missing key**: `AINotConfiguredError` class in providers.ts, 503 + `AI_NOT_CONFIGURED` code on API routes, friendly `AINotConfiguredCard` component with "Go to Settings" link in AIChatPanel. 6 tests.

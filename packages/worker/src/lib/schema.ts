@@ -199,6 +199,7 @@ export const locationHistory = pgTable('location_history', {
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),
+  isDemo: boolean('is_demo').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

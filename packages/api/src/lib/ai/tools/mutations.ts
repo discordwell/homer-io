@@ -375,6 +375,14 @@ export const sendCustomerNotification: NLOpsTool = {
   riskLevel: 'mutate',
   requiredRole: 'dispatcher',
   async execute(input: Record<string, unknown>, ctx: ToolContext) {
+    // Skip real notification sends for demo tenants — no SMS/email costs
+    const { eq } = await import('drizzle-orm');
+    const { db } = await import('../../db/index.js');
+    const { tenants } = await import('../../db/schema/tenants.js');
+    const [t] = await db.select({ isDemo: tenants.isDemo }).from(tenants).where(eq(tenants.id, ctx.tenantId)).limit(1);
+    if (t?.isDemo) {
+      return { success: true, message: `Notification "${input.trigger}" simulated for demo (not actually sent)` };
+    }
     const { enqueueCustomerNotification } = await import('../../../modules/customer-notifications/service.js');
     await enqueueCustomerNotification(ctx.tenantId, input.orderId as string, input.trigger as string);
     return { success: true, message: `Notification "${input.trigger}" queued for order ${input.orderId}` };
