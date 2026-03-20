@@ -316,7 +316,7 @@ const DRIVER_PROFILES = [
   { successRate: 0.95, avgTimeMin: 30, volumeWeight: 0.5, label: 'part_timer' },
 ];
 
-async function seedDemoAnalytics(tenantId: string, driverIds: string[], vehicleIds: string[]): Promise<void> {
+export async function seedDemoAnalytics(tenantId: string, driverIds: string[], vehicleIds: string[]): Promise<void> {
   const rand = seededRandom(42);
   const now = new Date();
   const allOrders: Array<{
