@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { riskSummary, getRiskLevel } from './RiskBadge.js';
+import { C } from '../theme.js';
 
 describe('riskSummary', () => {
   it('returns null when no risky stops', () => {
@@ -29,12 +30,12 @@ describe('riskSummary', () => {
 describe('getRiskLevel', () => {
   it('returns Low Risk for score 0', () => {
     const result = getRiskLevel(0);
-    expect(result).toEqual({ label: 'Low Risk', color: '#34D399' });
+    expect(result).toEqual({ label: 'Low Risk', color: C.green });
   });
 
   it('returns Low Risk for score 19', () => {
     const result = getRiskLevel(19);
-    expect(result).toEqual({ label: 'Low Risk', color: '#34D399' });
+    expect(result).toEqual({ label: 'Low Risk', color: C.green });
   });
 
   it('returns null (normal) for score 20', () => {
@@ -47,31 +48,31 @@ describe('getRiskLevel', () => {
 
   it('returns Medium Risk for score 40', () => {
     const result = getRiskLevel(40);
-    expect(result).toEqual({ label: 'Medium Risk', color: '#FBBF24' });
+    expect(result).toEqual({ label: 'Medium Risk', color: C.yellow });
   });
 
   it('returns Medium Risk for score 59', () => {
     const result = getRiskLevel(59);
-    expect(result).toEqual({ label: 'Medium Risk', color: '#FBBF24' });
+    expect(result).toEqual({ label: 'Medium Risk', color: C.yellow });
   });
 
   it('returns High Risk for score 60', () => {
     const result = getRiskLevel(60);
-    expect(result).toEqual({ label: 'High Risk', color: '#FB923C' });
+    expect(result).toEqual({ label: 'High Risk', color: C.orange });
   });
 
   it('returns High Risk for score 79', () => {
     const result = getRiskLevel(79);
-    expect(result).toEqual({ label: 'High Risk', color: '#FB923C' });
+    expect(result).toEqual({ label: 'High Risk', color: C.orange });
   });
 
   it('returns Critical for score 80', () => {
     const result = getRiskLevel(80);
-    expect(result).toEqual({ label: 'Critical', color: '#F87171' });
+    expect(result).toEqual({ label: 'Critical', color: C.red });
   });
 
   it('returns Critical for score 100', () => {
     const result = getRiskLevel(100);
-    expect(result).toEqual({ label: 'Critical', color: '#F87171' });
+    expect(result).toEqual({ label: 'Critical', color: C.red });
   });
 });
