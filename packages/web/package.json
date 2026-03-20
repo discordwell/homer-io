@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@homer-io/shared": "*",
+    "@react-oauth/google": "^0.13.4",
     "leaflet": "^1.9.4",
     "maplibre-gl": "^5.20.2",
     "papaparse": "^5.5.3",
