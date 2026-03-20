@@ -1,10 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/auth.js';
 import { LoginPage } from './pages/Login.js';
 import { RegisterPage } from './pages/Register.js';
 import { ForgotPasswordPage } from './pages/ForgotPassword.js';
 import { ResetPasswordPage } from './pages/ResetPassword.js';
 import { VerifyEmailPage } from './pages/VerifyEmail.js';
+import { OrgChoicePage } from './pages/OrgChoice.js';
 import { DashboardPage } from './pages/Dashboard.js';
 import { VehiclesPage } from './pages/Vehicles.js';
 import { DriversPage } from './pages/Drivers.js';
@@ -40,6 +42,7 @@ function CatchAllRedirect() {
 
 export function App() {
   return (
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
     <div style={{
       minHeight: '100vh',
       background: C.bg,
@@ -53,6 +56,7 @@ export function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/org-choice" element={<OrgChoicePage />} />
         <Route path="/track/:orderId" element={<PublicTrackingPage />} />
         <Route path="/dashboard" element={
           <ProtectedRoute><DashboardLayout /></ProtectedRoute>
@@ -82,5 +86,6 @@ export function App() {
         <Route path="*" element={<CatchAllRedirect />} />
       </Routes>
     </div>
+    </GoogleOAuthProvider>
   );
 }
