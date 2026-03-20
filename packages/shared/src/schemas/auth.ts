@@ -34,6 +34,7 @@ export const userResponseSchema = z.object({
   role: z.enum(ROLES),
   tenantId: z.string().uuid(),
   createdAt: z.string().datetime(),
+  avatarUrl: z.string().nullable().optional(),
 });
 export type UserResponse = z.infer<typeof userResponseSchema>;
 

@@ -1,4 +1,5 @@
 export * from './schemas/auth.js';
+export * from './schemas/google-auth.js';
 export * from './schemas/common.js';
 export * from './schemas/fleet.js';
 export * from './schemas/orders.js';
