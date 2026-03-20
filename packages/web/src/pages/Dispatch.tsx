@@ -11,7 +11,7 @@ export function DispatchPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h2 style={{ fontFamily: F.display, fontSize: 24, marginBottom: 4 }}>Dispatch</h2>
           <p style={{ color: C.dim, fontSize: 14 }}>

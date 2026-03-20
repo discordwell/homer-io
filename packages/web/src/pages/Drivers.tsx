@@ -120,15 +120,17 @@ export function DriversPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h2 style={{ fontFamily: F.display, fontSize: 24, marginBottom: 4 }}>Drivers</h2>
           <p style={{ color: C.dim, fontSize: 14 }}>Manage your driver roster</p>
         </div>
-        <button onClick={openAdd} style={primaryBtnStyle}>+ Add Driver</button>
+        <div className="page-header-actions">
+          <button onClick={openAdd} style={primaryBtnStyle}>+ Add Driver</button>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div className="filter-pills" style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         <Pill active={!driverStatusFilter} onClick={() => setDriverStatusFilter('')}>All</Pill>
         <Pill active={driverStatusFilter === 'available'} onClick={() => handleStatusFilter('available')}>Available</Pill>
         <Pill active={driverStatusFilter === 'on_route'} onClick={() => handleStatusFilter('on_route')}>On Route</Pill>

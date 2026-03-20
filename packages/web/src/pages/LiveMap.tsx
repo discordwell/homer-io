@@ -153,6 +153,7 @@ export default function LiveMap() {
 
       {/* Main content: map + event feed side by side */}
       <div
+        className="live-map-content"
         style={{
           flex: 1,
           display: 'flex',
@@ -163,12 +164,12 @@ export default function LiveMap() {
         }}
       >
         {/* Map - 70% width */}
-        <div style={{ flex: 7, minWidth: 0 }}>
+        <div className="live-map-pane" style={{ flex: 7, minWidth: 0 }}>
           <LiveFleetMap height="100%" />
         </div>
 
         {/* Event feed - 30% width */}
-        <div style={{ flex: 3, minWidth: 240 }}>
+        <div className="live-map-feed" style={{ flex: 3, minWidth: 240 }}>
           <DeliveryEventFeed />
         </div>
       </div>

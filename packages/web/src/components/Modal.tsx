@@ -22,13 +22,13 @@ export function Modal({ open, onClose, title, size = 'md', children }: ModalProp
   if (!open) return null;
 
   return createPortal(
-    <div ref={overlayRef} onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+    <div ref={overlayRef} className="modal-overlay" onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
       style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 1000, backdropFilter: 'blur(4px)',
       }}>
-      <div style={{
+      <div className="modal-content" style={{
         background: C.bg2, borderRadius: 16, border: `1px solid ${C.muted}`,
         width: sizes[size], maxWidth: '90vw', maxHeight: '85vh', overflow: 'auto',
         padding: 24,

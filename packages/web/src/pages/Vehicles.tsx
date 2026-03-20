@@ -116,12 +116,14 @@ export function VehiclesPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h2 style={{ fontFamily: F.display, fontSize: 24, marginBottom: 4 }}>Vehicles</h2>
           <p style={{ color: C.dim, fontSize: 14 }}>Manage your fleet vehicles</p>
         </div>
-        <button onClick={openAdd} style={primaryBtnStyle}>+ Add Vehicle</button>
+        <div className="page-header-actions">
+          <button onClick={openAdd} style={primaryBtnStyle}>+ Add Vehicle</button>
+        </div>
       </div>
 
       {vehicles.length === 0 ? (

@@ -66,6 +66,8 @@ export const sseActionResultEvent = z.object({
 export const sseErrorEvent = z.object({
   type: z.literal('error'),
   message: z.string(),
+  /** Optional error code for structured handling (e.g. 'AI_NOT_CONFIGURED') */
+  code: z.string().optional(),
 });
 
 export const sseDoneEvent = z.object({

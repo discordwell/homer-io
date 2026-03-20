@@ -30,6 +30,8 @@ export interface NLOpsMessage {
   toolActivities?: NLOpsToolActivity[];
   confirmation?: NLOpsConfirmation;
   actionResult?: { actionId: string; success: boolean; summary: string };
+  /** Error code from server (e.g. 'AI_NOT_CONFIGURED') for special UI handling */
+  errorCode?: string;
   timestamp: number;
 }
 
@@ -268,6 +270,7 @@ function handleSSEEvent(
     case 'error':
       updateAssistant(set, msgId, (msg) => ({
         content: (msg.content ? msg.content + '\n' : '') + `Error: ${event.message}`,
+        errorCode: event.code,
       }));
       break;
 

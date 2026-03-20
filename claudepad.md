@@ -2,6 +2,47 @@
 
 ## Session Summaries
 
+### 2026-03-20T11:30 UTC — Ship-Blockers & Polish Batch (9 Items)
+- Fixed 9 ship-blocker/polish/growth items using 5 parallel Opus agents + direct fixes.
+- **#1 AI Copilot missing key**: `AINotConfiguredError` class in providers.ts, 503 + `AI_NOT_CONFIGURED` code on API routes, friendly `AINotConfiguredCard` component with "Go to Settings" link in AIChatPanel. 6 tests.
+- **#2 Onboarding notifications skippable**: "Configure later" button on step 4/5, `POST /onboarding/skip-step` + `GET /onboarding/provider-status` endpoints, skipped steps tracked in tenant settings JSONB. SMS/email providers now return explicit `success: false` when unconfigured. 11 tests.
+- **#3 Old landing components**: Confirmed clean — no unstaged changes.
+- **#4 Hero map crossfade**: Already fixed (styledata + 2.5s fallback). Added 5 unit tests for ready-signal logic.
+- **#5 Mobile responsive**: 19 files modified. Hamburger menu + sidebar overlay on mobile. Touch targets 44px. Tables horizontal-scroll with fade hint. AI panel full-screen overlay. Modals bottom-sheet. KPI grids responsive (4→2→1 col). Landing page hero/pricing/footer all mobile-friendly. 40 tests.
+- **#6 SEO/OG tags**: Added og:image, og:url, twitter:card meta tags. Generated 1200x630 OG image (dark theme, amber accents, "Talk to your fleet." headline) via canvas + browser automation.
+- **#7 Public demo mode**: Client-side `/demo` route with static Bay Area data (12 orders, 5 drivers, 3 routes). `guardDemoWrite()` blocks mutations in orders/fleet/routes/settings stores. DemoBanner with signup CTA. "See how it works" → `/demo`, "Talk to us" → "Try the demo". 39 tests.
+- **#8 Stripe/.env.example**: Added all Stripe (6 keys), Twilio (3), SendGrid (2) env vars to .env.example.
+- **#9 OSRM health**: Deploy workflow now attempts `docker start osrm-homer` if health check fails, with actionable error message.
+- **Bug fix**: Pre-existing `pTotal` undefined in analytics insights engine (line 615). Fixed: `const pTotal = prevStats.delivered + prevStats.failed`.
+- **Test fix**: NLOps tool count 22→25 (onboarding agent added 3 tools).
+- 457 tests pass. Full build clean.
+
+### 2026-03-20T10:30 UTC — Analytics Overhaul: Three-Zone Dashboard
+- **Complete analytics page rewrite** with three zones: "The Glance" (KPIs), "The Story" (charts + insights), "The Detail" (tabbed deep-dive).
+- **Zone A**: 6 animated KPI cards (count-up animation, inline sparklines, period-over-period deltas). Copilot prompt bar with 4 suggestion pills wired to NLOps store.
+- **Zone B**: Enhanced trend chart (4 series incl. on-time rate on 2nd Y axis, brush selector, anomaly dots, "vs Previous" toggle). Delivery heatmap (7×24 day/hour CSS grid, amber intensity, hover tooltips). Auto-generated insights strip (scrollable cards with "Ask HOMER" CTAs).
+- **Zone C**: Tabbed detail — Drivers (medal badges, sparklines, efficiency scores, expandable rows, fleet-avg comparison), Routes (duration comparison bars, summary stats), Delivery Outcomes (stacked bar, failure donut, time-window compliance gauge).
+- **Backend**: 7 new endpoints under /analytics/enhanced/ + /heatmap + /insights + /outcomes + /compare. Insights engine with 6 pattern detectors (day-of-week failure anomaly, peak hour, driver outlier, failure category concentration, week-over-week regression, capacity utilization).
+- **Demo data**: seedDemoAnalytics() generates 90 days of historical data (~750 orders, ~130 routes) with deliberate patterns (Tuesday failure spike, peak hours, driver performance profiles, growth ramp).
+- **Copilot tools**: 3 new NLOps tools (get_analytics_deep, compare_periods, get_delivery_outcomes) for conversational analytics queries.
+- **New files**: 10 components (AnimatedKPICard, Sparkline, DeliveryHeatmap, EnhancedTrendChart, InsightCard, InsightsStrip, AnalyticsPromptBar, DriverPerformanceTable, RouteAnalytics, DeliveryOutcomes). 4 CSS keyframe animations.
+- **Bug fixes during deploy**: Date→ISO string for raw SQL params, enum→text cast for COALESCE, unicode emoji escape sequences.
+- 5 commits. Deployed and wet-tested via browser automation.
+
+### 2026-03-20T05:30 UTC — V2 Auth: Google OAuth + Org Resolution
+- Implemented Google sign-in/sign-up with ID token flow (`google-auth-library` + `@react-oauth/google`).
+- **Google OAuth flow**: GoogleLogin component → ID token → backend `verifyIdToken` with audience check → 3-case resolution (existing by googleId, email match auto-link, new user with org options).
+- **Org resolution**: New users choose: join existing org (domain auto-join), start fresh, or explore demo. OrgChoicePage.tsx.
+- **Domain auto-join**: `orgDomain` + `autoJoinEnabled` on tenants. Generic domains (gmail, yahoo, etc.) excluded. First from domain = owner, subsequent = dispatcher.
+- **Demo seeding**: 24 Bay Area locations, 4 vehicles, 5 drivers, 15-20 orders with today's timestamps, 3 routes (completed/in_progress/draft).
+- **Email linking**: Work email verification with 24h expiry, SQL LIKE lookup (no full table scan), auto-join matching org on verify.
+- **DB changes**: `google_id` (unique) + `avatar_url` on users. `org_domain` + `auto_join_enabled` + `is_demo` on tenants. Index on org_domain.
+- **Frontend**: GoogleSignInButton (Google's rendered button), updated Login/Register with Google button + "or" divider, OrgChoice page, auth store with `pendingGoogleUser` (excluded from localStorage via `partialize`), App wrapped in GoogleOAuthProvider.
+- **Security**: ID token flow (not implicit) with audience verification. No access tokens stored in localStorage.
+- **Google Cloud**: Created OAuth consent screen (External) + OAuth Client ID for HOMER-io project. Authorized origins: homer.discordwell.com, app.homer.io.
+- 9 backend commits + 3 frontend commits + 1 docs commit. 566 tests passing. Deployed to ovh2.
+- **New files**: 10 (google-auth.ts schema, google.ts, demo-seed.ts, domain.ts, email-link.ts, 3 test files, GoogleSignInButton.tsx, OrgChoice.tsx). **Modified**: 14 files.
+
 ### 2026-03-20T00:15 UTC — Backend Aesthetic Redesign (Match Homepage)
 - Unified all three surfaces (dashboard, auth, driver app) with the homepage's golden amber design system.
 - **CSS Variables Migration**: Created `app.css` with `:root` custom properties for all design tokens. Updated `theme.ts` to export `var(--xxx)` references — all 97 importing components cascade automatically. Added `alpha()` helper for semi-transparent colors (replaces broken `${C.color}XX` hex alpha pattern with `rgba(var(--color-rgb), opacity)`).

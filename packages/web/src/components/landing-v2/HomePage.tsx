@@ -126,7 +126,8 @@ function Hero() {
           </p>
           <div className="hero-buttons">
             <Link to="/register" className="btn-primary">Start free &rarr;</Link>
-            <a href="#features" className="btn-outline">See how it works</a>
+            {/* human-requested: CTA links to interactive demo */}
+            <Link to="/demo" className="btn-outline">See how it works</Link>
           </div>
         </div>
         <ChatPreview city={city} />
@@ -440,7 +441,7 @@ function FinalCTA() {
         </p>
         <div className="final-cta-buttons">
           <Link to="/register" className="btn-primary">Get started free &rarr;</Link>
-          <a href="mailto:hello@homer.io" className="btn-outline">Talk to us</a>
+          <Link to="/demo" className="btn-outline">Try the demo</Link>
         </div>
       </Reveal>
     </div>

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../api/client.js';
+import { guardDemoWrite } from './demo.js';
 import type { CreateRouteInput } from '@homer-io/shared';
 
 interface RouteOrder {
@@ -81,22 +82,26 @@ export const useRoutesStore = create<RoutesState>()((set, get) => ({
   },
 
   createRoute: async (input) => {
+    guardDemoWrite('Creating routes');
     const route = await api.post<Route>('/routes', input);
     await get().fetchRoutes(get().page);
     return route;
   },
 
   updateRoute: async (id, input) => {
+    guardDemoWrite('Updating routes');
     await api.patch(`/routes/${id}`, input);
     await get().fetchRoutes(get().page);
   },
 
   deleteRoute: async (id) => {
+    guardDemoWrite('Deleting routes');
     await api.delete(`/routes/${id}`);
     await get().fetchRoutes(get().page);
   },
 
   optimizeRoute: async (id) => {
+    guardDemoWrite('Optimizing routes');
     const result = await api.post<{ message: string; optimized: boolean; route: Route }>(`/routes/${id}/optimize`);
     if (result.route) set({ currentRoute: result.route });
     return { message: result.message, optimized: result.optimized };

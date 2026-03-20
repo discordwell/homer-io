@@ -95,6 +95,7 @@ export function NotificationCenter() {
       {open && (
         <div
           ref={panelRef}
+          className="notification-dropdown"
           style={{
             position: 'absolute', top: 'calc(100% + 8px)', right: 0,
             width: 380, maxHeight: 480,

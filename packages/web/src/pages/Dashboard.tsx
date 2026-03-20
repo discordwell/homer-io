@@ -58,7 +58,7 @@ export function DashboardPage() {
       )}
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
+      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
         <KPICard icon="🗺️" label="Active Routes" value={stats?.activeRoutes ?? 0} color={C.accent} />
         <KPICard icon="📦" label="Orders Today" value={stats?.ordersToday ?? 0} color={C.green} />
         <KPICard icon="👤" label="Active Drivers" value={stats?.activeDrivers ?? 0} color={C.yellow} />

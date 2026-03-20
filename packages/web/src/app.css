@@ -512,6 +512,332 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 14px;
 }
 
+/* ---- Mobile Responsive: Dashboard ---- */
+
+/* Mobile hamburger button (shown only on mobile) */
+.mobile-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: var(--t2);
+  cursor: pointer;
+  font-size: 20px;
+  padding: 0;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile sidebar backdrop overlay */
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-toggle {
+    display: flex;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    width: var(--sidebar-w) !important;
+    z-index: 60;
+    transition: transform 0.25s ease;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* Hide the desktop collapse toggle on mobile */
+  .sidebar .sidebar-toggle {
+    display: none;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* On mobile, labels are always visible when sidebar is open */
+  .sidebar.mobile-open .sidebar-link .label {
+    opacity: 1 !important;
+    width: auto !important;
+  }
+
+  .sidebar.mobile-open .sidebar-sub {
+    display: flex !important;
+  }
+
+  .sidebar.mobile-open .sidebar-user .name,
+  .sidebar.mobile-open .sidebar-user .role,
+  .sidebar.mobile-open .sidebar-user .signout {
+    display: block !important;
+  }
+
+  /* Larger touch targets for sidebar links on mobile */
+  .sidebar-link {
+    padding: 12px 12px;
+    min-height: 44px;
+  }
+
+  .sidebar-expander {
+    padding: 12px 12px;
+    min-height: 44px;
+  }
+
+  /* Main content fills full width on mobile */
+  .dashboard-main {
+    margin-left: 0 !important;
+  }
+
+  /* Tighter padding on mobile main content */
+  .dashboard-main main {
+    padding: 16px !important;
+  }
+
+  /* Top nav adjustments for mobile */
+  .topnav {
+    padding: 0 12px;
+    gap: 8px;
+  }
+}
+
+/* Tablet responsive (between mobile and desktop) */
+@media (max-width: 1024px) and (min-width: 769px) {
+  /* Auto-collapse sidebar on tablets */
+  .sidebar:not(.collapsed) {
+    width: var(--sidebar-w-collapsed);
+  }
+
+  .sidebar:not(.collapsed) .sidebar-link .label {
+    opacity: 0;
+    width: 0;
+  }
+
+  .sidebar:not(.collapsed) .sidebar-sub {
+    display: none;
+  }
+
+  .sidebar:not(.collapsed) .sidebar-user .name,
+  .sidebar:not(.collapsed) .sidebar-user .role,
+  .sidebar:not(.collapsed) .sidebar-user .signout {
+    display: none;
+  }
+}
+
+/* ---- Mobile Responsive: DataTable ---- */
+
+@media (max-width: 640px) {
+  /* Make tables scrollable with a visible hint */
+  .data-table-wrap {
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(to left, var(--bg2), transparent);
+    pointer-events: none;
+    z-index: 1;
+    opacity: 1;
+    transition: opacity 0.2s;
+  }
+
+  /* Pagination buttons need bigger touch targets */
+  .data-table-pagination button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 16px;
+  }
+}
+
+/* ---- Mobile Responsive: KPI Cards ---- */
+
+@media (max-width: 1024px) {
+  .kpi-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+}
+
+@media (max-width: 374px) {
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ---- Mobile Responsive: Page Headers ---- */
+
+@media (max-width: 640px) {
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .page-header-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .page-header-actions button {
+    flex: 1;
+    min-height: 44px;
+    justify-content: center;
+  }
+}
+
+/* ---- Mobile Responsive: AI Chat Panel ---- */
+
+@media (max-width: 768px) {
+  .ai-chat-panel {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    z-index: 1000 !important;
+    border-left: none !important;
+  }
+
+  .ai-chat-toggle {
+    bottom: 16px !important;
+    right: 16px !important;
+    width: 52px !important;
+    height: 52px !important;
+  }
+}
+
+/* ---- Mobile Responsive: Notification Center ---- */
+
+@media (max-width: 480px) {
+  .notification-dropdown {
+    position: fixed !important;
+    top: var(--topnav-h) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-height: calc(100vh - var(--topnav-h)) !important;
+    max-height: calc(100dvh - var(--topnav-h)) !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* ---- Mobile Responsive: Filter Pills ---- */
+
+@media (max-width: 640px) {
+  /* Make filter pill rows horizontally scrollable on mobile */
+  .filter-pills {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .filter-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Ensure pills have adequate touch targets */
+  .filter-pills button {
+    min-height: 36px;
+    flex-shrink: 0;
+  }
+
+  /* Settings tabs: scrollable with adequate targets */
+  .settings-tabs {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .settings-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-tabs button {
+    min-height: 44px;
+    flex-shrink: 0;
+  }
+}
+
+/* ---- Mobile Responsive: Auth Pages ---- */
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 24px 16px;
+    border-radius: 0;
+    border: none;
+    width: 100%;
+    max-width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+/* ---- Mobile Responsive: Live Map ---- */
+
+@media (max-width: 768px) {
+  .live-map-content {
+    flex-direction: column !important;
+    padding: 0 12px 12px !important;
+  }
+
+  .live-map-pane {
+    flex: none !important;
+    height: 50vh !important;
+    min-height: 300px;
+  }
+
+  .live-map-feed {
+    flex: none !important;
+    min-width: 0 !important;
+    max-height: 30vh;
+    overflow-y: auto;
+  }
+}
+
+/* ---- Mobile Responsive: Modal ---- */
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    align-items: flex-end !important;
+  }
+
+  .modal-content {
+    max-width: 100vw !important;
+    width: 100vw !important;
+    max-height: 90vh !important;
+    max-height: 90dvh !important;
+    border-radius: 16px 16px 0 0 !important;
+    margin: 0 !important;
+  }
+}
+
 /* ---- Driver app overrides ---- */
 
 .driver-app {

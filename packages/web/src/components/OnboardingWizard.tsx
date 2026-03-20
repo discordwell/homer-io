@@ -12,7 +12,7 @@ const STEP_LINKS: Record<string, string> = {
 };
 
 export function OnboardingWizard() {
-  const { status, loading, fetchStatus, completeOnboarding, skipOnboarding } = useOnboardingStore();
+  const { status, loading, fetchStatus, completeOnboarding, skipOnboarding, skipStep } = useOnboardingStore();
   const navigate = useNavigate();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -63,37 +63,70 @@ export function OnboardingWizard() {
       {/* Steps */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {status.steps.map((step) => (
-          <div key={step.key} style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '10px 14px', borderRadius: 8, background: C.bg3,
-          }}>
-            <span style={{
-              width: 22, height: 22, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: step.completed ? C.green : C.muted,
-              color: step.completed ? '#000' : C.dim,
-              fontSize: 12, fontWeight: 600, flexShrink: 0,
+          <div key={step.key}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '10px 14px', borderRadius: step.skipReason && !step.completed ? '8px 8px 0 0' : 8,
+              background: C.bg3,
             }}>
-              {step.completed ? '\u2713' : '\u00B7'}
-            </span>
-            <span style={{
-              flex: 1, fontSize: 14,
-              color: step.completed ? C.dim : C.text,
-              textDecoration: step.completed ? 'line-through' : 'none',
-            }}>
-              {step.label}
-            </span>
-            {!step.completed && (
-              <button
-                onClick={() => navigate(STEP_LINKS[step.key] || '/dashboard')}
-                style={{
-                  padding: '4px 12px', borderRadius: 6,
-                  background: C.accent, border: 'none', color: '#000',
-                  cursor: 'pointer', fontFamily: F.body, fontSize: 12, fontWeight: 600,
-                }}
-              >
-                Go
-              </button>
+              <span style={{
+                width: 22, height: 22, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: step.completed ? (step.skipped ? C.yellow : C.green) : C.muted,
+                color: step.completed ? '#000' : C.dim,
+                fontSize: 12, fontWeight: 600, flexShrink: 0,
+              }}>
+                {step.completed ? (step.skipped ? '\u2192' : '\u2713') : '\u00B7'}
+              </span>
+              <span style={{
+                flex: 1, fontSize: 14,
+                color: step.completed ? C.dim : C.text,
+                textDecoration: step.completed && !step.skipped ? 'line-through' : 'none',
+              }}>
+                {step.label}
+                {step.skipped && (
+                  <span style={{ fontSize: 11, color: C.dim, marginLeft: 8, fontStyle: 'italic' }}>
+                    (skipped)
+                  </span>
+                )}
+              </span>
+              {!step.completed && (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {step.skippable && (
+                    <button
+                      onClick={() => skipStep(step.key)}
+                      style={{
+                        padding: '4px 12px', borderRadius: 6,
+                        background: 'transparent', border: `1px solid ${C.muted}`,
+                        color: C.dim, cursor: 'pointer', fontFamily: F.body,
+                        fontSize: 12, fontWeight: 400,
+                      }}
+                    >
+                      Configure later
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigate(STEP_LINKS[step.key] || '/dashboard')}
+                    style={{
+                      padding: '4px 12px', borderRadius: 6,
+                      background: C.accent, border: 'none', color: '#000',
+                      cursor: 'pointer', fontFamily: F.body, fontSize: 12, fontWeight: 600,
+                    }}
+                  >
+                    Go
+                  </button>
+                </div>
+              )}
+            </div>
+            {/* Show skip reason hint when the step is not completed and has a reason */}
+            {step.skipReason && !step.completed && (
+              <div style={{
+                padding: '8px 14px', borderRadius: '0 0 8px 8px',
+                background: C.bg3, borderTop: `1px solid ${C.muted}`,
+                fontSize: 12, color: C.yellow, lineHeight: 1.4,
+              }}>
+                {step.skipReason}
+              </div>
             )}
           </div>
         ))}

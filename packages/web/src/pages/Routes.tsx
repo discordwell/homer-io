@@ -69,15 +69,17 @@ export function RoutesPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h2 style={{ fontFamily: F.display, fontSize: 24, marginBottom: 4 }}>Routes</h2>
           <p style={{ color: C.dim, fontSize: 14 }}>Plan and manage delivery routes</p>
         </div>
-        <button onClick={() => navigate('/dashboard/routes/new')} style={primaryBtnStyle}>+ Create Route</button>
+        <div className="page-header-actions">
+          <button onClick={() => navigate('/dashboard/routes/new')} style={primaryBtnStyle}>+ Create Route</button>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div className="filter-pills" style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         <Pill active={!statusFilter} onClick={() => setStatusFilter('')}>All</Pill>
         {['draft', 'planned', 'in_progress', 'completed', 'cancelled'].map(s => (
           <Pill key={s} active={statusFilter === s} onClick={() => setStatusFilter(s === statusFilter ? '' : s)}>

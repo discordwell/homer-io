@@ -213,16 +213,35 @@ class OpenAIProvider implements AIProvider {
 
 // --- Factory ---
 
+/** Thrown when no AI provider API key is configured */
+export class AINotConfiguredError extends Error {
+  constructor(provider: string) {
+    super(`AI provider not configured: ${provider} API key is missing`);
+    this.name = 'AINotConfiguredError';
+  }
+}
+
 let cachedProvider: AIProvider | null = null;
+
+/**
+ * Check whether an AI provider is configured (has an API key).
+ * Does not throw — safe to call anywhere.
+ */
+export function isAIConfigured(): boolean {
+  if (config.nlops.provider === 'openai') {
+    return !!config.openai.apiKey;
+  }
+  return !!config.anthropic.apiKey;
+}
 
 export function getProvider(): AIProvider {
   if (cachedProvider) return cachedProvider;
 
   if (config.nlops.provider === 'openai') {
-    if (!config.openai.apiKey) throw new Error('OPENAI_API_KEY required when NLOPS_PROVIDER=openai');
+    if (!config.openai.apiKey) throw new AINotConfiguredError('OpenAI');
     cachedProvider = new OpenAIProvider();
   } else {
-    if (!config.anthropic.apiKey) throw new Error('ANTHROPIC_API_KEY required for NLOps');
+    if (!config.anthropic.apiKey) throw new AINotConfiguredError('Anthropic');
     cachedProvider = new AnthropicProvider();
   }
 

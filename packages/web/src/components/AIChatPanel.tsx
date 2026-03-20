@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNLOpsStore, type NLOpsMessage, type NLOpsToolActivity, type NLOpsConfirmation } from '../stores/nlops.js';
 import { C, F, alpha } from '../theme.js';
 
@@ -83,7 +84,7 @@ export function AIChatPanel() {
       {thoughtOverlay}
 
       {/* Toggle button */}
-      <button onClick={toggle} style={{
+      <button className="ai-chat-toggle" onClick={toggle} style={{
         position: 'fixed', bottom: 24, right: 24, width: 48, height: 48,
         borderRadius: '50%', background: C.accent, border: 'none',
         color: '#000', fontSize: 16, cursor: 'pointer', zIndex: 999,
@@ -96,9 +97,10 @@ export function AIChatPanel() {
 
       {/* Panel */}
       {isOpen && (
-        <div style={{
+        <div className="ai-chat-panel" style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0,
           width: 400, background: C.bg2, borderLeft: `1px solid ${C.muted}`,
-          display: 'flex', flexDirection: 'column', flexShrink: 0,
+          display: 'flex', flexDirection: 'column', flexShrink: 0, zIndex: 999,
         }}>
           {/* Header */}
           <div style={{
@@ -200,6 +202,11 @@ function MessageBubble({ msg, onConfirm, onDeny }: {
     );
   }
 
+  // AI not configured — show a helpful setup card
+  if (msg.errorCode === 'AI_NOT_CONFIGURED') {
+    return <AINotConfiguredCard />;
+  }
+
   // Confirmation card
   if (msg.confirmation) {
     return <ConfirmationCard conf={msg.confirmation} onConfirm={onConfirm} onDeny={onDeny} />;
@@ -244,6 +251,37 @@ function MessageBubble({ msg, onConfirm, onDeny }: {
           {msg.content}
         </div>
       )}
+    </div>
+  );
+}
+
+function AINotConfiguredCard() {
+  const navigate = useNavigate();
+  return (
+    <div style={{
+      padding: '14px 16px', borderRadius: 10,
+      background: alpha(C.orange, 0.08),
+      border: `1px solid ${C.orange}`,
+      fontSize: 13, color: C.text, maxWidth: '92%',
+    }}>
+      <div style={{ fontFamily: F.display, fontWeight: 600, color: C.orange, marginBottom: 8, fontSize: 14 }}>
+        AI Copilot Not Configured
+      </div>
+      <p style={{ margin: '0 0 10px', lineHeight: 1.5, color: C.dim }}>
+        HOMER's AI assistant requires an API key to function.
+        Ask your server administrator to set <span style={{ fontFamily: F.mono, color: C.text }}>ANTHROPIC_API_KEY</span> or <span style={{ fontFamily: F.mono, color: C.text }}>OPENAI_API_KEY</span> in the environment configuration.
+      </p>
+      <button
+        onClick={() => navigate('/dashboard/settings?tab=integrations')}
+        style={{
+          padding: '6px 14px', borderRadius: 6,
+          background: C.orange, border: 'none',
+          color: '#fff', cursor: 'pointer', fontSize: 13,
+          fontFamily: F.body, fontWeight: 600,
+        }}
+      >
+        Go to Settings
+      </button>
     </div>
   );
 }

@@ -74,3 +74,24 @@
   z-index: 4;
   pointer-events: none;
 }
+
+/* Mobile: lighten grid overlay and reduce ring density */
+@media (max-width: 640px) {
+  .hero-map-grid {
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 59px,
+        rgba(24,37,64,0.15) 59px,
+        rgba(24,37,64,0.15) 60px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 59px,
+        rgba(24,37,64,0.15) 59px,
+        rgba(24,37,64,0.15) 60px
+      );
+  }
+}

@@ -49,7 +49,7 @@ export function SettingsPage() {
         <p style={{ color: C.dim, fontSize: 14 }}>Manage your organization, team, and integrations</p>
       </div>
 
-      <div style={{
+      <div className="settings-tabs" style={{
         display: 'flex', gap: 4, marginBottom: 24,
         borderBottom: `1px solid ${C.border}`, paddingBottom: 0,
         overflowX: 'auto',

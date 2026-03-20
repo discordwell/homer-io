@@ -68,7 +68,12 @@ jobs:
             rsync -a --delete packages/web/dist/ site/
             echo 'n' | npx drizzle-kit push --config infra/drizzle-push.config.ts --force || echo 'drizzle push skipped'
             pm2 reload infra/ecosystem.config.cjs || pm2 start infra/ecosystem.config.cjs
-            curl -sf http://localhost:5000/ > /dev/null && echo "OSRM: healthy" || echo "OSRM: not running (routing will use haversine fallback)"
+            if curl -sf http://localhost:5000/ > /dev/null 2>&1; then
+              echo "OSRM: healthy"
+            else
+              echo "OSRM: not running — attempting restart..."
+              docker start osrm-homer 2>/dev/null && sleep 3 && curl -sf http://localhost:5000/ > /dev/null && echo "OSRM: restarted successfully" || echo "OSRM: still down (run infra/osrm/setup-osrm.sh to initialize). Routing will use haversine fallback."
+            fi
             echo "Deployed $(git rev-parse --short HEAD) at $(date)"
 
       - name: Reboot ovh2 via OVH API (SSH failed)
@@ -112,4 +117,10 @@ jobs:
             rsync -a --delete packages/web/dist/ site/
             echo 'n' | npx drizzle-kit push --config infra/drizzle-push.config.ts --force || echo 'drizzle push skipped'
             pm2 reload infra/ecosystem.config.cjs || pm2 start infra/ecosystem.config.cjs
+            if curl -sf http://localhost:5000/ > /dev/null 2>&1; then
+              echo "OSRM: healthy"
+            else
+              echo "OSRM: not running — attempting restart..."
+              docker start osrm-homer 2>/dev/null && sleep 3 && curl -sf http://localhost:5000/ > /dev/null && echo "OSRM: restarted successfully" || echo "OSRM: still down (run infra/osrm/setup-osrm.sh to initialize). Routing will use haversine fallback."
+            fi
             echo "Deployed $(git rev-parse --short HEAD) at $(date) (after reboot)"

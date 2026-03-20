@@ -27,6 +27,12 @@ import { DriverMapPage } from './pages/driver/DriverMap.js';
 import { DriverProfilePage } from './pages/driver/DriverProfile.js';
 import { MigrationPage } from './pages/Migration.js';
 import { LandingPage } from './pages/Landing.js';
+import { DemoDashboardLayout } from './components/DemoDashboardLayout.js';
+import { DemoDashboardPage } from './pages/DemoDashboard.js';
+import { DemoOrdersPage } from './pages/DemoOrders.js';
+import { DemoRoutesPage } from './pages/DemoRoutes.js';
+import { DemoVehiclesPage, DemoDriversPage } from './pages/DemoFleet.js';
+import { DemoAnalyticsPage } from './pages/DemoAnalytics.js';
 import { C, F } from './theme.js';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -82,6 +88,15 @@ export function App() {
           <Route path="stop/:routeId/:orderId" element={<DriverStopDetailPage />} />
           <Route path="map" element={<DriverMapPage />} />
           <Route path="profile" element={<DriverProfilePage />} />
+        </Route>
+        {/* Public demo routes — no auth required */}
+        <Route path="/demo" element={<DemoDashboardLayout />}>
+          <Route index element={<DemoDashboardPage />} />
+          <Route path="orders" element={<DemoOrdersPage />} />
+          <Route path="routes" element={<DemoRoutesPage />} />
+          <Route path="fleet/vehicles" element={<DemoVehiclesPage />} />
+          <Route path="fleet/drivers" element={<DemoDriversPage />} />
+          <Route path="analytics" element={<DemoAnalyticsPage />} />
         </Route>
         <Route path="*" element={<CatchAllRedirect />} />
       </Routes>

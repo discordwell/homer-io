@@ -21,7 +21,7 @@ const navItems = [
   { label: 'Settings', path: '/dashboard/settings', icon: '\u2699\uFE0F' },
 ];
 
-export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+export function Sidebar({ collapsed, onToggle, mobileOpen }: { collapsed: boolean; onToggle: () => void; mobileOpen?: boolean }) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const location = useLocation();
@@ -33,7 +33,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
   useEffect(() => { fetchUnreadCount(); }, []);
 
   return (
-    <nav className={`sidebar${collapsed ? ' collapsed' : ''}`}>
+    <nav className={`sidebar${collapsed ? ' collapsed' : ''}${mobileOpen ? ' mobile-open' : ''}`}>
       <button className="sidebar-toggle" onClick={onToggle} aria-label="Toggle sidebar">
         {collapsed ? '\u25B6' : '\u25C0'}
       </button>

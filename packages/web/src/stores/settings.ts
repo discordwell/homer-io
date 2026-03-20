@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../api/client.js';
+import { guardDemoWrite } from './demo.js';
 import type { UpdateOrgSettingsInput, InviteUserInput, ApiKeyCreateInput, Role } from '@homer-io/shared';
 
 interface OrgSettings {
@@ -77,6 +78,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   },
 
   updateSettings: async (input) => {
+    guardDemoWrite('Updating settings');
     const settings = await api.put<OrgSettings>('/settings/organization', input);
     set({ orgSettings: settings });
   },
@@ -92,17 +94,20 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   },
 
   inviteUser: async (input) => {
+    guardDemoWrite('Inviting users');
     const result = await api.post<InviteResponse>('/team/invite', input);
     await get().fetchTeam();
     return result;
   },
 
   updateRole: async (userId, role) => {
+    guardDemoWrite('Updating roles');
     await api.put(`/team/${userId}/role`, { role });
     await get().fetchTeam();
   },
 
   deactivateUser: async (userId) => {
+    guardDemoWrite('Deactivating users');
     await api.delete(`/team/${userId}`);
     await get().fetchTeam();
   },
@@ -118,12 +123,14 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   },
 
   createApiKey: async (input) => {
+    guardDemoWrite('Creating API keys');
     const result = await api.post<ApiKeyCreateResponse>('/api-keys', input);
     await get().fetchApiKeys();
     return result;
   },
 
   revokeApiKey: async (id) => {
+    guardDemoWrite('Revoking API keys');
     await api.delete(`/api-keys/${id}`);
     await get().fetchApiKeys();
   },

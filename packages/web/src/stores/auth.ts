@@ -55,6 +55,13 @@ export const useAuthStore = create<AuthState>()(
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Clear stale demo tokens that may persist if user hard-navigated
+        // away from /demo without React cleanup running
+        if (state?.accessToken === 'demo-token') {
+          state.logout();
+        }
+      },
     },
   ),
 );

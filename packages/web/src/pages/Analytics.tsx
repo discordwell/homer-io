@@ -29,12 +29,12 @@ export function AnalyticsPage() {
       {/* ── Zone A: The Glance ── */}
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ fontFamily: F.display, fontSize: 24, marginBottom: 4 }}>Analytics</h2>
           <p style={{ color: C.dim, margin: 0, fontSize: 13 }}>Performance metrics, trends, and insights</p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="page-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Range selector */}
           <div style={{
             display: 'flex', background: C.bg3, borderRadius: 8,
@@ -76,7 +76,7 @@ export function AnalyticsPage() {
 
       {/* KPI Cards (6 animated) */}
       {ov && (
-        <div style={{
+        <div className="kpi-grid" style={{
           display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 24,
         }}>
           <AnimatedKPICard

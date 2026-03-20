@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../api/client.js';
+import { guardDemoWrite } from './demo.js';
 
 interface Order {
   id: string;
@@ -76,16 +77,19 @@ export const useOrdersStore = create<OrdersState>()((set, get) => ({
   },
 
   createOrder: async (input) => {
+    guardDemoWrite('Creating orders');
     await api.post('/orders', input);
     await get().fetchOrders(get().page);
   },
 
   deleteOrder: async (id) => {
+    guardDemoWrite('Deleting orders');
     await api.delete(`/orders/${id}`);
     await get().fetchOrders(get().page);
   },
 
   importCsv: async (rows) => {
+    guardDemoWrite('Importing orders');
     await api.post('/orders/import/csv', { orders: rows });
     await get().fetchOrders(1);
   },

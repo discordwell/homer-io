@@ -207,18 +207,18 @@ export function OrdersPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h2 style={{ fontFamily: F.display, fontSize: 24, marginBottom: 4 }}>Orders</h2>
           <p style={{ color: C.dim, fontSize: 14 }}>{total} total orders</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="page-header-actions" style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => setCsvOpen(true)} style={secondaryBtnStyle}>Import CSV</button>
           <button onClick={() => setModalOpen(true)} style={primaryBtnStyle}>+ Add Order</button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div className="filter-pills" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <Pill active={!statusFilter} onClick={() => setStatusFilter('')}>All</Pill>
         {['received', 'assigned', 'in_transit', 'delivered', 'failed', 'returned'].map(s => (
           <Pill key={s} active={statusFilter === s} onClick={() => setStatusFilter(s === statusFilter ? '' : s)}>
@@ -374,7 +374,7 @@ function AddressIntelligencePanel({ data, loading, onClose }: {
       {!loading && data && (
         <div>
           {/* Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+          <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
             <StatBox label="Deliveries" value={data.totalDeliveries} />
             <StatBox
               label="Success Rate"

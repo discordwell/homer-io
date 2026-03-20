@@ -313,30 +313,9 @@ export async function getEnhancedOverview(tenantId: string, range: '7d' | '30d' 
   const totalDriverCount = Number(driverCounts[0].total);
   const activeDriverCount = Number(driverCounts[0].active);
 
-  // Previous period overview for deltas
-  const [prevDelivered, prevFailed, prevAvgTime, prevRoutes, prevOrders, prevOnTime, prevActiveDriversResult] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
-      eq(orders.tenantId, tenantId), eq(orders.status, 'delivered'),
-      gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
-    )),
-    db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
-      eq(orders.tenantId, tenantId), eq(orders.status, 'failed'),
-      gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
-    )),
-    db.select({ avg: sql<number>`avg(EXTRACT(EPOCH FROM (${orders.completedAt} - ${orders.createdAt})) / 60)` })
-      .from(orders).where(and(
-        eq(orders.tenantId, tenantId), eq(orders.status, 'delivered'),
-        sql`${orders.completedAt} IS NOT NULL`,
-        gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
-      )),
-    db.select({ count: sql<number>`count(*)` }).from(routes).where(and(
-      eq(routes.tenantId, tenantId),
-      gte(routes.createdAt, prevCutoff), lt(routes.createdAt, cutoff),
-    )),
-    db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
-      eq(orders.tenantId, tenantId),
-      gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
-    )),
+  // Previous period stats via shared helper + extra queries for on-time & active drivers
+  const [prevStats, prevOnTimeResult, prevActiveDriversResult] = await Promise.all([
+    getPreviousPeriodStats(tenantId, cutoff, prevCutoff),
     db.select({
       total: sql<number>`count(*) FILTER (WHERE ${orders.status} = 'delivered')`,
       onTime: sql<number>`count(*) FILTER (WHERE ${orders.status} = 'delivered' AND ${orders.completedAt} <= ${orders.timeWindowEnd})`,
@@ -353,13 +332,8 @@ export async function getEnhancedOverview(tenantId: string, range: '7d' | '30d' 
     )),
   ]);
 
-  const pDel = Number(prevDelivered[0].count);
-  const pFail = Number(prevFailed[0].count);
-  const pTotal = pDel + pFail;
-  const pSuccessRate = pTotal > 0 ? Math.round((pDel / pTotal) * 100 * 10) / 10 : 0;
-  const pAvgTime = prevAvgTime[0].avg != null ? Math.round(Number(prevAvgTime[0].avg)) : 0;
-  const pOnTimeTotal = Number(prevOnTime[0].total);
-  const pOnTimeCount = Number(prevOnTime[0].onTime);
+  const pOnTimeTotal = Number(prevOnTimeResult[0].total);
+  const pOnTimeCount = Number(prevOnTimeResult[0].onTime);
   const pOnTimeRate = pOnTimeTotal > 0 ? Math.round((pOnTimeCount / pOnTimeTotal) * 100 * 10) / 10 : 0;
   const prevActiveDriverCount = Number(prevActiveDriversResult[0].count);
 
@@ -408,12 +382,12 @@ export async function getEnhancedOverview(tenantId: string, range: '7d' | '30d' 
       ordersReceived: dailyData.map(d => d.newOrders),
     },
     deltas: {
-      deliveries: delta(current.totalDeliveries, pDel),
-      successRate: Math.round((current.successRate - pSuccessRate) * 10) / 10,
+      deliveries: delta(current.totalDeliveries, prevStats.delivered),
+      successRate: Math.round((current.successRate - prevStats.successRate) * 10) / 10,
       onTimeRate: Math.round((onTimeRate - pOnTimeRate) * 10) / 10,
-      avgDeliveryTime: delta(current.avgDeliveryTime ?? 0, pAvgTime),
+      avgDeliveryTime: delta(current.avgDeliveryTime ?? 0, prevStats.avgDeliveryTime),
       activeDrivers: delta(activeDriverCount, prevActiveDriverCount),
-      ordersReceived: delta(current.ordersReceived, Number(prevOrders[0].count)),
+      ordersReceived: delta(current.ordersReceived, prevStats.orders),
     },
   };
 }
@@ -508,8 +482,13 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
   prevCutoff.setDate(prevCutoff.getDate() - days);
 
   const insights: Insight[] = [];
-  let insightId = 0;
-  const nextInsightId = () => `insight-${++insightId}`;
+  const insightIdCounts = new Map<string, number>();
+  const stableInsightId = (type: string, category: string) => {
+    const base = `insight-${type}-${category}`;
+    const count = (insightIdCounts.get(base) ?? 0) + 1;
+    insightIdCounts.set(base, count);
+    return count === 1 ? base : `${base}-${count}`;
+  };
 
   // Get base data in parallel
   const [dayOfWeekFailures, hourlyVolume, driverPerf, overview, failureCats] = await Promise.all([
@@ -543,20 +522,8 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
   ]);
 
   // Previous period for comparison
-  const [prevDeliveredR, prevFailedR] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
-      eq(orders.tenantId, tenantId), eq(orders.status, 'delivered'),
-      gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
-    )),
-    db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
-      eq(orders.tenantId, tenantId), eq(orders.status, 'failed'),
-      gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
-    )),
-  ]);
-  const pDel = Number(prevDeliveredR[0].count);
-  const pFail = Number(prevFailedR[0].count);
-  const pTotal = pDel + pFail;
-  const prevSuccessRate = pTotal > 0 ? Math.round((pDel / pTotal) * 100 * 10) / 10 : 0;
+  const prevStats = await getPreviousPeriodStats(tenantId, cutoff, prevCutoff);
+  const prevSuccessRate = prevStats.successRate;
 
   const DOW_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -570,7 +537,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
     for (const d of dowData) {
       if (d.rate > meanRate * 1.5 && d.failed >= 3) {
         insights.push({
-          id: nextInsightId(), type: 'warning', category: 'timing',
+          id: stableInsightId('warning', 'timing'), type: 'warning', category: 'timing',
           headline: `${DOW_NAMES[d.dow]} Failure Spike`,
           detail: `${Math.round(d.rate * 100)}% failure rate on ${DOW_NAMES[d.dow]}s vs ${Math.round(meanRate * 100)}% average. ${d.failed} failures in the period.`,
           impact: Math.min(90, Math.round(d.rate / meanRate * 30)),
@@ -589,7 +556,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
     if (pct >= 15) {
       const peakHour = Number(peak.hour);
       insights.push({
-        id: nextInsightId(), type: 'suggestion', category: 'timing',
+        id: stableInsightId('suggestion', 'timing'), type: 'suggestion', category: 'timing',
         headline: `Peak Hour: ${peakHour}:00–${peakHour + 1}:00`,
         detail: `${pct}% of all deliveries happen in this window (${peak.cnt} deliveries). Ensure full driver availability.`,
         impact: Math.min(70, pct),
@@ -606,7 +573,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
       if (Math.abs(diff) > 10 && d.totalDeliveries >= 5) {
         if (diff > 0) {
           insights.push({
-            id: nextInsightId(), type: 'positive', category: 'driver',
+            id: stableInsightId('positive', 'driver'), type: 'positive', category: 'driver',
             headline: `${d.driverName} — Star Performer`,
             detail: `${d.successRate}% success rate, ${Math.round(diff)}% above fleet average. Consider assigning high-priority routes.`,
             impact: Math.min(60, Math.round(diff)),
@@ -614,7 +581,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
           });
         } else {
           insights.push({
-            id: nextInsightId(), type: 'warning', category: 'driver',
+            id: stableInsightId('warning', 'driver'), type: 'warning', category: 'driver',
             headline: `${d.driverName} — Needs Support`,
             detail: `${d.successRate}% success rate, ${Math.round(Math.abs(diff))}% below fleet average. Review route assignments or provide coaching.`,
             impact: Math.min(80, Math.round(Math.abs(diff))),
@@ -634,7 +601,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
       if (pct >= 40) {
         const label = String(cat.category).replace(/_/g, ' ');
         insights.push({
-          id: nextInsightId(), type: 'warning', category: 'failure',
+          id: stableInsightId('warning', 'failure'), type: 'warning', category: 'failure',
           headline: `"${label}" Drives ${pct}% of Failures`,
           detail: `${cat.cnt} of ${totalFailures} failures are "${label}". ${label === 'not home' ? 'Consider requiring recipient phone confirmation before dispatch.' : 'Review delivery procedures.'}`,
           impact: Math.min(85, pct),
@@ -645,11 +612,12 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
   }
 
   // 5. Week-over-week regression/improvement
+  const pTotal = prevStats.delivered + prevStats.failed;
   if (pTotal > 0 && overview.totalDeliveries + (overview.ordersReceived - overview.totalDeliveries) > 0) {
     const diff = overview.successRate - prevSuccessRate;
     if (diff <= -5) {
       insights.push({
-        id: nextInsightId(), type: 'anomaly', category: 'performance',
+        id: stableInsightId('anomaly', 'performance'), type: 'anomaly', category: 'performance',
         headline: 'Success Rate Declining',
         detail: `Success rate dropped from ${prevSuccessRate}% to ${overview.successRate}% compared to the previous period.`,
         impact: Math.min(90, Math.round(Math.abs(diff) * 2)),
@@ -657,7 +625,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
       });
     } else if (diff >= 5) {
       insights.push({
-        id: nextInsightId(), type: 'positive', category: 'performance',
+        id: stableInsightId('positive', 'performance'), type: 'positive', category: 'performance',
         headline: 'Success Rate Improving',
         detail: `Success rate improved from ${prevSuccessRate}% to ${overview.successRate}%, up ${Math.round(diff)}% from the previous period.`,
         impact: Math.min(50, Math.round(diff)),
@@ -679,7 +647,7 @@ export async function generateInsights(tenantId: string, range: '7d' | '30d' | '
     const utilRate = Math.round((activeInPeriod / totalDrivers) * 100);
     if (utilRate < 60 && totalDrivers >= 3) {
       insights.push({
-        id: nextInsightId(), type: 'suggestion', category: 'capacity',
+        id: stableInsightId('suggestion', 'capacity'), type: 'suggestion', category: 'capacity',
         headline: 'Low Driver Utilization',
         detail: `Only ${activeInPeriod} of ${totalDrivers} drivers completed deliveries this period (${utilRate}%). Review driver scheduling.`,
         impact: Math.min(60, 60 - utilRate),
@@ -853,7 +821,7 @@ export async function getEnhancedRouteEfficiency(tenantId: string, range: '7d' |
   if (driverIds.length > 0) {
     const driverRows = await db.select({ id: drivers.id, name: drivers.name })
       .from(drivers)
-      .where(sql`${drivers.id} IN ${driverIds}`);
+      .where(inArray(drivers.id, driverIds));
     for (const d of driverRows) driverNameMap.set(d.id, d.name);
   }
 
@@ -892,47 +860,23 @@ export async function comparePeriods(
 
   const current = await getAnalyticsOverview(tenantId, range);
 
-  // Previous period
-  const [pDel, pFail, pAvg, pRoutes, pDist, pOrders] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
-      eq(orders.tenantId, tenantId), eq(orders.status, 'delivered'),
-      gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
-    )),
-    db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
-      eq(orders.tenantId, tenantId), eq(orders.status, 'failed'),
-      gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
-    )),
-    db.select({ avg: sql<number>`avg(EXTRACT(EPOCH FROM (${orders.completedAt} - ${orders.createdAt})) / 60)` })
-      .from(orders).where(and(
-        eq(orders.tenantId, tenantId), eq(orders.status, 'delivered'),
-        sql`${orders.completedAt} IS NOT NULL`,
-        gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
-      )),
-    db.select({ count: sql<number>`count(*)` }).from(routes).where(and(
-      eq(routes.tenantId, tenantId),
-      gte(routes.createdAt, prevCutoff), lt(routes.createdAt, cutoff),
-    )),
+  // Previous period via shared helper + extra distance query
+  const [prevStats, pDist] = await Promise.all([
+    getPreviousPeriodStats(tenantId, cutoff, prevCutoff),
     db.select({ total: sql<number>`COALESCE(sum(${routes.totalDistance}::numeric), 0)` })
       .from(routes).where(and(
         eq(routes.tenantId, tenantId),
         gte(routes.createdAt, prevCutoff), lt(routes.createdAt, cutoff),
       )),
-    db.select({ count: sql<number>`count(*)` }).from(orders).where(and(
-      eq(orders.tenantId, tenantId),
-      gte(orders.createdAt, prevCutoff), lt(orders.createdAt, cutoff),
-    )),
   ]);
 
-  const prevDel = Number(pDel[0].count);
-  const prevFail = Number(pFail[0].count);
-  const prevTotal = prevDel + prevFail;
   const previous: AnalyticsOverview = {
-    totalDeliveries: prevDel,
-    successRate: prevTotal > 0 ? Math.round((prevDel / prevTotal) * 100 * 10) / 10 : 0,
-    avgDeliveryTime: pAvg[0].avg != null ? Math.round(Number(pAvg[0].avg)) : null,
-    totalRoutes: Number(pRoutes[0].count),
+    totalDeliveries: prevStats.delivered,
+    successRate: prevStats.successRate,
+    avgDeliveryTime: prevStats.avgDeliveryTime !== 0 ? prevStats.avgDeliveryTime : null,
+    totalRoutes: prevStats.routes,
     totalDistance: pDist[0].total != null ? Number(pDist[0].total) : null,
-    ordersReceived: Number(pOrders[0].count),
+    ordersReceived: prevStats.orders,
   };
 
   function pctChange(curr: number, prev: number): number {

@@ -18,8 +18,8 @@ interface DataTableProps<T> {
 export function DataTable<T extends Record<string, any>>({ columns, data, onRowClick, pagination }: DataTableProps<T>) {
   return (
     <div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: F.body, fontSize: 14 }}>
+      <div className="data-table-wrap" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: F.body, fontSize: 14, minWidth: columns.length > 4 ? 600 : undefined }}>
           <thead>
             <tr>
               {columns.map(col => (
@@ -27,7 +27,7 @@ export function DataTable<T extends Record<string, any>>({ columns, data, onRowC
                   padding: '10px 12px', textAlign: 'left', color: C.dim, fontSize: 12,
                   fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px',
                   borderBottom: `1px solid ${C.muted}`, whiteSpace: 'nowrap',
-                  width: col.width,
+                  width: col.width, position: 'sticky', top: 0, background: C.bg2, zIndex: 1,
                 }}>{col.header}</th>
               ))}
             </tr>
@@ -43,7 +43,7 @@ export function DataTable<T extends Record<string, any>>({ columns, data, onRowC
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 {columns.map(col => (
-                  <td key={col.key} style={{ padding: '10px 12px', color: C.text }}>
+                  <td key={col.key} style={{ padding: '10px 12px', color: C.text, whiteSpace: col.width ? 'nowrap' : undefined }}>
                     {col.render ? col.render(item) : String(item[col.key] ?? '')}
                   </td>
                 ))}
@@ -53,14 +53,14 @@ export function DataTable<T extends Record<string, any>>({ columns, data, onRowC
         </table>
       </div>
       {pagination && pagination.totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+        <div className="data-table-pagination" style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
           <button onClick={() => pagination.onPageChange(pagination.page - 1)} disabled={pagination.page <= 1}
-            style={pgBtnStyle(false)}>Prev</button>
-          <span style={{ color: C.dim, fontSize: 13, padding: '6px 12px' }}>
+            style={pgBtnStyle(pagination.page <= 1)}>Prev</button>
+          <span style={{ color: C.dim, fontSize: 13, padding: '6px 12px', display: 'flex', alignItems: 'center' }}>
             {pagination.page} / {pagination.totalPages}
           </span>
           <button onClick={() => pagination.onPageChange(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages}
-            style={pgBtnStyle(false)}>Next</button>
+            style={pgBtnStyle(pagination.page >= pagination.totalPages)}>Next</button>
         </div>
       )}
     </div>

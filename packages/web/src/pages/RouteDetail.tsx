@@ -127,7 +127,7 @@ export function RouteDetailPage() {
       )}
 
       {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <KPICard icon="📍" label="Total Stops" value={route.totalStops} color={C.accent} />
         <KPICard icon="✅" label="Completed" value={route.completedStops} color={C.green} />
         <KPICard icon="📏" label="Distance" value={route.totalDistance ? `${Number(route.totalDistance).toFixed(1)} km` : '—'} color={C.yellow} />

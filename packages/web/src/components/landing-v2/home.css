@@ -904,27 +904,141 @@ html { scroll-behavior: smooth; }
 }
 
 @media (max-width: 640px) {
-  .hp-nav { padding: 0 20px; }
+  .hp-nav { padding: 0 16px; }
   .hp-nav-links { display: none; }
 
-  .hero-content { padding: 80px 20px 40px; }
-  .hp-section { padding: 80px 20px; }
-  .hp-section-full { padding: 80px 20px; }
+  .hero {
+    min-height: calc(100vh - 64px);
+    min-height: calc(100dvh - 64px);
+  }
 
-  .feature-grid { grid-template-columns: 1fr; }
-  .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; }
+  .hero-content {
+    padding: 80px 16px 40px;
+    gap: 32px;
+  }
 
-  .proof-strip { padding: 16px 20px; gap: 12px; font-size: 11px; }
-  .final-cta { padding: 80px 20px; }
+  .hero-h1 {
+    font-size: clamp(36px, 10vw, 52px);
+  }
+
+  .hero-sub {
+    font-size: 15px;
+    margin-bottom: 28px;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .hero-buttons .btn-primary,
+  .hero-buttons .btn-outline {
+    width: 100%;
+    justify-content: center;
+    padding: 16px 28px;
+    /* Minimum 44px touch target */
+    min-height: 48px;
+  }
+
+  .hero-scroll { display: none; }
+
+  .chat-preview {
+    width: 100%;
+    max-width: 100%;
+    min-height: 280px;
+  }
+
+  .chat-body {
+    max-height: 260px;
+    padding: 12px 14px;
+  }
+
+  .c-msg { font-size: 13px; }
+
+  .hp-section { padding: 60px 16px; }
+  .hp-section-full { padding: 60px 16px; }
+
+  .feature-grid { grid-template-columns: 1fr; gap: 12px; }
+  .feature-card { padding: 24px 20px; }
+
+  .pricing-grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .pricing-card { padding: 24px 20px; }
+
+  .proof-strip {
+    padding: 12px 16px;
+    gap: 8px;
+    font-size: 10px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  .proof-strip .sep { display: none; }
+
+  .proof-strip > span {
+    white-space: nowrap;
+    padding: 4px 8px;
+    background: rgba(12,18,32,0.6);
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .final-cta { padding: 60px 16px; }
+
+  .final-cta-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .final-cta-buttons .btn-primary,
+  .final-cta-buttons .btn-outline {
+    width: 100%;
+    max-width: 320px;
+    justify-content: center;
+    min-height: 48px;
+  }
 
   .hp-footer {
     flex-direction: column;
-    gap: 20px;
-    padding: 32px 20px;
+    gap: 16px;
+    padding: 24px 16px;
     text-align: center;
   }
+
+  .hp-footer-links { gap: 16px; }
 
   .address-card-stats { flex-direction: column; }
   .address-card-stat { border-right: none; border-bottom: 1px solid var(--border2); }
   .address-card-stat:last-child { border-bottom: none; }
+
+  .nlops-demo-body { padding: 14px; gap: 10px; }
+  .nlops-demo-header { padding: 12px 14px; font-size: 11px; }
+
+  .address-card-header { padding: 14px 16px; }
+  .address-card-notes { padding: 14px 16px; }
+  .address-card-risk { padding: 12px 16px; }
+
+  .hp-nav-cta {
+    padding: 8px 16px;
+    font-size: 13px;
+    min-height: 40px;
+  }
+
+  .hp-h2 { font-size: clamp(24px, 6vw, 36px); }
+  .hp-body { font-size: 15px; }
+}
+
+/* Extra-small devices (< 375px) */
+@media (max-width: 374px) {
+  .hero-content { padding: 72px 12px 32px; }
+  .hero-h1 { font-size: 32px; }
+  .hp-section { padding: 48px 12px; }
+  .hp-section-full { padding: 48px 12px; }
 }

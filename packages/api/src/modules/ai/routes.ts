@@ -5,6 +5,10 @@ import { handleAiChat } from './service.js';
 import { runAgentLoop } from '../../lib/ai/agent.js';
 import { recordMeteredUsage } from '../billing/service.js';
 import { cacheIncr, cacheDecr } from '../../lib/cache.js';
+import { isAIConfigured } from '../../lib/ai/providers.js';
+
+const AI_NOT_CONFIGURED_MESSAGE =
+  'AI Copilot is not available. An AI provider API key (ANTHROPIC_API_KEY or OPENAI_API_KEY) must be configured on the server. Contact your administrator.';
 
 // Per-tenant NLOps rate limiting (finding #5)
 const NLOPS_MAX_CONCURRENT = 3;
@@ -39,15 +43,31 @@ export async function aiRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
   // Legacy plain-text chat (kept for backward compat)
-  app.post('/chat', async (request) => {
+  app.post('/chat', async (request, reply) => {
+    if (!isAIConfigured()) {
+      reply.status(503);
+      return { error: AI_NOT_CONFIGURED_MESSAGE, code: 'AI_NOT_CONFIGURED' };
+    }
     const { message, history } = aiChatRequestSchema.parse(request.body);
-    const reply = await handleAiChat(request.user.tenantId, message, history);
-    return { reply };
+    const result = await handleAiChat(request.user.tenantId, message, history);
+    return { reply: result };
   });
 
   // NLOps SSE endpoint — agentic loop with tool_use
   app.post('/ops', async (request, reply) => {
     const { message, history, confirm } = nlopsRequestSchema.parse(request.body);
+
+    // Check AI provider configuration before proceeding
+    if (!isAIConfigured()) {
+      reply.header('Content-Type', 'text/event-stream');
+      reply.header('Cache-Control', 'no-cache');
+      reply.header('Connection', 'keep-alive');
+      const raw = reply.raw;
+      raw.write(`event: error\ndata: ${JSON.stringify({ type: 'error', message: AI_NOT_CONFIGURED_MESSAGE, code: 'AI_NOT_CONFIGURED' })}\n\n`);
+      raw.write(`event: done\ndata: ${JSON.stringify({ type: 'done' })}\n\n`);
+      raw.end();
+      return reply;
+    }
 
     // Per-tenant rate limiting (finding #5)
     const rateCheck = await checkTenantRateLimit(request.user.tenantId);

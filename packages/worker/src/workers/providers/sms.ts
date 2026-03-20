@@ -5,8 +5,8 @@ export async function sendSms(
   config: { accountSid: string; authToken: string; fromNumber: string },
 ): Promise<{ success: boolean; providerId?: string; error?: string }> {
   if (!config.accountSid || !config.authToken) {
-    console.log('[sms] No Twilio credentials configured, skipping send');
-    return { success: true, providerId: 'dry-run' };
+    console.warn('[sms] No Twilio credentials configured — SMS will not be delivered. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN to enable SMS.');
+    return { success: false, error: 'Twilio is not configured. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables to enable SMS notifications.' };
   }
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Messages.json`;

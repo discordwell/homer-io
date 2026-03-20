@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useCustomerNotificationsStore } from '../../stores/customer-notifications.js';
+import { useOnboardingStore } from '../../stores/onboarding.js';
 import { DataTable, type Column } from '../DataTable.js';
 import { Badge } from '../Badge.js';
 import { ConfirmDialog } from '../ConfirmDialog.js';
@@ -34,6 +35,7 @@ export function NotificationsTab({ onViewLog }: Props) {
     templates, loading,
     fetchTemplates, createTemplate, updateTemplate, deleteTemplate, testTemplate,
   } = useCustomerNotificationsStore();
+  const { providerStatus, fetchProviderStatus } = useOnboardingStore();
   const { toast } = useToast();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null);
@@ -41,6 +43,7 @@ export function NotificationsTab({ onViewLog }: Props) {
 
   useEffect(() => {
     fetchTemplates();
+    fetchProviderStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -81,6 +84,20 @@ export function NotificationsTab({ onViewLog }: Props) {
   }
 
   async function handleTest(id: string) {
+    // Check provider status before attempting test
+    const template = templates.find(t => t.id === id);
+    if (template && providerStatus) {
+      const channel = template.channel;
+      const provider = channel === 'sms' ? providerStatus.sms : providerStatus.email;
+      if (!provider.configured) {
+        toast(
+          `Cannot send test: ${provider.provider} is not configured. Set the required environment variables on the server to enable ${channel.toUpperCase()} notifications.`,
+          'error',
+        );
+        return;
+      }
+    }
+
     try {
       const result = await testTemplate(id);
       if (result.success) {
@@ -191,12 +208,35 @@ export function NotificationsTab({ onViewLog }: Props) {
         padding: 12, borderRadius: 8,
         background: C.bg, border: `1px solid ${C.border}`,
       }}>
-        <ProviderStatus label="Twilio (SMS)" configured={false} />
-        <ProviderStatus label="SendGrid (Email)" configured={false} />
+        <ProviderStatus
+          label="Twilio (SMS)"
+          configured={providerStatus?.sms.configured ?? false}
+        />
+        <ProviderStatus
+          label="SendGrid (Email)"
+          configured={providerStatus?.email.configured ?? false}
+        />
         <span style={{ color: C.dim, fontSize: 12, marginLeft: 'auto', alignSelf: 'center' }}>
           Providers can be configured via environment variables
         </span>
       </div>
+
+      {/* Warning when no providers are configured */}
+      {providerStatus && !providerStatus.sms.configured && !providerStatus.email.configured && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 20,
+          padding: 14, borderRadius: 8,
+          background: 'rgba(255, 180, 50, 0.08)', border: `1px solid ${C.yellow}`,
+        }}>
+          <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1.4 }}>!</span>
+          <div style={{ fontSize: 13, color: C.text, lineHeight: 1.5 }}>
+            <strong>No notification providers configured.</strong> SMS and email notifications
+            will not be delivered until Twilio and/or SendGrid credentials are set as
+            environment variables on the server. You can still create and manage templates
+            — they will be used once a provider is configured.
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <span style={{ color: C.dim, fontSize: 14 }}>

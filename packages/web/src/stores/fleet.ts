@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../api/client.js';
+import { guardDemoWrite } from './demo.js';
 import type { CreateVehicleInput, CreateDriverInput } from '@homer-io/shared';
 
 interface Vehicle {
@@ -85,16 +86,19 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
   },
 
   createVehicle: async (input) => {
+    guardDemoWrite('Adding vehicles');
     await api.post('/fleet/vehicles', input);
     await get().fetchVehicles(get().vehiclePage);
   },
 
   updateVehicle: async (id, input) => {
+    guardDemoWrite('Updating vehicles');
     await api.patch(`/fleet/vehicles/${id}`, input);
     await get().fetchVehicles(get().vehiclePage);
   },
 
   deleteVehicle: async (id) => {
+    guardDemoWrite('Deleting vehicles');
     await api.delete(`/fleet/vehicles/${id}`);
     await get().fetchVehicles(get().vehiclePage);
   },
@@ -114,16 +118,19 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
   },
 
   createDriver: async (input) => {
+    guardDemoWrite('Adding drivers');
     await api.post('/fleet/drivers', input);
     await get().fetchDrivers(get().driverPage);
   },
 
   updateDriver: async (id, input) => {
+    guardDemoWrite('Updating drivers');
     await api.patch(`/fleet/drivers/${id}`, input);
     await get().fetchDrivers(get().driverPage);
   },
 
   deleteDriver: async (id) => {
+    guardDemoWrite('Deleting drivers');
     await api.delete(`/fleet/drivers/${id}`);
     await get().fetchDrivers(get().driverPage);
   },

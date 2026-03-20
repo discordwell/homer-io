@@ -51,9 +51,16 @@ export default function MapLibreHeroMap({ lat, lng, onReady }: MapLibreHeroMapPr
       onReadyRef.current();
     };
 
+    // 'styledata' fires as soon as the style document is parsed — much earlier
+    // than 'load' which waits for every tile/sprite/glyph to finish. This lets
+    // us crossfade to the MapLibre canvas while tiles are still streaming in,
+    // avoiding the long blank-map gap.
+    map.once('styledata', handleReady);
+    // Keep 'load' as a belt-and-suspenders fallback in case 'styledata' is
+    // somehow skipped (shouldn't happen, but defensive).
     map.on('load', handleReady);
-    // Fallback: if load doesn't fire within 5s, show map anyway
-    const fallbackTimer = setTimeout(handleReady, 5000);
+    // Fallback: if neither event fires within 2.5s, show map anyway
+    const fallbackTimer = setTimeout(handleReady, 2500);
 
     map.on('error', (e) => {
       console.warn('[HeroMap] MapLibre error:', e.error?.message || e);
@@ -61,6 +68,10 @@ export default function MapLibreHeroMap({ lat, lng, onReady }: MapLibreHeroMapPr
 
     return () => {
       clearTimeout(fallbackTimer);
+      map.off('load', handleReady);
+      // 'styledata' was registered with once() so it auto-removes after firing,
+      // but if it hasn't fired yet we should clean it up too.
+      map.off('styledata', handleReady);
       animatorRef.current?.destroy();
       animatorRef.current = null;
       map.remove();
