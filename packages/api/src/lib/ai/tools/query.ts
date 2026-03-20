@@ -1,4 +1,7 @@
+import { eq } from 'drizzle-orm';
 import type { NLOpsTool, ToolContext } from './types.js';
+import { db } from '../../db/index.js';
+import { drivers } from '../../db/schema/drivers.js';
 
 // ============================================================
 // Query tools — risk: 'read', no confirmation needed
@@ -34,11 +37,17 @@ export const getOperationalSummary: NLOpsTool = {
       if (s in routesByStatus) routesByStatus[s]++;
     }
 
-    const driversByStatus = { available: 0, on_route: 0, on_break: 0, offline: 0 };
-    for (const d of driverLocations) {
-      const s = (d as any).driverStatus as keyof typeof driversByStatus;
-      if (s in driversByStatus) driversByStatus[s]++;
-    }
+    const allDrivers = await db
+      .select({ status: drivers.status })
+      .from(drivers)
+      .where(eq(drivers.tenantId, ctx.tenantId));
+
+    const driversByStatus = {
+      available: allDrivers.filter(d => d.status === 'available').length,
+      on_route: allDrivers.filter(d => d.status === 'on_route').length,
+      on_break: allDrivers.filter(d => d.status === 'on_break').length,
+      offline: allDrivers.filter(d => d.status === 'offline').length,
+    };
 
     const urgentOrders = pendingOrders.items.filter((o: any) => o.priority === 'urgent');
 
