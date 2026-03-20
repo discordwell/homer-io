@@ -125,7 +125,7 @@ export function RouteBuilderPage() {
         </div>
       </div>
 
-      <div className="route-builder-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 24 }}>
+      <div className="route-builder-grid" style={{ display: 'grid', gap: 24 }}>
         {/* Left: Map */}
         <div>
           <RouteMap stops={stops} onClick={addMapStop} height="500px" />

@@ -317,7 +317,7 @@ export default function LiveMap() {
         </div>
 
         {/* Event feed - 30% width */}
-        <div className="live-map-feed" style={{ flex: 3, minWidth: 240 }}>
+        <div className="live-map-feed" style={{ flex: 3, minWidth: 0 }}>
           <DeliveryEventFeed />
         </div>
       </div>

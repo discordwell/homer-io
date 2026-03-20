@@ -55,7 +55,7 @@ export function DemoAnalyticsPage() {
             { name: 'Casey Nguyen', deliveries: 181, successRate: 90, avgTime: '38 min', rank: 5 },
           ].map((d) => (
             <div key={d.name} className="driver-leaderboard-row" style={{
-              display: 'grid', gridTemplateColumns: '40px 1fr 100px 100px 100px',
+              display: 'grid',
               alignItems: 'center', padding: '12px 16px',
               background: C.bg3, borderRadius: 8, border: `1px solid ${C.muted}`,
               gap: 16,
@@ -71,7 +71,7 @@ export function DemoAnalyticsPage() {
       </div>
 
       {/* Delivery Outcomes Breakdown */}
-      <div className="analytics-chart-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+      <div className="analytics-chart-grid" style={{ display: 'grid', gap: 24, marginBottom: 24 }}>
         <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 24 }}>
           <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 16 }}>Delivery Outcomes</h3>
           <div style={{ display: 'grid', gap: 10 }}>

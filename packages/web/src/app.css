@@ -56,6 +56,12 @@
   --sidebar-w: 240px;
   --sidebar-w-collapsed: 64px;
 
+  /* Fluid spacing & typography tokens */
+  --page-pad: clamp(16px, 3vw, 32px);
+  --page-heading: clamp(18px, 2.5vw, 24px);
+  --card-gap: clamp(8px, 1.5vw, 16px);
+  --section-gap: clamp(16px, 3vw, 32px);
+
   color-scheme: dark;
   background: var(--bg);
 }
@@ -150,7 +156,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 clamp(12px, 3vw, 24px);
   background: rgba(6, 9, 15, 0.88);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border2);
@@ -600,16 +606,11 @@ h1, h2, h3, h4, h5, h6 {
     margin-left: 0 !important;
   }
 
-  /* Tighter padding on mobile main content */
+  /* Fluid padding on mobile main content */
   .dashboard-main main {
-    padding: 16px !important;
+    padding: var(--page-pad) !important;
   }
 
-  /* Top nav adjustments for mobile */
-  .topnav {
-    padding: 0 12px;
-    gap: 8px;
-  }
 }
 
 /* Tablet responsive (between mobile and desktop) */
@@ -666,28 +667,21 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* ---- Mobile Responsive: KPI Cards ---- */
+/* ---- Fluid KPI Cards — auto-fit eliminates hard column jumps ---- */
 
-@media (max-width: 1024px) {
-  .kpi-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-  }
+.kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)) !important;
+  gap: var(--card-gap) !important;
 }
 
-@media (max-width: 640px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-  }
-}
+/* ---- Fluid Page Headers ---- */
 
-@media (max-width: 374px) {
-  .kpi-grid {
-    grid-template-columns: 1fr !important;
-  }
+/* Fluid page heading font sizes — overrides inline fontSize: 24 */
+.dashboard-main h2,
+.demo-main h2,
+.route-detail-header h2 {
+  font-size: var(--page-heading) !important;
 }
-
-/* ---- Mobile Responsive: Page Headers ---- */
 
 @media (max-width: 640px) {
   .page-header {
@@ -799,11 +793,18 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* ---- Mobile Responsive: Live Map ---- */
+/* ---- Fluid Live Map ---- */
+
+.live-map-header {
+  padding: clamp(12px, 2vw, 16px) clamp(16px, 3vw, 24px) !important;
+}
+
+.live-map-content {
+  padding: 0 clamp(12px, 2vw, 24px) clamp(12px, 2vw, 24px) !important;
+}
 
 @media (max-width: 768px) {
   .live-map-header {
-    padding: 12px 16px !important;
     flex-wrap: wrap;
     gap: 8px;
   }
@@ -814,7 +815,6 @@ h1, h2, h3, h4, h5, h6 {
 
   .live-map-content {
     flex-direction: column !important;
-    padding: 0 12px 12px !important;
   }
 
   .live-map-pane {
@@ -848,46 +848,58 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* ---- Mobile Responsive: Analytics / two-column grids ---- */
+/* ---- Fluid Analytics / two-column grids ---- */
 
-@media (max-width: 768px) {
+.analytics-chart-grid {
+  grid-template-columns: 1fr !important;
+}
+
+/* Only go side-by-side when there's enough room */
+@media (min-width: 900px) {
   .analytics-chart-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  .analytics-tab-bar {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-
-  .analytics-tab-bar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .analytics-tab-bar button {
-    white-space: nowrap;
-    flex-shrink: 0;
-    min-height: 44px;
+    grid-template-columns: 1fr clamp(240px, 30vw, 320px) !important;
   }
 }
 
-/* ---- Mobile Responsive: Route Builder two-column layout ---- */
+.analytics-tab-bar {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
 
-@media (max-width: 768px) {
+.analytics-tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.analytics-tab-bar button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---- Fluid Route Builder two-column layout ---- */
+
+.route-builder-grid {
+  grid-template-columns: 1fr !important;
+}
+
+.route-builder-grid > div:first-child {
+  min-height: 300px;
+}
+
+@media (min-width: 900px) {
   .route-builder-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr clamp(300px, 35vw, 400px) !important;
   }
 
   .route-builder-grid > div:first-child {
-    min-height: 300px;
+    min-height: 0;
   }
 }
 
-/* ---- Mobile Responsive: Route Detail ---- */
+/* ---- Fluid Route Detail ---- */
 
-@media (max-width: 640px) {
+@media (max-width: 700px) {
   .route-detail-header {
     flex-direction: column !important;
     align-items: flex-start !important;
@@ -905,7 +917,9 @@ h1, h2, h3, h4, h5, h6 {
     min-height: 44px;
     justify-content: center;
   }
+}
 
+@media (max-width: 640px) {
   .route-detail-stop {
     flex-wrap: wrap;
     gap: 8px !important;
@@ -916,13 +930,14 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* ---- Mobile Responsive: Form grids in modals ---- */
+/* ---- Fluid form grids — auto-fit lets fields flow naturally ---- */
 
-@media (max-width: 640px) {
-  .form-grid-2,
-  .form-grid-3 {
-    grid-template-columns: 1fr !important;
-  }
+.form-grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)) !important;
+}
+
+.form-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)) !important;
 }
 
 /* ---- Mobile Responsive: Bulk action bar ---- */
@@ -939,75 +954,46 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* ---- Mobile Responsive: Intelligence widget ---- */
+/* ---- Fluid Intelligence widget KPIs ---- */
 
-@media (max-width: 640px) {
-  .intel-kpi-grid {
-    grid-template-columns: 1fr !important;
-    gap: 8px !important;
-  }
+.intel-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)) !important;
+  gap: var(--card-gap) !important;
 }
 
-/* ---- Mobile Responsive: Migration page ---- */
+/* ---- Fluid Migration page ---- */
 
-@media (max-width: 640px) {
-  .migration-page {
-    padding: 16px !important;
-  }
-
-  .migration-summary-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  .migration-date-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  .migration-history-table {
-    font-size: 12px;
-  }
-
-  .migration-history-table th,
-  .migration-history-table td {
-    padding: 8px 6px !important;
-  }
+.migration-page {
+  padding: var(--page-pad) !important;
 }
 
-/* ---- Mobile Responsive: Dispatch Board ---- */
-
-@media (max-width: 640px) {
-  .dispatch-board-columns {
-    gap: 12px !important;
-  }
-
-  .dispatch-board-columns > div {
-    min-width: 240px !important;
-    width: 240px !important;
-  }
+.migration-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)) !important;
 }
 
-/* ---- Mobile Responsive: KPI grid (6-column variant) ---- */
-
-@media (max-width: 1024px) {
-  .kpi-grid-6 {
-    grid-template-columns: repeat(3, 1fr) !important;
-  }
+.migration-date-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)) !important;
 }
 
-@media (max-width: 640px) {
-  .kpi-grid-6 {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-  }
+/* ---- Fluid Dispatch Board ---- */
+
+.dispatch-board-columns > div {
+  width: clamp(220px, 25vw, 280px) !important;
+  min-width: clamp(220px, 25vw, 280px) !important;
 }
 
-@media (max-width: 374px) {
-  .kpi-grid-6 {
-    grid-template-columns: 1fr !important;
-  }
+/* ---- Fluid KPI grid (6-column variant) — smaller min for more cards ---- */
+
+.kpi-grid-6 {
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)) !important;
+  gap: var(--card-gap) !important;
 }
 
-/* ---- Mobile Responsive: Demo Dashboard Layout ---- */
+/* ---- Fluid Demo Dashboard Layout ---- */
+
+.demo-main main {
+  padding: var(--page-pad) !important;
+}
 
 @media (max-width: 768px) {
   .demo-main {
@@ -1015,7 +1001,6 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .demo-main main {
-    padding: 16px !important;
     height: auto !important;
   }
 }
@@ -1038,9 +1023,13 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* ---- Mobile Responsive: Driver leaderboard rows ---- */
+/* ---- Fluid Driver leaderboard rows ---- */
 
-@media (max-width: 640px) {
+.driver-leaderboard-row {
+  grid-template-columns: 36px 1fr auto auto auto !important;
+}
+
+@media (max-width: 700px) {
   .driver-leaderboard-row {
     grid-template-columns: 32px 1fr !important;
     gap: 4px 12px !important;

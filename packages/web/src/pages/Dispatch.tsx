@@ -32,7 +32,7 @@ export function DispatchPage() {
       {tab === 'manual' ? (
         <DispatchBoard />
       ) : (
-        <div style={{ maxWidth: 480 }}>
+        <div style={{ maxWidth: 'min(480px, 100%)' }}>
           <AutoDispatchPanel />
         </div>
       )}

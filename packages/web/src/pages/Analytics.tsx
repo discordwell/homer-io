@@ -142,7 +142,7 @@ export function AnalyticsPage() {
       {/* ── Zone B: The Story ── */}
 
       {/* Trend Chart + Heatmap */}
-      <div className="analytics-chart-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16, marginBottom: 24 }}>
+      <div className="analytics-chart-grid" style={{ display: 'grid', gap: 16, marginBottom: 24 }}>
         <EnhancedTrendChart data={enhancedTrends} />
         <DeliveryHeatmap data={heatmap} />
       </div>

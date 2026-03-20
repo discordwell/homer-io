@@ -173,7 +173,7 @@ export function DemoDashboardLayout() {
           minHeight: '100vh',
         }}
       >
-        <main style={{ flex: 1, padding: isMobile ? '16px' : '20px 32px 32px', overflow: 'auto', height: 'calc(100vh - var(--topnav-h) - 41px)' }}>
+        <main style={{ flex: 1, padding: `20px var(--page-pad) var(--page-pad)`, overflow: 'auto', height: 'calc(100vh - var(--topnav-h) - 41px)' }}>
           <Outlet />
         </main>
       </div>

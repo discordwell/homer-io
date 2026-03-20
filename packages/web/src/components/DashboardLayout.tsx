@@ -127,7 +127,7 @@ export function DashboardLayout() {
         }}
       >
         <SubscriptionBanner />
-        <main style={{ flex: 1, padding: isMobile ? '16px' : '20px 32px 32px', overflow: 'auto' }}>
+        <main style={{ flex: 1, padding: `20px var(--page-pad) var(--page-pad)`, overflow: 'auto' }}>
           <OnboardingWizard />
           <Outlet />
         </main>

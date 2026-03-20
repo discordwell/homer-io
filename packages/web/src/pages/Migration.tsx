@@ -220,7 +220,7 @@ export function MigrationPage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="migration-page" style={{ padding: 32, maxWidth: 1100, margin: '0 auto' }}>
+    <div className="migration-page" style={{ maxWidth: 1100, margin: '0 auto' }}>
       <h1 style={{ fontFamily: F.display, fontSize: 28, marginBottom: 8 }}>Migrate Data</h1>
       <p style={{ color: C.dim, fontSize: 14, marginBottom: 32 }}>
         Import your orders, drivers, and vehicles from another platform via API or CSV export.

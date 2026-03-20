@@ -235,7 +235,7 @@ export function DispatchBoard() {
 }
 
 const columnStyle: React.CSSProperties = {
-  width: 280, minWidth: 280, flexShrink: 0,
+  flexShrink: 0,
   background: C.bg2, borderRadius: 12,
   border: `1px solid ${C.border}`,
   display: 'flex', flexDirection: 'column',
