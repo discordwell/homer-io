@@ -284,6 +284,71 @@ export const getRouteRiskTool: NLOpsTool = {
   },
 };
 
+export const getAnalyticsDeep: NLOpsTool = {
+  name: 'get_analytics_deep',
+  description: 'Get comprehensive analytics: enriched overview with sparklines and period deltas, auto-generated insights, and delivery outcomes (failure breakdown + time-window compliance). Use this for broad analytics questions like "how are we doing?" or "give me a full status report".',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      range: { type: 'string', enum: ['7d', '30d', '90d'], description: 'Time range (default 7d)' },
+    },
+    required: [],
+    additionalProperties: false,
+  },
+  riskLevel: 'read',
+  requiredRole: 'dispatcher',
+  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+    const range = (input.range as '7d' | '30d' | '90d') || '7d';
+    const { getEnhancedOverview } = await import('../../../modules/analytics/service.js');
+    const { generateInsights } = await import('../../../modules/analytics/service.js');
+    const { getDeliveryOutcomes } = await import('../../../modules/analytics/service.js');
+    const [overview, insights, outcomes] = await Promise.all([
+      getEnhancedOverview(ctx.tenantId, range),
+      generateInsights(ctx.tenantId, range),
+      getDeliveryOutcomes(ctx.tenantId, range),
+    ]);
+    return { overview, insights, outcomes };
+  },
+};
+
+export const comparePeriodsT: NLOpsTool = {
+  name: 'compare_periods',
+  description: 'Compare analytics between current and previous period. Returns both period stats and percentage changes. Use for "compare this week to last week" or "how are we trending?" questions.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      range: { type: 'string', enum: ['7d', '30d', '90d'], description: 'Time range — compares this period vs the same length before it (default 7d)' },
+    },
+    required: [],
+    additionalProperties: false,
+  },
+  riskLevel: 'read',
+  requiredRole: 'dispatcher',
+  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+    const { comparePeriods } = await import('../../../modules/analytics/service.js');
+    return comparePeriods(ctx.tenantId, (input.range as '7d' | '30d' | '90d') || '7d');
+  },
+};
+
+export const getDeliveryOutcomesT: NLOpsTool = {
+  name: 'get_delivery_outcomes',
+  description: 'Get delivery failure breakdown by category (not home, wrong address, etc.), daily status distribution, and time-window compliance rate. Use for "why are deliveries failing?" or "what are our failure reasons?" questions.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      range: { type: 'string', enum: ['7d', '30d', '90d'], description: 'Time range (default 7d)' },
+    },
+    required: [],
+    additionalProperties: false,
+  },
+  riskLevel: 'read',
+  requiredRole: 'dispatcher',
+  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+    const { getDeliveryOutcomes } = await import('../../../modules/analytics/service.js');
+    return getDeliveryOutcomes(ctx.tenantId, (input.range as '7d' | '30d' | '90d') || '7d');
+  },
+};
+
 export const queryTools: NLOpsTool[] = [
   getOperationalSummary,
   searchOrders,
@@ -297,4 +362,7 @@ export const queryTools: NLOpsTool[] = [
   getAddressIntelligenceTool,
   getIntelligenceInsightsTool,
   getRouteRiskTool,
+  getAnalyticsDeep,
+  comparePeriodsT,
+  getDeliveryOutcomesT,
 ];

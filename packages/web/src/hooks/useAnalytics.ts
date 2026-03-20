@@ -2,14 +2,11 @@ import { useEffect } from 'react';
 import { useAnalyticsStore } from '../stores/analytics.js';
 
 export function useAnalytics() {
-  const {
-    overview, drivers, routeEfficiency, trends,
-    range, setRange, loading, fetchAll, exportCsv,
-  } = useAnalyticsStore();
+  const store = useAnalyticsStore();
 
   useEffect(() => {
-    fetchAll();
-  }, [range, fetchAll]);
+    store.fetchEnhanced();
+  }, [store.range]);
 
-  return { overview, drivers, routeEfficiency, trends, range, setRange, loading, exportCsv };
+  return store;
 }

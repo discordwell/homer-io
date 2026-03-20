@@ -1,16 +1,35 @@
 import { create } from 'zustand';
 import { api } from '../api/client.js';
-import type { AnalyticsOverview, DriverPerformance, RouteEfficiency, TrendPoint } from '@homer-io/shared';
+import type {
+  AnalyticsOverview, DriverPerformance, RouteEfficiency, TrendPoint,
+  EnhancedOverview, EnhancedDriverPerformance, EnhancedRouteEfficiency,
+  EnhancedTrendPoint, HeatmapCell, Insight, DeliveryOutcomes,
+} from '@homer-io/shared';
 
 interface AnalyticsState {
+  // Legacy (kept for backward compat)
   overview: AnalyticsOverview | null;
   drivers: DriverPerformance[];
   routeEfficiency: RouteEfficiency | null;
   trends: TrendPoint[];
+
+  // Enhanced
+  enhancedOverview: EnhancedOverview | null;
+  enhancedDrivers: EnhancedDriverPerformance[];
+  enhancedRoutes: EnhancedRouteEfficiency | null;
+  enhancedTrends: EnhancedTrendPoint[];
+  heatmap: HeatmapCell[];
+  insights: Insight[];
+  outcomes: DeliveryOutcomes | null;
+
   range: '7d' | '30d' | '90d';
   loading: boolean;
+  activeTab: 'drivers' | 'routes' | 'outcomes';
+
   setRange: (range: '7d' | '30d' | '90d') => void;
+  setActiveTab: (tab: 'drivers' | 'routes' | 'outcomes') => void;
   fetchAll: () => Promise<void>;
+  fetchEnhanced: () => Promise<void>;
   exportCsv: () => Promise<void>;
 }
 
@@ -19,10 +38,19 @@ export const useAnalyticsStore = create<AnalyticsState>()((set, get) => ({
   drivers: [],
   routeEfficiency: null,
   trends: [],
+  enhancedOverview: null,
+  enhancedDrivers: [],
+  enhancedRoutes: null,
+  enhancedTrends: [],
+  heatmap: [],
+  insights: [],
+  outcomes: null,
   range: '7d',
   loading: false,
+  activeTab: 'drivers',
 
   setRange: (range) => set({ range }),
+  setActiveTab: (tab) => set({ activeTab: tab }),
 
   fetchAll: async () => {
     set({ loading: true });
@@ -36,6 +64,26 @@ export const useAnalyticsStore = create<AnalyticsState>()((set, get) => ({
         api.get<TrendPoint[]>(`/analytics/trends${params}`),
       ]);
       set({ overview, drivers, routeEfficiency, trends });
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  fetchEnhanced: async () => {
+    set({ loading: true });
+    try {
+      const { range } = get();
+      const params = `?range=${range}`;
+      const [enhancedOverview, enhancedDrivers, enhancedRoutes, enhancedTrends, heatmap, insights, outcomes] = await Promise.all([
+        api.get<EnhancedOverview>(`/analytics/enhanced/overview${params}`),
+        api.get<EnhancedDriverPerformance[]>(`/analytics/enhanced/drivers${params}`),
+        api.get<EnhancedRouteEfficiency>(`/analytics/enhanced/routes${params}`),
+        api.get<EnhancedTrendPoint[]>(`/analytics/enhanced/trends${params}`),
+        api.get<HeatmapCell[]>(`/analytics/heatmap${params}`),
+        api.get<Insight[]>(`/analytics/insights${params}`),
+        api.get<DeliveryOutcomes>(`/analytics/outcomes${params}`),
+      ]);
+      set({ enhancedOverview, enhancedDrivers, enhancedRoutes, enhancedTrends, heatmap, insights, outcomes });
     } finally {
       set({ loading: false });
     }

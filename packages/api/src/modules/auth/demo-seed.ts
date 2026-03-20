@@ -274,4 +274,210 @@ export async function seedDemoOrg(tenantId: string): Promise<void> {
       .set({ status: 'on_route' })
       .where(eq(drivers.id, insertedDrivers[1].id));
   }
+
+  // --- Historical analytics data (90 days of realistic orders + routes) ---
+  await seedDemoAnalytics(tenantId, insertedDrivers.map(d => d.id), insertedVehicles.map(v => v.id));
+}
+
+// ---------------------------------------------------------------------------
+// 90-day historical data for analytics — creates ~700 orders, ~50 routes
+// with deliberate patterns for the insights engine to detect
+// ---------------------------------------------------------------------------
+
+type FailureCategory = 'not_home' | 'access_denied' | 'wrong_address' | 'refused' | 'other';
+const FAILURE_CATEGORIES: FailureCategory[] = ['not_home', 'access_denied', 'wrong_address', 'refused', 'other'];
+const FAILURE_WEIGHTS = [40, 20, 15, 10, 15]; // cumulative probability
+
+function pickFailureCategory(): FailureCategory {
+  const r = Math.random() * 100;
+  let cumulative = 0;
+  for (let i = 0; i < FAILURE_CATEGORIES.length; i++) {
+    cumulative += FAILURE_WEIGHTS[i];
+    if (r < cumulative) return FAILURE_CATEGORIES[i];
+  }
+  return 'other';
+}
+
+// Seeded random for reproducible demo data
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 1664525 + 1013904223) & 0x7fffffff;
+    return s / 0x7fffffff;
+  };
+}
+
+// Driver performance profiles: [successRate, avgTimeMinutes, volumeWeight]
+const DRIVER_PROFILES = [
+  { successRate: 0.97, avgTimeMin: 28, volumeWeight: 1.2, label: 'star' },
+  { successRate: 0.93, avgTimeMin: 35, volumeWeight: 1.0, label: 'reliable' },
+  { successRate: 0.85, avgTimeMin: 42, volumeWeight: 0.9, label: 'new_hire' },
+  { successRate: 0.78, avgTimeMin: 48, volumeWeight: 0.7, label: 'struggling' },
+  { successRate: 0.95, avgTimeMin: 30, volumeWeight: 0.5, label: 'part_timer' },
+];
+
+async function seedDemoAnalytics(tenantId: string, driverIds: string[], vehicleIds: string[]): Promise<void> {
+  const rand = seededRandom(42);
+  const now = new Date();
+  const allOrders: Array<{
+    tenantId: string;
+    recipientName: string;
+    deliveryAddress: { street: string; city: string; state: string; zip: string };
+    deliveryLat: string;
+    deliveryLng: string;
+    status: 'delivered' | 'failed';
+    createdAt: Date;
+    completedAt: Date | null;
+    failureCategory: FailureCategory | null;
+    timeWindowStart: Date | null;
+    timeWindowEnd: Date | null;
+  }> = [];
+
+  const allRoutes: Array<{
+    tenantId: string;
+    name: string;
+    status: 'completed';
+    driverId: string;
+    vehicleId: string;
+    depotAddress: { street: string; city: string; state: string; zip: string };
+    depotLat: string;
+    depotLng: string;
+    totalStops: number;
+    completedStops: number;
+    totalDuration: number;
+    totalDistance: string;
+    plannedStartAt: Date;
+    actualStartAt: Date;
+    actualEndAt: Date;
+    createdAt: Date;
+  }> = [];
+
+  const depotLoc = BAY_AREA_LOCATIONS[0];
+
+  // Generate 90 days of data (skip today — today's data is the real-time seed above)
+  for (let daysAgo = 90; daysAgo >= 1; daysAgo--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - daysAgo);
+    const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
+
+    // Volume: ramp from ~5/day to ~15/day, weekdays heavier
+    const progress = (90 - daysAgo) / 90; // 0 → 1 over the period
+    const baseVolume = 5 + progress * 10;
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const dayVolume = Math.round(baseVolume * (isWeekend ? 0.4 : 1.0) + (rand() - 0.5) * 4);
+    if (dayVolume <= 0) continue;
+
+    // Assign orders to 1-3 routes for this day
+    const routeCount = Math.max(1, Math.min(3, Math.floor(dayVolume / 5)));
+    const ordersPerRoute = Math.ceil(dayVolume / routeCount);
+
+    for (let ri = 0; ri < routeCount; ri++) {
+      const driverIdx = (daysAgo * 3 + ri) % Math.min(driverIds.length, DRIVER_PROFILES.length);
+      const profile = DRIVER_PROFILES[driverIdx];
+      const driverId = driverIds[driverIdx];
+      const vehicleId = vehicleIds[ri % vehicleIds.length];
+
+      // Route timing
+      const startHour = 7 + ri * 3 + Math.floor(rand() * 2);
+      const routeStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), startHour, Math.floor(rand() * 30));
+      const durationMinutes = ordersPerRoute * profile.avgTimeMin * (0.8 + rand() * 0.4);
+      const routeEnd = new Date(routeStart.getTime() + durationMinutes * 60000);
+
+      let routeDelivered = 0;
+      const routeOrderCount = Math.min(ordersPerRoute, 8); // cap per route
+
+      for (let oi = 0; oi < routeOrderCount; oi++) {
+        const loc = BAY_AREA_LOCATIONS[Math.floor(rand() * BAY_AREA_LOCATIONS.length)];
+        const first = RECIPIENT_FIRST[Math.floor(rand() * RECIPIENT_FIRST.length)];
+        const last = RECIPIENT_LAST[Math.floor(rand() * RECIPIENT_LAST.length)];
+
+        // Delivery hour: 70% between 8-18, peak at 14-16
+        const hour = rand() < 0.7
+          ? 8 + Math.floor(rand() * 10)
+          : Math.floor(rand() * 24);
+        const orderCreated = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 6 + Math.floor(rand() * 3), Math.floor(rand() * 60));
+
+        // Determine success: apply driver profile + Tuesday penalty
+        let failChance = 1 - profile.successRate;
+        const isTuesday = dayOfWeek === 2;
+        if (isTuesday) failChance *= 2; // Tuesday failure spike (deliberate pattern)
+
+        const succeeded = rand() > failChance;
+        const deliveryTime = profile.avgTimeMin * (0.6 + rand() * 0.8);
+        const completedAt = succeeded
+          ? new Date(routeStart.getTime() + (oi + 1) * deliveryTime * 60000)
+          : null;
+
+        // Time window: 70% of orders have one
+        const hasTimeWindow = rand() < 0.7;
+        const windowStart = hasTimeWindow ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, 0) : null;
+        const windowEnd = hasTimeWindow ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour + 2, 0) : null;
+
+        allOrders.push({
+          tenantId,
+          recipientName: `${first} ${last}`,
+          deliveryAddress: { street: loc.name, city: '', state: 'CA', zip: '' },
+          deliveryLat: loc.lat.toString(),
+          deliveryLng: loc.lng.toString(),
+          status: succeeded ? 'delivered' : 'failed',
+          createdAt: orderCreated,
+          completedAt,
+          failureCategory: succeeded ? null : pickFailureCategory(),
+          timeWindowStart: windowStart,
+          timeWindowEnd: windowEnd,
+        });
+
+        if (succeeded) routeDelivered++;
+      }
+
+      const totalDistance = routeOrderCount * (3 + rand() * 8); // 3-11 km per stop
+
+      allRoutes.push({
+        tenantId,
+        name: `Route ${date.toISOString().slice(0, 10)} #${ri + 1}`,
+        status: 'completed',
+        driverId,
+        vehicleId,
+        depotAddress: { street: depotLoc.name, city: 'San Francisco', state: 'CA', zip: '94105' },
+        depotLat: depotLoc.lat.toString(),
+        depotLng: depotLoc.lng.toString(),
+        totalStops: routeOrderCount,
+        completedStops: routeDelivered,
+        totalDuration: Math.round(durationMinutes),
+        totalDistance: String(Math.round(totalDistance * 10) / 10),
+        plannedStartAt: routeStart,
+        actualStartAt: new Date(routeStart.getTime() + Math.floor(rand() * 10) * 60000),
+        actualEndAt: routeEnd,
+        createdAt: new Date(routeStart.getTime() - 30 * 60000), // created 30min before start
+      });
+    }
+  }
+
+  // Batch insert routes, then assign orders to them
+  const ROUTE_BATCH = 25;
+  const insertedRouteIds: string[] = [];
+  for (let i = 0; i < allRoutes.length; i += ROUTE_BATCH) {
+    const batch = allRoutes.slice(i, i + ROUTE_BATCH);
+    const result = await db.insert(routes).values(batch).returning({ id: routes.id });
+    insertedRouteIds.push(...result.map(r => r.id));
+  }
+
+  // Map orders to routes: orders are grouped by route (ordersPerRoute per route)
+  let orderIdx = 0;
+  const ordersWithRoutes = allOrders.map(o => {
+    // Find which route this order belongs to based on insertion order
+    const routeIdx = Math.min(
+      Math.floor(orderIdx / 8), // max 8 orders per route
+      insertedRouteIds.length - 1,
+    );
+    orderIdx++;
+    return { ...o, routeId: insertedRouteIds[routeIdx] ?? null };
+  });
+
+  // Batch insert orders
+  const ORDER_BATCH = 50;
+  for (let i = 0; i < ordersWithRoutes.length; i += ORDER_BATCH) {
+    const batch = ordersWithRoutes.slice(i, i + ORDER_BATCH);
+    await db.insert(orders).values(batch);
+  }
 }

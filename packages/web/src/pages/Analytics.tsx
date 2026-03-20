@@ -1,27 +1,38 @@
 import { useAnalytics } from '../hooks/useAnalytics.js';
-import { KPICard } from '../components/KPICard.js';
-import { TrendChart } from '../components/analytics/TrendChart.js';
-import { DriverLeaderboard } from '../components/analytics/DriverLeaderboard.js';
-import { RouteEfficiencyCard } from '../components/analytics/RouteEfficiencyCard.js';
-import { CarbonDashboard } from '../components/analytics/CarbonDashboard.js';
+import { AnimatedKPICard } from '../components/analytics/AnimatedKPICard.js';
+import { EnhancedTrendChart } from '../components/analytics/EnhancedTrendChart.js';
+import { DeliveryHeatmap } from '../components/analytics/DeliveryHeatmap.js';
+import { InsightsStrip } from '../components/analytics/InsightsStrip.js';
+import { AnalyticsPromptBar } from '../components/analytics/AnalyticsPromptBar.js';
+import { DriverPerformanceTable } from '../components/analytics/DriverPerformanceTable.js';
+import { RouteAnalytics } from '../components/analytics/RouteAnalytics.js';
+import { DeliveryOutcomes } from '../components/analytics/DeliveryOutcomes.js';
 import { ReportDownload } from '../components/analytics/ReportDownload.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 const ranges = ['7d', '30d', '90d'] as const;
 
 export function AnalyticsPage() {
-  const { overview, drivers, routeEfficiency, trends, range, setRange, loading, exportCsv } = useAnalytics();
+  const {
+    enhancedOverview, enhancedDrivers, enhancedRoutes, enhancedTrends,
+    heatmap, insights, outcomes,
+    range, setRange, loading, exportCsv, activeTab, setActiveTab,
+  } = useAnalytics();
 
-  if (loading && !overview) return <LoadingSpinner />;
+  if (loading && !enhancedOverview) return <LoadingSpinner />;
+
+  const ov = enhancedOverview;
 
   return (
     <div>
+      {/* ── Zone A: The Glance ── */}
+
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h2 style={{ fontFamily: F.display, fontSize: 24, marginBottom: 4 }}>Analytics</h2>
-          <p style={{ color: C.dim, margin: 0, fontSize: 14 }}>Performance metrics and trends</p>
+          <p style={{ color: C.dim, margin: 0, fontSize: 13 }}>Performance metrics, trends, and insights</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {/* Range selector */}
@@ -45,9 +56,7 @@ export function AnalyticsPage() {
               </button>
             ))}
           </div>
-          {/* Report download */}
           <ReportDownload />
-          {/* Export button */}
           <button
             onClick={exportCsv}
             style={{
@@ -62,47 +71,134 @@ export function AnalyticsPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        <KPICard
-          icon="📦"
-          label="Total Deliveries"
-          value={overview?.totalDeliveries ?? 0}
-          color={C.green}
-        />
-        <KPICard
-          icon="✅"
-          label="Success Rate"
-          value={overview?.successRate != null ? `${overview.successRate}%` : '\u2014'}
-          color={C.accent}
-        />
-        <KPICard
-          icon="🗺️"
-          label="Total Routes"
-          value={overview?.totalRoutes ?? 0}
-          color={C.purple}
-        />
-        <KPICard
-          icon="📋"
-          label="Orders Received"
-          value={overview?.ordersReceived ?? 0}
-          color={C.yellow}
-        />
+      {/* Copilot Prompt Bar */}
+      <AnalyticsPromptBar />
+
+      {/* KPI Cards (6 animated) */}
+      {ov && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 24,
+        }}>
+          <AnimatedKPICard
+            icon="\uD83D\uDCE6"
+            label="Deliveries"
+            value={ov.totalDeliveries}
+            sparkline={ov.sparklines.deliveries}
+            delta={ov.deltas.deliveries}
+            color={C.green}
+            delay={0}
+          />
+          <AnimatedKPICard
+            icon="\u2705"
+            label="Success Rate"
+            value={Math.round(ov.successRate)}
+            suffix="%"
+            sparkline={ov.sparklines.successRate}
+            delta={ov.deltas.successRate}
+            color={ov.successRate >= 95 ? C.green : ov.successRate >= 90 ? C.yellow : C.red}
+            delay={80}
+          />
+          <AnimatedKPICard
+            icon="\u23F1"
+            label="On-Time Rate"
+            value={Math.round(ov.onTimeRate)}
+            suffix="%"
+            sparkline={ov.sparklines.onTimeRate}
+            delta={ov.deltas.onTimeRate}
+            color={ov.onTimeRate >= 95 ? C.green : ov.onTimeRate >= 90 ? C.yellow : C.red}
+            delay={160}
+          />
+          <AnimatedKPICard
+            icon="\u26A1"
+            label="Avg Time"
+            value={ov.avgDeliveryTime ?? 0}
+            suffix="m"
+            sparkline={ov.sparklines.avgDeliveryTime}
+            delta={ov.deltas.avgDeliveryTime}
+            color={C.accent}
+            delay={240}
+          />
+          <AnimatedKPICard
+            icon="\uD83D\uDE97"
+            label="Active Drivers"
+            value={ov.activeDriverCount}
+            sparkline={ov.sparklines.activeDrivers}
+            delta={ov.deltas.activeDrivers}
+            color={C.purple}
+            delay={320}
+          />
+          <AnimatedKPICard
+            icon="\uD83D\uDCCB"
+            label="Orders"
+            value={ov.ordersReceived}
+            sparkline={ov.sparklines.ordersReceived}
+            delta={ov.deltas.ordersReceived}
+            color={C.yellow}
+            delay={400}
+          />
+        </div>
+      )}
+
+      {/* ── Zone B: The Story ── */}
+
+      {/* Trend Chart + Heatmap */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16, marginBottom: 24 }}>
+        <EnhancedTrendChart data={enhancedTrends} />
+        <DeliveryHeatmap data={heatmap} />
       </div>
 
-      {/* Two-column: TrendChart + RouteEfficiency */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, marginBottom: 24 }}>
-        <TrendChart data={trends} />
-        <RouteEfficiencyCard data={routeEfficiency} />
+      {/* Insights Strip */}
+      <InsightsStrip insights={insights} />
+
+      {/* ── Zone C: The Detail ── */}
+
+      {/* Tab bar */}
+      <div style={{
+        display: 'flex', gap: 0, marginBottom: 20, borderBottom: `1px solid ${C.muted}`,
+      }}>
+        {([
+          { key: 'drivers' as const, label: 'Drivers' },
+          { key: 'routes' as const, label: 'Routes' },
+          { key: 'outcomes' as const, label: 'Delivery Outcomes' },
+        ]).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            style={{
+              padding: '10px 20px', border: 'none', cursor: 'pointer',
+              fontFamily: F.body, fontSize: 13, fontWeight: 500,
+              background: 'transparent',
+              color: activeTab === key ? C.accent : C.dim,
+              borderBottom: `2px solid ${activeTab === key ? C.accent : 'transparent'}`,
+              marginBottom: -1,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Carbon Dashboard */}
-      <div style={{ marginBottom: 24 }}>
-        <CarbonDashboard range={range} />
+      {/* Tab content */}
+      <div style={{
+        background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 20,
+        animation: 'tab-fade-in 200ms ease-out',
+      }}>
+        {activeTab === 'drivers' && enhancedDrivers.length > 0 && (
+          <DriverPerformanceTable drivers={enhancedDrivers} />
+        )}
+        {activeTab === 'routes' && enhancedRoutes && (
+          <RouteAnalytics data={enhancedRoutes} />
+        )}
+        {activeTab === 'outcomes' && outcomes && (
+          <DeliveryOutcomes data={outcomes} />
+        )}
+        {activeTab === 'drivers' && enhancedDrivers.length === 0 && !loading && (
+          <div style={{ color: C.dim, fontSize: 13, fontFamily: F.body, padding: 20, textAlign: 'center' }}>
+            No driver performance data for this period.
+          </div>
+        )}
       </div>
-
-      {/* Full-width: Driver Leaderboard */}
-      <DriverLeaderboard drivers={drivers} />
     </div>
   );
 }
