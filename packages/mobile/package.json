@@ -16,6 +16,7 @@
     "expo-constants": "~55.0.9",
     "expo-device": "~55.0.10",
     "expo-haptics": "~55.0.9",
+    "expo-image-manipulator": "~55.0.11",
     "expo-image-picker": "~55.0.13",
     "expo-local-authentication": "~55.0.9",
     "expo-location": "~55.1.4",

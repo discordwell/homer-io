@@ -6,6 +6,7 @@ import { useDriverStore } from '@/stores/driver';
 import { PhotoCapture, type CapturedPhoto } from './PhotoCapture';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { C, Size, Spacing, Radius, alpha, Base } from '@/theme';
+import { hapticError } from '@/services/haptics';
 
 interface DeliveryFailureFlowProps {
   orderId: string;
@@ -71,6 +72,7 @@ export function DeliveryFailureFlow({ orderId, routeId, onComplete, onCancel }: 
       // Complete the stop as failed
       const failureReason = `${FAILURE_REASONS.find((r) => r.value === reason)?.label}${notes ? `: ${notes}` : ''}`;
       await completeStop(routeId, orderId, { status: 'failed', failureReason });
+      hapticError();
       onComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to report delivery failure');

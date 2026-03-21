@@ -10,6 +10,8 @@ import { isBiometricEnabled, authenticateWithBiometric, isBiometricAvailable } f
 import { startOfflineQueueSync, syncOfflineQueue } from '@/services/offline-queue';
 import { handleNotificationDeepLink } from '@/services/deep-links';
 import { useAppForeground } from '@/hooks/useAppState';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { C } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -103,8 +105,9 @@ export default function RootLayout() {
   useAppForeground(handleForeground);
 
   return (
-    <>
+    <ErrorBoundary>
       <StatusBar style="light" backgroundColor={C.bg} />
+      <OfflineBanner />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -116,6 +119,6 @@ export default function RootLayout() {
         <Stack.Screen name="(driver)" />
         <Stack.Screen name="(dispatch)" />
       </Stack>
-    </>
+    </ErrorBoundary>
   );
 }

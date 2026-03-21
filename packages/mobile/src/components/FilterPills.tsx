@@ -1,5 +1,6 @@
 import { ScrollView, Pressable, Text, StyleSheet } from 'react-native';
 import { C, Size, Spacing, Radius } from '@/theme';
+import { hapticSelection } from '@/services/haptics';
 
 interface FilterPillsProps {
   options: Array<{ label: string; value: string | null }>;
@@ -19,7 +20,7 @@ export function FilterPills({ options, selected, onSelect }: FilterPillsProps) {
         return (
           <Pressable
             key={opt.value ?? 'all'}
-            onPress={() => onSelect(opt.value)}
+            onPress={() => { hapticSelection(); onSelect(opt.value); }}
             style={[styles.pill, isActive && styles.pillActive]}
           >
             <Text style={[styles.pillText, isActive && styles.pillTextActive]}>

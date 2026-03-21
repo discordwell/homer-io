@@ -597,3 +597,80 @@ One "NLOps interaction" = one user message, regardless of internal tool calls. M
 - **Process:** PM2 manages 2 API instances (cluster) + 1 worker
 - **Proxy:** Caddy handles TLS + routing for all subdomains
 - **Demo:** Static files served from `/opt/homer-io/site`
+
+## Mobile App (React Native / Expo)
+
+### Overview
+
+Native iOS + Android app built with Expo SDK 55 / React Native 0.83. Single unified app with role-based views — drivers see delivery routes, dispatchers monitor the fleet. File-based routing via Expo Router.
+
+### Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Framework | Expo SDK 55 | Managed native builds via EAS |
+| Navigation | Expo Router | File-based routing with auth gating |
+| State | Zustand + MMKV | Same pattern as web, encrypted persistence |
+| Tokens | expo-secure-store | OS-level encrypted JWT storage |
+| Maps | react-native-maps | Native MapKit (iOS) + Google Maps (Android) |
+| Real-time | socket.io-client | Same protocol as web |
+| Camera | expo-image-picker | POD photo capture with compression |
+| Signature | react-native-signature-canvas | POD signature capture |
+| GPS | expo-location + TaskManager | Background location tracking for drivers |
+| Push | expo-notifications | APNS + FCM via Expo push service |
+| Biometric | expo-local-authentication | Face ID / fingerprint unlock |
+| CI/CD | EAS Build + EAS Submit | Cloud builds, store submission |
+
+### Package Structure
+
+```
+packages/mobile/
+  app.config.ts              # Expo config (io.homer.mobile)
+  metro.config.js            # Monorepo resolution
+  eas.json                   # Build profiles (dev/preview/production)
+  app/
+    _layout.tsx              # Root: auth gating, native services orchestration
+    index.tsx                # Role-based redirect
+    (auth)/                  # Login, Register (Stack)
+    (driver)/                # Route, Map, Profile (Bottom Tabs)
+      stop/[routeId]/[orderId].tsx  # Stop detail + POD/failure flows
+    (dispatch)/              # Dashboard, Orders, Map, AI Chat, More (Bottom Tabs)
+      orders/[id].tsx        # Order detail
+      more/                  # Notifications, Routes, Fleet, Profile
+  src/
+    api/client.ts            # Fetch + JWT refresh mutex + secure token storage
+    stores/                  # 9 Zustand stores (auth, driver, fleet, orders, routes,
+                             #   tracking, notifications, messages, nlops)
+    services/                # location, notifications, biometric, offline-queue,
+                             #   deep-links, haptics, mmkv
+    hooks/                   # useSocket, useNetworkStatus, useAppState
+    components/              # Badge, KPICard, FilterPills, SearchBar, SkeletonLoader,
+                             #   ErrorBoundary, OfflineBanner, TabIcon, LoadingSpinner,
+                             #   EmptyState + driver/* + dispatch/* components
+```
+
+### Role-Based Navigation
+
+| Role | Tab Bar | Screens |
+|------|---------|---------|
+| driver | Route / Map / Profile | Active route with stops, live map, POD flow, chat, profile |
+| dispatcher, admin, owner | Dashboard / Orders / Map / AI / More | KPIs, order list, fleet map, NLOps copilot, notifications, routes, fleet, profile |
+
+### Native Services (orchestrated in root layout)
+
+- **Background GPS** — starts for drivers on login, stops on logout. TaskManager task posts to `/api/tracking/location` every 10s/50m.
+- **Push Notifications** — registers Expo push token on login via `POST /api/devices/register`. Foreground banners, tap-to-deep-link routing.
+- **Biometric Lock** — Face ID/fingerprint on app resume (configurable per user).
+- **Offline POD Queue** — MMKV-backed queue. Auto-syncs when connectivity restores via NetInfo listener.
+- **Socket.IO** — singleton connection with auth token, auto-reconnect. Feeds live driver positions + delivery events.
+
+### Backend Additions for Mobile
+
+- `device_tokens` table — stores Expo push tokens per user
+- `POST /api/devices/register` + `DELETE /api/devices/unregister` — push token management
+- Notification worker sends push via `expo-server-sdk` alongside email + in-app notifications
+
+### Store Targets
+
+- **Apple App Store** — bundle ID `io.homer.mobile`, Apple Developer account ready
+- **Google Play Store** — package `io.homer.mobile`, developer account pending setup

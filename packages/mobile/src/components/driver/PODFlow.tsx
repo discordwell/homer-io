@@ -7,6 +7,7 @@ import { PhotoCapture, type CapturedPhoto } from './PhotoCapture';
 import { SignaturePad } from './SignaturePad';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { C, Size, Spacing, Radius, alpha, Base } from '@/theme';
+import { hapticSuccess } from '@/services/haptics';
 
 interface PODFlowProps {
   orderId: string;
@@ -93,6 +94,7 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
 
       // Complete the stop
       await completeStop(routeId, orderId, { status: 'delivered' });
+      hapticSuccess();
       onComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit delivery proof');

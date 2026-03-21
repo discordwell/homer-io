@@ -2,6 +2,18 @@
 
 ## Session Summaries
 
+### 2026-03-21T01:00 UTC — Mobile App Phases 0–5 Complete
+- **Full mobile app** built across 5 phases: 65 source files in `packages/mobile/`
+- **Phase 0**: Expo SDK 55 scaffold, metro/turbo config, theme tokens, EAS profiles
+- **Phase 1**: API client (JWT refresh mutex + expo-secure-store), auth store, login/register, driver route/stop detail/POD flow/profile — all functional
+- **Phase 2**: Background GPS (TaskManager), push notifications (expo-notifications + backend device_tokens + expo-server-sdk), biometric auth, offline POD queue (MMKV + NetInfo auto-sync), driver live map
+- **Phase 3**: Dispatcher dashboard (KPI cards), orders list (filter+search), live fleet map (Socket.IO driver positions), routes, fleet, notifications (unread+mark read), dispatcher profile
+- **Phase 4**: Messages store + DriverChat (Socket.IO live), NLOps AI copilot (full SSE streaming, tool indicators, confirmation cards), useSocket hook
+- **Phase 5**: SkeletonLoader, ErrorBoundary, haptic feedback (POD success, failure error, filter selection), image compression (expo-image-manipulator 1200px/0.7), OfflineBanner, ARCHITECTURE.md updated
+- **Backend additions**: device_tokens table, POST/DELETE /api/devices/(un)register, notification worker sends push via expo-server-sdk
+- **Bundle sizes**: iOS 3.2MB, Android 3.3MB. TypeScript clean. All 4 packages build clean.
+- **Next**: EAS project ID setup, app icons/splash, store assets, submission
+
 ### 2026-03-20T23:30 UTC — Mobile App Phase 0+1: Expo/React Native Foundation + Driver Core
 - **New package**: `packages/mobile/` — Expo SDK 55, React Native 0.83, Expo Router (file-based navigation)
 - **Phase 0 (Foundation)**: app.config.ts (io.homer.mobile), metro.config.js (monorepo watchFolders), eas.json (3 build profiles), turbo.json (mobile tasks), theme.ts (raw hex tokens from web CSS vars), MMKV v4 Zustand adapter

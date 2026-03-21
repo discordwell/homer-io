@@ -1,5 +1,6 @@
 import { View, Text, Image, Pressable, StyleSheet, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { C, Size, Spacing, Radius } from '@/theme';
 
 export interface CapturedPhoto {
@@ -25,17 +26,24 @@ export function PhotoCapture({ photos, onChange, maxPhotos = 4 }: PhotoCapturePr
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
       quality: 0.8,
-      base64: true,
     });
 
     if (result.canceled || !result.assets?.[0]) return;
 
     const asset = result.assets[0];
-    if (!asset.base64) return;
+
+    // Compress and resize to max 1200px width for reasonable upload size
+    const compressed = await manipulateAsync(
+      asset.uri,
+      [{ resize: { width: Math.min(asset.width || 1200, 1200) } }],
+      { compress: 0.7, format: SaveFormat.JPEG, base64: true },
+    );
+
+    if (!compressed.base64) return;
 
     const newPhoto: CapturedPhoto = {
-      uri: asset.uri,
-      base64: asset.base64,
+      uri: compressed.uri,
+      base64: compressed.base64,
       filename: `photo-${Date.now()}.jpg`,
     };
 
