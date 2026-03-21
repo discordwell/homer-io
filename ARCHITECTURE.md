@@ -31,9 +31,7 @@ HOMER.io is an AI-powered last-mile delivery logistics platform targeting SMB co
 
 ```
 homer-io/
-├── src/App.jsx              # PRESERVED demo (never modify)
-├── src/main.jsx             # PRESERVED demo entry
-├── index.html               # PRESERVED demo HTML
+├── legacy/demo-site/        # Original demo prototype (deprecated, preserved for reference)
 ├── packages/
 │   ├── shared/              # Shared Zod schemas, types, constants
 │   ├── api/                 # Fastify backend (TypeScript)

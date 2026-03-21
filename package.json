@@ -13,10 +13,8 @@
     "dev:web": "npm run dev -w @homer-io/web",
     "dev:worker": "npm run dev -w @homer-io/worker",
     "build": "turbo build",
-    "build:demo": "vite build",
     "test": "turbo test",
     "lint": "turbo lint",
-    "preview": "vite preview",
     "db:generate": "npm run db:generate -w @homer-io/api",
     "db:migrate": "npm run db:migrate -w @homer-io/api"
   },

@@ -369,8 +369,7 @@
 ## Key Findings
 
 - **Design token system**: `app.css` defines CSS custom properties (`:root`). `theme.ts` exports `C` (colors as `var(--xxx)`) and `F` (fonts as `var(--xxx)`) plus `alpha(color, opacity)` helper. Accent: golden amber (#F59E0B). Display: Cabinet Grotesk. Body: Inter (dashboard) / Satoshi (auth, driver). Old blue (#5BA4F5) only in legacy `landing/` components.
-- **Demo API calls**: Direct to `api.anthropic.com` with `claude-sonnet-4-20250514` — needs to be proxied through our API in the product.
-- **Demo never modified**: All new code in `packages/`. Root vite.config.js and src/ untouched.
+- **Legacy demo**: Original prototype moved to `legacy/demo-site/` (deprecated). The product demo is now at `/demo` in the main SPA (`packages/web`).
 - **Fastify reply helpers**: Using `@fastify/sensible` for `reply.unauthorized()`, `reply.forbidden()`, etc.
 - **Drizzle numeric columns**: Stored as strings in JS, need explicit parsing when doing math.
 - **Package versions**: React 19.2.4, Vite 8.0.0, Fastify 5.3.0, Drizzle 0.44.0, Zod 3.25.0.
