@@ -84,7 +84,7 @@ function VerticalHero({ content }: { content: VerticalContent }) {
         backgroundSize: '64px 64px',
       }} />
 
-      <div style={{
+      <div className="hero-content" style={{
         position: 'relative',
         zIndex: 2,
         width: '100%',
@@ -115,6 +115,7 @@ function VerticalHero({ content }: { content: VerticalContent }) {
         {/* Right: feature preview card */}
         <div style={{
           width: 440,
+          maxWidth: '100%',
           flexShrink: 0,
           background: 'rgba(12,18,32,0.85)',
           backdropFilter: 'blur(24px)',

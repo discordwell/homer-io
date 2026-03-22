@@ -303,7 +303,7 @@ export function PricingPage() {
       }}>
         <Reveal>
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: 20, maxWidth: 1100, margin: '0 auto 32px',
           }}>
             {PLANS.map((p) => {
@@ -395,6 +395,7 @@ export function PricingPage() {
             background: 'var(--bg-card)', borderRadius: 14,
             border: '1px solid var(--border)',
             overflow: 'hidden',
+            overflowX: 'auto',
           }}>
             {/* Matrix header */}
             <div style={{
@@ -437,7 +438,7 @@ export function PricingPage() {
       <section style={{ padding: '0 48px 80px', maxWidth: 1320, margin: '0 auto' }}>
         <Reveal>
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: 16, maxWidth: 900, margin: '0 auto',
           }}>
             {INDUSTRY_NOTES.map((note) => (
@@ -474,7 +475,7 @@ export function PricingPage() {
             </div>
 
             <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
               gap: 16,
             }}>
               {METERED_EXTRAS.map((item) => (
