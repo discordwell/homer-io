@@ -1,14 +1,11 @@
 import { FastifyInstance } from 'fastify';
-import { eq } from 'drizzle-orm';
 import { aiChatRequestSchema, nlopsRequestSchema } from '@homer-io/shared';
-import { authenticate } from '../../plugins/auth.js';
+import { authenticate, checkIsDemo } from '../../plugins/auth.js';
 import { handleAiChat } from './service.js';
 import { runAgentLoop } from '../../lib/ai/agent.js';
 import { recordMeteredUsage } from '../billing/service.js';
-import { cacheIncr, cacheDecr, cacheGet, cacheSet } from '../../lib/cache.js';
+import { cacheIncr, cacheDecr } from '../../lib/cache.js';
 import { isAIConfigured } from '../../lib/ai/providers.js';
-import { db } from '../../lib/db/index.js';
-import { tenants } from '../../lib/db/schema/tenants.js';
 
 const AI_NOT_CONFIGURED_MESSAGE =
   'AI Copilot is not available. An AI provider API key (ANTHROPIC_API_KEY or OPENAI_API_KEY) must be configured on the server. Contact your administrator.';
@@ -40,23 +37,6 @@ async function checkTenantRateLimit(tenantId: string): Promise<{ allowed: boolea
 
 async function releaseTenantConcurrency(tenantId: string): Promise<void> {
   await cacheDecr(`nlops:active:${tenantId}`);
-}
-
-/** Check if tenant is a demo tenant (cached 60s) */
-async function checkIsDemo(tenantId: string): Promise<boolean> {
-  const cacheKey = `tenant:isDemo:${tenantId}`;
-  const cached = await cacheGet<boolean>(cacheKey);
-  if (cached !== null) return cached;
-
-  const [row] = await db
-    .select({ isDemo: tenants.isDemo })
-    .from(tenants)
-    .where(eq(tenants.id, tenantId))
-    .limit(1);
-
-  const isDemo = row?.isDemo ?? false;
-  await cacheSet(cacheKey, isDemo, 60);
-  return isDemo;
 }
 
 export async function aiRoutes(app: FastifyInstance) {

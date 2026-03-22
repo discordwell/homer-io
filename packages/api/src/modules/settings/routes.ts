@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { updateOrgSettingsSchema } from '@homer-io/shared';
-import { authenticate, requireRole } from '../../plugins/auth.js';
+import { authenticate, requireRole, denyDemo } from '../../plugins/auth.js';
 import { getOrgSettings, updateOrgSettings } from './service.js';
 
 export async function settingsRoutes(app: FastifyInstance) {
@@ -12,7 +12,7 @@ export async function settingsRoutes(app: FastifyInstance) {
   });
 
   app.put('/organization', {
-    preHandler: [authenticate, requireRole('owner')],
+    preHandler: [authenticate, requireRole('owner'), denyDemo],
   }, async (request, reply) => {
     const body = updateOrgSettingsSchema.parse(request.body);
     const settings = await updateOrgSettings(

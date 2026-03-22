@@ -38,9 +38,7 @@ interface ApiKeyCreateResponse extends ApiKey {
   key: string;
 }
 
-interface InviteResponse extends TeamMember {
-  tempPassword: string;
-}
+type InviteResponse = TeamMember;
 
 interface SettingsState {
   orgSettings: OrgSettings | null;

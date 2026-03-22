@@ -37,7 +37,7 @@ export function TeamTab() {
   const { toast } = useToast();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState<InviteForm>(emptyInviteForm);
-  const [credentialsModal, setCredentialsModal] = useState<{ email: string; tempPassword: string } | null>(null);
+  const [inviteSuccessEmail, setInviteSuccessEmail] = useState<string | null>(null);
   const [roleEditId, setRoleEditId] = useState<string | null>(null);
   const [roleEditValue, setRoleEditValue] = useState<string>('dispatcher');
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
@@ -102,7 +102,7 @@ export function TeamTab() {
       });
       setInviteOpen(false);
       setInviteForm(emptyInviteForm);
-      setCredentialsModal({ email: result.email, tempPassword: result.tempPassword });
+      setInviteSuccessEmail(result.email);
       toast('Team member invited', 'success');
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Failed to invite', 'error');
@@ -180,46 +180,18 @@ export function TeamTab() {
         </form>
       </Modal>
 
-      {/* Credentials Modal (shown after invite) */}
+      {/* Invite Success Modal */}
       <Modal
-        open={!!credentialsModal}
-        onClose={() => setCredentialsModal(null)}
-        title="Temporary Credentials"
+        open={!!inviteSuccessEmail}
+        onClose={() => setInviteSuccessEmail(null)}
+        title="Invitation Sent"
         size="sm"
       >
         <p style={{ color: C.dim, fontSize: 14, marginBottom: 16 }}>
-          Share these credentials with the new team member. They should change their password on first login.
+          An invitation email with temporary login credentials has been sent to <strong style={{ color: C.text }}>{inviteSuccessEmail}</strong>.
         </p>
-        <div style={{
-          background: C.bg, borderRadius: 8, padding: 16,
-          border: `1px solid ${C.muted}`, marginBottom: 16,
-        }}>
-          <div style={{ marginBottom: 12 }}>
-            <span style={{ color: C.dim, fontSize: 12, display: 'block', marginBottom: 4 }}>Email</span>
-            <span style={{ color: C.text, fontFamily: F.mono, fontSize: 14 }}>{credentialsModal?.email}</span>
-          </div>
-          <div>
-            <span style={{ color: C.dim, fontSize: 12, display: 'block', marginBottom: 4 }}>Temporary Password</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: C.text, fontFamily: F.mono, fontSize: 14 }}>{credentialsModal?.tempPassword}</span>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(credentialsModal?.tempPassword || '');
-                  toast('Password copied', 'info');
-                }}
-                style={{
-                  background: C.bg3, border: `1px solid ${C.muted}`, color: C.dim,
-                  padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
-                  fontSize: 12, fontFamily: F.body,
-                }}
-              >
-                Copy
-              </button>
-            </div>
-          </div>
-        </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={() => setCredentialsModal(null)} style={primaryBtnStyle}>Done</button>
+          <button onClick={() => setInviteSuccessEmail(null)} style={primaryBtnStyle}>Done</button>
         </div>
       </Modal>
 

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { FastifyInstance } from 'fastify';
 import { checkoutRequestSchema, changePlanRequestSchema, payAsYouGoRequestSchema, planFeatures } from '@homer-io/shared';
-import { authenticate, requireRole } from '../../plugins/auth.js';
+import { authenticate, requireRole, denyDemo } from '../../plugins/auth.js';
 import {
   getSubscription,
   createCheckoutSession,
@@ -24,6 +24,7 @@ const invoicesQuerySchema = z.object({
 export async function billingRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
   app.addHook('preHandler', requireRole('owner'));
+  app.addHook('preHandler', denyDemo);
 
   // GET /api/billing/subscription — current plan + usage
   app.get('/subscription', async (request) => {

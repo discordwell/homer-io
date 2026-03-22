@@ -77,7 +77,6 @@ export async function inviteUser(
 
   return {
     ...user,
-    tempPassword,
     createdAt: user.createdAt.toISOString(),
   };
 }

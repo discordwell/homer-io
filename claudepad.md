@@ -2,6 +2,13 @@
 
 ## Session Summaries
 
+### 2026-03-21T17:40 UTC — Demo Privilege Escalation Fix
+- **Security**: Blocked demo tenants from 37 sensitive endpoints across 10 route modules (api-keys, webhooks, team, integrations, gdpr, billing, customer-notifications, settings, migration, onboarding)
+- **Guard**: Created reusable `checkIsDemo()` (cached 60s) and `denyDemo` preHandler in `plugins/auth.ts`, extracted from `ai/routes.ts`
+- **tempPassword leak**: Removed plaintext temp password from team invite API response; frontend updated to show "invitation email sent" instead of displaying credentials
+- **Tests**: 7 new tests covering checkIsDemo cache/DB behavior, denyDemo 403/passthrough/no-user, and tempPassword removal
+- **All 463 existing tests + 7 new pass. TypeScript clean.**
+
 ### 2026-03-21T01:00 UTC — Mobile App Phases 0–5 Complete
 - **Full mobile app** built across 5 phases: 65 source files in `packages/mobile/`
 - **Phase 0**: Expo SDK 55 scaffold, metro/turbo config, theme tokens, EAS profiles
