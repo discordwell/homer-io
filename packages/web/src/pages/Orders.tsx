@@ -46,6 +46,10 @@ const emptyForm = {
   street: '', city: '', state: '', zip: '',
   packageCount: 1, priority: 'normal' as const, notes: '',
   isGift: false, senderName: '', senderEmail: '', senderPhone: '', giftMessage: '',
+  // Pharmacy fields
+  isControlledSubstance: false, controlledSchedule: '' as string,
+  isColdChain: false, patientDob: '', prescriberName: '', prescriberNpi: '',
+  driverNotesHipaa: '',
 };
 
 export function OrdersPage() {
@@ -57,6 +61,7 @@ export function OrdersPage() {
   const { toast } = useToast();
   const { orgSettings } = useSettingsStore();
   const isFlorist = orgSettings?.industry === 'florist';
+  const isPharmacy = orgSettings?.industry === 'pharmacy';
   const [modalOpen, setModalOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -188,6 +193,17 @@ export function OrdersPage() {
       input.senderPhone = form.senderPhone || undefined;
       input.giftMessage = form.giftMessage || undefined;
     }
+    if (isPharmacy) {
+      input.isControlledSubstance = form.isControlledSubstance;
+      if (form.isControlledSubstance && form.controlledSchedule) {
+        input.controlledSchedule = form.controlledSchedule;
+      }
+      input.isColdChain = form.isColdChain;
+      input.patientDob = form.patientDob || undefined;
+      input.prescriberName = form.prescriberName || undefined;
+      input.prescriberNpi = form.prescriberNpi || undefined;
+      input.driverNotesHipaa = form.driverNotesHipaa || undefined;
+    }
     try {
       await createOrder(input);
       toast('Order created', 'success');
@@ -225,7 +241,7 @@ export function OrdersPage() {
         </div>
         <div className="page-header-actions" style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => setCsvOpen(true)} style={secondaryBtnStyle}>Import CSV</button>
-          <button onClick={() => setModalOpen(true)} style={primaryBtnStyle}>+ Add Order</button>
+          <button onClick={() => { setForm({ ...emptyForm, isGift: isFlorist }); setModalOpen(true); }} style={primaryBtnStyle}>+ Add Order</button>
         </div>
       </div>
 
@@ -290,7 +306,7 @@ export function OrdersPage() {
         <EmptyState icon="📦" title="No orders yet" description="Add orders manually or import from CSV."
           action={<div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
             <button onClick={() => setCsvOpen(true)} style={secondaryBtnStyle}>Import CSV</button>
-            <button onClick={() => setModalOpen(true)} style={primaryBtnStyle}>+ Add Order</button>
+            <button onClick={() => { setForm({ ...emptyForm, isGift: isFlorist }); setModalOpen(true); }} style={primaryBtnStyle}>+ Add Order</button>
           </div>} />
       ) : (
         <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
@@ -332,6 +348,131 @@ export function OrdersPage() {
               ]} />
           </div>
           <FormField label="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+
+          {/* Gift delivery section */}
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginTop: 8, marginBottom: 12 }}>
+            <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={form.isGift}
+                onChange={(e) => setForm({ ...form, isGift: e.target.checked })}
+                style={{ width: 18, height: 18, accentColor: C.accent }}
+              />
+              <span style={{ fontSize: 14, color: C.text, fontWeight: 500 }}>This is a gift</span>
+            </label>
+          </div>
+
+          {form.isGift && (
+            <div style={{
+              background: alpha(C.purple, 0.04), borderRadius: 8,
+              border: `1px solid ${alpha(C.purple, 0.12)}`, padding: 16, marginBottom: 16,
+            }}>
+              <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <FormField label="Sender Name" value={form.senderName} onChange={(e) => setForm({ ...form, senderName: e.target.value })} />
+                <FormField label="Sender Phone" value={form.senderPhone} onChange={(e) => setForm({ ...form, senderPhone: e.target.value })} />
+              </div>
+              <FormField label="Sender Email" type="email" value={form.senderEmail} onChange={(e) => setForm({ ...form, senderEmail: e.target.value })} />
+              <label style={{ display: 'block', marginBottom: 0 }}>
+                <span style={{ color: C.dim, fontSize: 13, display: 'block', marginBottom: 6 }}>Gift Message</span>
+                <textarea
+                  value={form.giftMessage}
+                  onChange={(e) => setForm({ ...form, giftMessage: e.target.value })}
+                  placeholder="Optional message included with delivery"
+                  style={{
+                    width: '100%', padding: 12, borderRadius: 8,
+                    background: C.bg, border: `1px solid ${C.muted}`,
+                    color: C.text, fontSize: 14, outline: 'none',
+                    fontFamily: F.body, boxSizing: 'border-box' as const,
+                    minHeight: 80, resize: 'vertical' as const,
+                  }}
+                />
+              </label>
+            </div>
+          )}
+
+          {/* Pharmacy fields */}
+          {isPharmacy && (
+            <>
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginTop: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 14, color: C.text, fontWeight: 500 }}>Pharmacy Fields</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+                <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.isControlledSubstance}
+                    onChange={(e) => setForm({ ...form, isControlledSubstance: e.target.checked })}
+                    style={{ width: 18, height: 18, accentColor: C.accent }}
+                  />
+                  <span style={{ fontSize: 14, color: C.text }}>Controlled Substance</span>
+                </label>
+                <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.isColdChain}
+                    onChange={(e) => setForm({ ...form, isColdChain: e.target.checked })}
+                    style={{ width: 18, height: 18, accentColor: C.accent }}
+                  />
+                  <span style={{ fontSize: 14, color: C.text }}>Cold Chain / Temperature-Sensitive</span>
+                </label>
+              </div>
+
+              {form.isControlledSubstance && (
+                <SelectField
+                  label="Schedule"
+                  value={form.controlledSchedule}
+                  onChange={(e) => setForm({ ...form, controlledSchedule: e.target.value })}
+                  options={[
+                    { value: '', label: 'Select schedule...' },
+                    { value: 'II', label: 'Schedule II' },
+                    { value: 'III', label: 'Schedule III' },
+                    { value: 'IV', label: 'Schedule IV' },
+                    { value: 'V', label: 'Schedule V' },
+                  ]}
+                />
+              )}
+
+              <FormField
+                label="Patient DOB"
+                type="date"
+                value={form.patientDob}
+                onChange={(e) => setForm({ ...form, patientDob: e.target.value })}
+              />
+
+              <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <FormField
+                  label="Prescriber Name"
+                  value={form.prescriberName}
+                  onChange={(e) => setForm({ ...form, prescriberName: e.target.value })}
+                  placeholder="Dr. Jane Smith"
+                />
+                <FormField
+                  label="Prescriber NPI"
+                  value={form.prescriberNpi}
+                  onChange={(e) => setForm({ ...form, prescriberNpi: e.target.value })}
+                  placeholder="1234567890"
+                />
+              </div>
+
+              <label style={{ display: 'block', marginBottom: 16 }}>
+                <span style={{ color: C.dim, fontSize: 13, display: 'block', marginBottom: 6 }}>Driver Notes (HIPAA-safe)</span>
+                <textarea
+                  value={form.driverNotesHipaa}
+                  onChange={(e) => setForm({ ...form, driverNotesHipaa: e.target.value })}
+                  placeholder="Delivery instructions visible to driver — do not include PHI"
+                  style={{
+                    width: '100%', padding: 12, borderRadius: 8,
+                    background: C.bg, border: `1px solid ${C.muted}`,
+                    color: C.text, fontSize: 14, outline: 'none',
+                    fontFamily: F.body, boxSizing: 'border-box' as const,
+                    minHeight: 80, resize: 'vertical' as const,
+                  }}
+                />
+              </label>
+            </>
+          )}
+
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
             <button type="button" onClick={() => setModalOpen(false)} style={cancelBtnStyle}>Cancel</button>
             <button type="submit" style={primaryBtnStyle}>Create Order</button>

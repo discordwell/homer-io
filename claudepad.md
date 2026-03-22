@@ -2,6 +2,19 @@
 
 ## Session Summaries
 
+### 2026-03-22T04:30 UTC — Pharmacy Delivery Vertical
+- **HIPAA-safe driver view**: driver sees hipaaSafeNotes (no medication names), PHI stripped for pharmacy tenants
+- **Controlled substances**: isControlledSubstance + controlledSchedule (II-V) on orders, auto-require signature
+- **Cold chain**: isColdChain flag, coldChainConfirmed toggle in POD confirm step
+- **Patient verification**: patientDob + patientDobVerified (lighter than cannabis ID scan)
+- **Prescriber info**: prescriberName + prescriberNpi on orders
+- **PioneerRx connector**: maps prescriptions to HIPAA-safe orders (RX numbers as barcodes, no med names in driver notes)
+- **PharmacyTab settings**: license, NPI, HIPAA toggles, controlled substance behavior, cold chain alerts
+- **Order form**: pharmacy-specific fields (controlled substance, cold chain, patient DOB, prescriber)
+- **Demo data**: 20% controlled, 15% cold chain, all with prescriber + patient DOB
+- Migration: 0008_add_pharmacy_support.sql
+- 12 new tests, 605 total passing
+
 ### 2026-03-22T04:05 UTC — Florist Delivery Vertical Phase 2
 - **Temp driver quick-onboard**: driver_invites table, token generation, public redeem endpoint, creates user+driver with minimal info, auto-expires
 - **FTD connector**: EcommerceConnector for FTD Mercury wire orders, maps sender/recipient/gift message, industryGate='florist'

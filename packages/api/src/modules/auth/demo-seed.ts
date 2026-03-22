@@ -216,6 +216,14 @@ export async function seedDemoOrg(tenantId: string, options?: SeedDemoOptions): 
         if ('senderEmail' in o && o.senderEmail) base.senderEmail = o.senderEmail;
         if ('giftMessage' in o && o.giftMessage) base.giftMessage = o.giftMessage;
         if ('isGift' in o) base.isGift = o.isGift;
+        // Pharmacy fields
+        if ('isControlledSubstance' in o) base.isControlledSubstance = o.isControlledSubstance;
+        if ('controlledSchedule' in o) base.controlledSchedule = o.controlledSchedule;
+        if ('isColdChain' in o) base.isColdChain = o.isColdChain;
+        if ('patientDob' in o) base.patientDob = o.patientDob;
+        if ('prescriberName' in o) base.prescriberName = o.prescriberName;
+        if ('prescriberNpi' in o) base.prescriberNpi = o.prescriberNpi;
+        if ('hipaaSafeNotes' in o) base.hipaaSafeNotes = o.hipaaSafeNotes;
         return base;
       }) as Array<typeof orders.$inferInsert>,
     )

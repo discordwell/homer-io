@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, numeric, integer, boolean, text, jsonb, pgEnum, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, numeric, integer, boolean, text, jsonb, pgEnum, index, date } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { routes } from './routes.js';
 import { failureCategoryEnum } from './delivery-metrics.js';
@@ -51,7 +51,17 @@ export const orders = pgTable('orders', {
   senderPhone: varchar('sender_phone', { length: 20 }),
   giftMessage: text('gift_message'),
   isGift: boolean('is_gift').default(false).notNull(),
-  // Cash-on-delivery (cannabis)
+  // Pharmacy compliance
+  isControlledSubstance: boolean('is_controlled_substance').default(false).notNull(),
+  controlledSchedule: varchar('controlled_schedule', { length: 10 }),
+  isColdChain: boolean('is_cold_chain').default(false).notNull(),
+  coldChainConfirmed: boolean('cold_chain_confirmed').default(false),
+  patientDob: date('patient_dob'),
+  patientDobVerified: boolean('patient_dob_verified').default(false),
+  prescriberName: varchar('prescriber_name', { length: 255 }),
+  prescriberNpi: varchar('prescriber_npi', { length: 20 }),
+  hipaaSafeNotes: text('hipaa_safe_notes'),
+  // Cash-on-delivery (cannabis) / Copay (pharmacy)
   cashAmount: numeric('cash_amount', { precision: 10, scale: 2 }),
   cashCollected: numeric('cash_collected', { precision: 10, scale: 2 }),
   paymentMethod: varchar('payment_method', { length: 20 }),

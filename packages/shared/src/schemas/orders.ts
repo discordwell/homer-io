@@ -40,7 +40,15 @@ export const createOrderSchema = z.object({
   senderPhone: z.string().max(20).optional(),
   giftMessage: z.string().max(2000).optional(),
   isGift: z.boolean().default(false),
-  // Cash-on-delivery (cannabis)
+  // Pharmacy compliance
+  isControlledSubstance: z.boolean().default(false),
+  controlledSchedule: z.enum(['II', 'III', 'IV', 'V']).optional(),
+  isColdChain: z.boolean().default(false),
+  patientDob: z.string().date().optional(),
+  prescriberName: z.string().max(255).optional(),
+  prescriberNpi: z.string().max(20).optional(),
+  hipaaSafeNotes: z.string().max(2000).optional(),
+  // Cash-on-delivery (cannabis) / Copay (pharmacy)
   cashAmount: z.number().min(0).optional(),
   paymentMethod: z.enum(['cash', 'prepaid', 'card']).optional(),
 });

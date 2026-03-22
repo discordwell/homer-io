@@ -25,6 +25,7 @@ export default function StopDetailScreen() {
   const { currentRoute, fetchCurrentRoute } = useDriverStore();
   const user = useAuthStore((s) => s.user);
   const isCannabis = user?.industry === 'cannabis';
+  const isPharmacy = user?.industry === 'pharmacy';
   const [showPOD, setShowPOD] = useState(false);
   const [showFailure, setShowFailure] = useState(false);
 
@@ -55,6 +56,9 @@ export default function StopDetailScreen() {
         recipientName={stop.recipientName}
         requireIdVerification={isCannabis}
         minimumAge={isCannabis ? 21 : undefined}
+        isColdChain={isPharmacy ? stop.isColdChain : undefined}
+        requireDobVerification={isPharmacy ? !!stop.patientDob : undefined}
+        patientDob={isPharmacy ? stop.patientDob : undefined}
         onComplete={() => {
           setShowPOD(false);
           router.back();

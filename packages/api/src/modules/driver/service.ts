@@ -1,5 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
+import { tenants } from '../../lib/db/schema/tenants.js';
 import { routes } from '../../lib/db/schema/routes.js';
 import { orders } from '../../lib/db/schema/orders.js';
 import { drivers } from '../../lib/db/schema/drivers.js';
@@ -35,7 +36,18 @@ export async function getCurrentRoute(tenantId: string, userId: string) {
     .where(and(eq(orders.routeId, route.id), eq(orders.tenantId, tenantId)))
     .orderBy(orders.stopSequence);
 
-  return { ...route, orders: stops };
+  // HIPAA-safe display: strip PHI from notes for pharmacy tenants
+  const [tenant] = await db.select({ industry: tenants.industry })
+    .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+
+  const sanitizedStops = tenant?.industry === 'pharmacy'
+    ? stops.map(stop => ({
+        ...stop,
+        notes: stop.hipaaSafeNotes || 'Prescription delivery', // Replace PHI notes with safe version
+      }))
+    : stops;
+
+  return { ...route, orders: sanitizedStops };
 }
 
 /**

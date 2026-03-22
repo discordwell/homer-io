@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const integrationPlatformEnum = z.enum([
-  'shopify', 'woocommerce', 'dutchie', 'ftd', 'teleflora',
+  'shopify', 'woocommerce', 'dutchie', 'ftd', 'teleflora', 'pioneerrx',
   'tookan', 'onfleet', 'optimoroute', 'speedyroute', 'getswift', 'circuit',
 ]);
 export type IntegrationPlatform = z.infer<typeof integrationPlatformEnum>;

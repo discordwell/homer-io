@@ -4,6 +4,7 @@ import { WooCommerceConnector } from './woocommerce.js';
 import { DutchieConnector } from './dutchie.js';
 import { FTDConnector } from './ftd.js';
 import { TelefloraConnector } from './teleflora.js';
+import { PioneerRxConnector } from './pioneerrx.js';
 import type { PlatformInfo } from '@homer-io/shared';
 
 export { encrypt, decrypt } from './crypto.js';
@@ -12,6 +13,7 @@ export { WooCommerceConnector } from './woocommerce.js';
 export { DutchieConnector } from './dutchie.js';
 export { FTDConnector } from './ftd.js';
 export { TelefloraConnector } from './teleflora.js';
+export { PioneerRxConnector } from './pioneerrx.js';
 export { MetrcConnector, getMetrcStates } from './metrc.js';
 export type { EcommerceConnector, ExternalOrder } from './connector.js';
 export type { SeedToSaleConnector, MetrcPackage, MetrcTransferInput } from './metrc.js';
@@ -22,6 +24,7 @@ const connectors: Record<string, EcommerceConnector> = {
   dutchie: new DutchieConnector(),
   ftd: new FTDConnector(),
   teleflora: new TelefloraConnector(),
+  pioneerrx: new PioneerRxConnector(),
 };
 
 export function getConnector(platform: string): EcommerceConnector {
@@ -81,6 +84,16 @@ export function getAvailablePlatforms(): PlatformInfo[] {
         { key: 'shopId', label: 'Shop ID', type: 'text', placeholder: 'Your Teleflora shop ID' },
       ],
       industryGate: 'florist',
+    },
+    {
+      platform: 'pioneerrx',
+      name: 'PioneerRx',
+      description: 'Import prescription delivery orders from PioneerRx pharmacy software (HIPAA-compliant).',
+      requiredCredentials: [
+        { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'PioneerRx API key' },
+        { key: 'pharmacyId', label: 'Pharmacy ID', type: 'text', placeholder: 'Your PioneerRx pharmacy ID' },
+      ],
+      industryGate: 'pharmacy',
     },
   ];
 }

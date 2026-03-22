@@ -19,13 +19,17 @@ interface PODFlowProps {
   // Cannabis compliance
   requireIdVerification?: boolean;
   minimumAge?: number;
+  // Pharmacy compliance
+  isColdChain?: boolean;
+  requireDobVerification?: boolean;
+  patientDob?: string; // YYYY-MM-DD
 }
 
 type Step = 'id_verification' | 'photo' | 'signature' | 'notes' | 'confirm';
 const BASE_STEPS: Step[] = ['photo', 'signature', 'notes', 'confirm'];
 const CANNABIS_STEPS: Step[] = ['id_verification', 'photo', 'signature', 'notes', 'confirm'];
 
-export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel, requireIdVerification, minimumAge = 21 }: PODFlowProps) {
+export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel, requireIdVerification, minimumAge = 21, isColdChain, requireDobVerification, patientDob }: PODFlowProps) {
   const STEPS = requireIdVerification ? CANNABIS_STEPS : BASE_STEPS;
   const [step, setStep] = useState<Step>(STEPS[0]);
   const [photos, setPhotos] = useState<CapturedPhoto[]>([]);
@@ -34,6 +38,9 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel,
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [idData, setIdData] = useState<IDVerificationData | null>(null);
+  // Pharmacy state
+  const [coldChainConfirmed, setColdChainConfirmed] = useState(false);
+  const [dobVerified, setDobVerified] = useState(false);
 
   const { uploadPodFiles, createPod, completeStop } = useDriverStore();
 
@@ -118,6 +125,9 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel,
           idVerifiedAt: new Date().toISOString(),
           ageVerified: idData.ageVerified,
         } : {}),
+        // Pharmacy compliance fields
+        ...(isColdChain ? { coldChainConfirmed, coldChainVerifiedAt: new Date().toISOString() } : {}),
+        ...(requireDobVerification && patientDob ? { dobVerified, dobVerifiedAt: dobVerified ? new Date().toISOString() : undefined } : {}),
       });
 
       // Complete the stop
@@ -263,6 +273,46 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel,
                 <Text style={styles.reviewValueSmall}>{notes}</Text>
               </View>
             ) : null}
+
+            {/* Cold chain confirmation (pharmacy) */}
+            {isColdChain && (
+              <View style={[styles.reviewCard, { borderColor: coldChainConfirmed ? alpha(C.green, 0.4) : alpha(C.orange, 0.4) }]}>
+                <Text style={styles.reviewLabel}>Cold Chain Verification</Text>
+                <Pressable
+                  onPress={() => setColdChainConfirmed(!coldChainConfirmed)}
+                  style={styles.toggleRow}
+                >
+                  <View style={[styles.toggle, coldChainConfirmed && styles.toggleActive]}>
+                    <View style={[styles.toggleKnob, coldChainConfirmed && styles.toggleKnobActive]} />
+                  </View>
+                  <Text style={[styles.toggleLabel, { flex: 1 }]}>
+                    Cold chain intact? Temperature-controlled packaging verified
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+
+            {/* DOB verification (pharmacy) */}
+            {requireDobVerification && patientDob && (
+              <View style={[styles.reviewCard, { borderColor: dobVerified ? alpha(C.green, 0.4) : alpha(C.orange, 0.4) }]}>
+                <Text style={styles.reviewLabel}>Patient DOB Verification</Text>
+                <Text style={[styles.reviewValue, { marginBottom: 10 }]}>
+                  Patient: {recipientName}, born **/**/{patientDob.split('-')[0]}
+                </Text>
+                <Pressable
+                  onPress={() => setDobVerified(true)}
+                  style={({ pressed }) => [
+                    styles.dobBtn,
+                    dobVerified && styles.dobBtnVerified,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={[styles.dobBtnText, dobVerified && styles.dobBtnTextVerified]}>
+                    {dobVerified ? 'DOB Verified' : 'Tap to Verify DOB'}
+                  </Text>
+                </Pressable>
+              </View>
+            )}
 
             {error && (
               <View style={styles.errorBox}>
@@ -461,5 +511,56 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.8,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 6,
+  },
+  toggle: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: C.muted,
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  toggleActive: {
+    backgroundColor: C.green,
+  },
+  toggleKnob: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#fff',
+  },
+  toggleKnobActive: {
+    alignSelf: 'flex-end',
+  },
+  toggleLabel: {
+    fontSize: Size.sm,
+    color: C.text,
+    lineHeight: 18,
+  },
+  dobBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: C.orange,
+    alignItems: 'center',
+  },
+  dobBtnVerified: {
+    backgroundColor: alpha(C.green, 0.12),
+    borderColor: C.green,
+  },
+  dobBtnText: {
+    fontSize: Size.md,
+    fontWeight: '600',
+    color: C.orange,
+  },
+  dobBtnTextVerified: {
+    color: C.green,
   },
 });

@@ -244,6 +244,14 @@ export interface IndustryOrderData {
   senderEmail?: string;
   giftMessage?: string;
   isGift?: boolean;
+  // Pharmacy fields
+  isControlledSubstance?: boolean;
+  controlledSchedule?: string;
+  isColdChain?: boolean;
+  patientDob?: string;
+  prescriberName?: string;
+  prescriberNpi?: string;
+  hipaaSafeNotes?: string;
 }
 
 function pick<T>(arr: T[]): T {
@@ -290,6 +298,7 @@ export function generateIndustryOrders(
     }
     if (industry === 'pharmacy') {
       customFields.rxVerification = true;
+      customFields.rxNumber = `RX-${randInt(1000, 9999)}`;
     }
 
     // Florist: add sender info and gift message for ~80% of orders
@@ -316,6 +325,47 @@ export function generateIndustryOrders(
       giftMessage = pick(giftMessages);
     }
 
+    // Pharmacy: add controlled substance, cold chain, prescriber, patient DOB
+    let isControlledSubstance: boolean | undefined;
+    let controlledSchedule: string | undefined;
+    let isColdChain: boolean | undefined;
+    let patientDob: string | undefined;
+    let prescriberName: string | undefined;
+    let prescriberNpi: string | undefined;
+    let hipaaSafeNotes: string | undefined;
+    if (industry === 'pharmacy') {
+      // 20% controlled substances
+      if (Math.random() < 0.2) {
+        isControlledSubstance = true;
+        controlledSchedule = pick(['II', 'III', 'IV', 'V']);
+      }
+      // 15% cold chain
+      if (Math.random() < 0.15) {
+        isColdChain = true;
+      }
+      // Patient DOB (random between 1940-2005)
+      const dobYear = 1940 + Math.floor(Math.random() * 65);
+      const dobMonth = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
+      const dobDay = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
+      patientDob = `${dobYear}-${dobMonth}-${dobDay}`;
+      // Prescriber
+      const drFirst = pick(['Dr. Sarah', 'Dr. James', 'Dr. Emily', 'Dr. Michael', 'Dr. Chen', 'Dr. Patel']);
+      const drLast = pick(RECIPIENT_LAST);
+      prescriberName = `${drFirst} ${drLast}`;
+      prescriberNpi = String(1000000000 + randInt(0, 999999999));
+      // HIPAA-safe notes (no medication names)
+      const safeNotes = [
+        'Ring doorbell, leave at door if not home',
+        'Call patient 15min before arrival',
+        'Deliver to reception — ask for patient by name',
+        'Side entrance — gate code provided to driver',
+        'Signature required — do not leave unattended',
+        'Morning delivery preferred',
+        '',
+      ];
+      hipaaSafeNotes = pick(safeNotes) || undefined;
+    }
+
     return {
       recipientName: `${first} ${last}`,
       deliveryAddress: {
@@ -339,6 +389,11 @@ export function generateIndustryOrders(
       ...(senderEmail ? { senderEmail } : {}),
       ...(giftMessage ? { giftMessage } : {}),
       ...(isGift ? { isGift } : {}),
+      ...(isControlledSubstance ? { isControlledSubstance, controlledSchedule } : {}),
+      ...(isColdChain ? { isColdChain } : {}),
+      ...(patientDob ? { patientDob } : {}),
+      ...(prescriberName ? { prescriberName, prescriberNpi } : {}),
+      ...(hipaaSafeNotes ? { hipaaSafeNotes } : {}),
     };
   });
 }

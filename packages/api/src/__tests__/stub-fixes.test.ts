@@ -187,6 +187,8 @@ describe('B6: Activity logging on createOrder', () => {
       requiresSignature: false,
       requiresPhoto: false,
       isGift: false,
+      isControlledSubstance: false,
+      isColdChain: false,
     });
 
     expect(mockLogActivity).toHaveBeenCalledWith({

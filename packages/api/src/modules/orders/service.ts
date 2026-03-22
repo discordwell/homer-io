@@ -42,6 +42,12 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
     if (florist?.autoRequirePhoto !== false) requiresPhoto = true;
   }
 
+  // Pharmacy industry: auto-enforce signature + photo
+  if (tenant?.industry === 'pharmacy') {
+    requiresSignature = true;
+    requiresPhoto = true;
+  }
+
   const [order] = await db
     .insert(orders)
     .values({
@@ -73,7 +79,15 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
       senderPhone: input.senderPhone,
       giftMessage: input.giftMessage,
       isGift: input.isGift || !!input.giftMessage,
-      // Cash-on-delivery
+      // Pharmacy compliance
+      isControlledSubstance: input.isControlledSubstance || false,
+      controlledSchedule: input.controlledSchedule,
+      isColdChain: input.isColdChain || false,
+      patientDob: input.patientDob,
+      prescriberName: input.prescriberName,
+      prescriberNpi: input.prescriberNpi,
+      hipaaSafeNotes: input.hipaaSafeNotes,
+      // Cash-on-delivery / Copay
       cashAmount: input.cashAmount?.toString(),
       paymentMethod: input.paymentMethod,
     })
