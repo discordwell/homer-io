@@ -68,18 +68,21 @@ app.setErrorHandler((error, request, reply) => {
       message: error.message,
     });
   }
-  // Sanitize database/internal errors — never leak SQL queries or stack traces
-  const msg = (error as Error).message || '';
-  if (msg.startsWith('Failed query:') || msg.includes('violates')) {
-    app.log.error(error);
-    return reply.status(500).send({
-      statusCode: 500,
-      error: 'Internal Server Error',
-      message: 'An internal error occurred. Please try again later.',
+  // @fastify/sensible and Fastify-native 4xx errors — pass through with sanitized shape
+  if ('statusCode' in error && typeof error.statusCode === 'number' && error.statusCode < 500) {
+    return reply.status(error.statusCode).send({
+      statusCode: error.statusCode,
+      error: error.name === 'FastifyError' ? 'Bad Request' : (error.name || 'Error'),
+      message: error.message,
     });
   }
-  // Let Fastify handle everything else (including @fastify/sensible errors)
-  reply.send(error);
+  // Everything else (DB errors, unexpected throws) — log and return generic 500
+  app.log.error(error);
+  return reply.status(500).send({
+    statusCode: 500,
+    error: 'Internal Server Error',
+    message: 'An internal error occurred. Please try again later.',
+  });
 });
 
 // Plugins
