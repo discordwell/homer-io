@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.js';
 import { api } from '../api/client.js';
 import { GoogleSignInButton } from '../components/GoogleSignInButton.js';
 import type { AuthResponse, GoogleAuthResponse } from '@homer-io/shared';
+
+const VALID_INDUSTRIES = ['courier', 'restaurant', 'florist', 'pharmacy', 'cannabis', 'grocery', 'furniture', 'other'] as const;
 
 export function RegisterPage() {
   const [name, setName] = useState('');
@@ -15,6 +17,24 @@ export function RegisterPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const setPendingGoogleUser = useAuthStore((s) => s.setPendingGoogleUser);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Pre-selected industry from vertical landing page (e.g. ?industry=cannabis)
+  const industryParam = searchParams.get('industry');
+  const preselectedIndustry = industryParam && (VALID_INDUSTRIES as readonly string[]).includes(industryParam)
+    ? industryParam
+    : null;
+
+  /** After successful auth, set the pre-selected industry then navigate */
+  async function postAuthSetIndustry() {
+    if (preselectedIndustry) {
+      try {
+        await api.post('/onboarding/set-industry', { industry: preselectedIndustry });
+      } catch {
+        // Non-blocking: if it fails, user picks industry during onboarding
+      }
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -25,6 +45,7 @@ export function RegisterPage() {
         name, orgName, email, password,
       });
       setAuth(res);
+      await postAuthSetIndustry();
       navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -39,6 +60,7 @@ export function RegisterPage() {
       const res = await api.post<GoogleAuthResponse>('/auth/google', { credential });
       if (res.status === 'existing_user' && res.auth) {
         setAuth(res.auth);
+        await postAuthSetIndustry();
         navigate('/dashboard');
       } else if (res.status === 'new_user') {
         setPendingGoogleUser({
@@ -47,7 +69,11 @@ export function RegisterPage() {
           name: res.googleName!,
           orgOptions: res.orgOptions || [],
         });
-        navigate('/org-choice');
+        // Pass industry through to org-choice page
+        const orgChoiceUrl = preselectedIndustry
+          ? `/org-choice?industry=${preselectedIndustry}`
+          : '/org-choice';
+        navigate(orgChoiceUrl);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google sign-in failed');

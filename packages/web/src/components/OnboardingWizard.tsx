@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOnboardingStore } from '../stores/onboarding.js';
+import { useAuthStore } from '../stores/auth.js';
 import { C, F, alpha } from '../theme.js';
+
+const INDUSTRY_SUBTITLES: Record<string, string> = {
+  cannabis: "Let's set up your compliant delivery operation",
+  florist: "Let's get your flower deliveries running beautifully",
+  pharmacy: "Let's set up HIPAA-compliant prescription delivery",
+  restaurant: "Let's get your delivery operation running fast",
+  grocery: "Let's set up your grocery delivery system",
+  furniture: "Let's configure your white-glove delivery service",
+};
 
 const STEP_LINKS: Record<string, string> = {
   vehicle: '/dashboard/fleet/vehicles',
@@ -54,8 +64,10 @@ function IndustryPicker({ onSelect, loading: isLoading }: { onSelect: (v: string
 }
 
 export function OnboardingWizard() {
-  const { status, loading, industryLoading, fetchStatus, completeOnboarding, skipOnboarding, skipStep, setIndustry } = useOnboardingStore();
+  const { status, loading, industryLoading, sampleDataLoading, fetchStatus, completeOnboarding, skipOnboarding, skipStep, setIndustry, loadSampleData } = useOnboardingStore();
+  const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const [sampleDataResult, setSampleDataResult] = useState<string | null>(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchStatus(); }, []);
@@ -64,6 +76,23 @@ export function OnboardingWizard() {
 
   const allDone = status.steps.every(s => s.completed);
   const progress = status.steps.filter(s => s.completed).length;
+  const industryStep = status.steps.find(s => s.key === 'industry');
+  const industrySet = industryStep?.completed && !industryStep?.skipped;
+  const industry = user?.industry ?? null;
+  const subtitle = industry && INDUSTRY_SUBTITLES[industry]
+    ? INDUSTRY_SUBTITLES[industry]
+    : 'Complete these steps to get started';
+
+  const handleLoadSampleData = async () => {
+    try {
+      const result = await loadSampleData();
+      setSampleDataResult(`Loaded ${result.ordersCreated} sample orders`);
+      setTimeout(() => setSampleDataResult(null), 5000);
+    } catch {
+      setSampleDataResult('Failed to load sample data');
+      setTimeout(() => setSampleDataResult(null), 5000);
+    }
+  };
 
   return (
     <div style={{
@@ -76,7 +105,12 @@ export function OnboardingWizard() {
             {allDone ? 'All set! You\'re ready to go' : 'Welcome to HOMER.io'}
           </h3>
           <p style={{ color: C.dim, fontSize: 13 }}>
-            {allDone ? 'Your setup is complete.' : `Complete these steps to get started (${progress}/${status.steps.length})`}
+            {allDone
+              ? 'Your setup is complete.'
+              : industrySet
+                ? `${subtitle} (${progress}/${status.steps.length})`
+                : `Complete these steps to get started (${progress}/${status.steps.length})`
+            }
           </p>
         </div>
         <button
@@ -101,6 +135,38 @@ export function OnboardingWizard() {
           transition: 'width 0.3s ease',
         }} />
       </div>
+
+      {/* Load sample data — prominent CTA after industry is selected */}
+      {industrySet && !sampleDataResult && (
+        <button
+          onClick={handleLoadSampleData}
+          disabled={sampleDataLoading}
+          style={{
+            width: '100%', padding: '14px 20px', marginBottom: 16,
+            borderRadius: 10, border: `1px solid ${C.accent}`,
+            background: alpha(C.accent, 0.08),
+            color: C.accent, cursor: sampleDataLoading ? 'wait' : 'pointer',
+            fontFamily: F.body, fontSize: 14, fontWeight: 600,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            transition: 'all 0.2s ease',
+            opacity: sampleDataLoading ? 0.7 : 1,
+          }}
+        >
+          <span style={{ fontSize: 18 }}>{sampleDataLoading ? '\u23F3' : '\u{1F4E6}'}</span>
+          {sampleDataLoading ? 'Loading sample data\u2026' : 'Load sample data \u2014 see HOMER in action'}
+        </button>
+      )}
+      {sampleDataResult && (
+        <div style={{
+          width: '100%', padding: '12px 20px', marginBottom: 16,
+          borderRadius: 10, background: alpha(C.green, 0.1),
+          border: `1px solid ${C.green}`,
+          color: C.green, fontFamily: F.body, fontSize: 13, fontWeight: 500,
+          textAlign: 'center',
+        }}>
+          {sampleDataResult}
+        </div>
+      )}
 
       {/* Steps */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

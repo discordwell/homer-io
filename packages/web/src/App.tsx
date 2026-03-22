@@ -33,6 +33,9 @@ import { DemoOrdersPage } from './pages/DemoOrders.js';
 import { DemoRoutesPage } from './pages/DemoRoutes.js';
 import { DemoVehiclesPage, DemoDriversPage } from './pages/DemoFleet.js';
 import { DemoAnalyticsPage } from './pages/DemoAnalytics.js';
+import { VerticalLanding } from './components/landing-v2/VerticalLanding.js';
+import { VERTICAL_CONTENT } from './components/landing-v2/vertical-content.js';
+import { PricingPage } from './pages/Pricing.js';
 import { C, F } from './theme.js';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -99,6 +102,14 @@ export function App() {
           <Route path="analytics" element={<DemoAnalyticsPage />} />
           <Route path="live" element={<LiveMapPage />} />
         </Route>
+        {/* Vertical landing pages */}
+        <Route path="/cannabis" element={<VerticalLanding content={VERTICAL_CONTENT.cannabis} />} />
+        <Route path="/florist" element={<VerticalLanding content={VERTICAL_CONTENT.florist} />} />
+        <Route path="/pharmacy" element={<VerticalLanding content={VERTICAL_CONTENT.pharmacy} />} />
+        <Route path="/restaurant" element={<VerticalLanding content={VERTICAL_CONTENT.restaurant} />} />
+        <Route path="/grocery" element={<VerticalLanding content={VERTICAL_CONTENT.grocery} />} />
+        <Route path="/furniture" element={<VerticalLanding content={VERTICAL_CONTENT.furniture} />} />
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="*" element={<CatchAllRedirect />} />
       </Routes>
     </div>

@@ -2,6 +2,16 @@
 
 ## Session Summaries
 
+### 2026-03-22T13:30 UTC — Vertical Landing Pages + Onboarding Polish + Pricing
+- **6 vertical landing pages**: /cannabis, /florist, /pharmacy, /restaurant, /grocery, /furniture — each with industry-specific hero, pain points, feature highlights, competitor comparison, compliance section, pricing notes
+- **VerticalLanding.tsx** shared component (19KB) + vertical-content.ts (21KB) — parameterized by industry
+- **Register pre-selection**: ?industry= query param auto-sets industry on registration
+- **Onboarding polish**: industry-specific welcome subtitles, prominent "Load sample data" button after industry selection
+- **Dashboard quick actions**: industry-relevant next steps for new users (3 action cards per industry)
+- **Pricing page**: standalone /pricing with 4-tier cards, annual/monthly toggle, feature matrix, industry pricing notes, metered extras, FAQ accordion
+- **Demo notification templates**: industry-specific SMS/email templates seeded per vertical
+- 619 tests passing, no new backend changes needed
+
 ### 2026-03-22T09:40 UTC — Restaurant + Grocery + Furniture Verticals
 - **Restaurant**: speed_priority feature, Square + Toast POS connectors (industryGate='restaurant'), RestaurantTab settings (delivery window, batch size), high-priority demo data
 - **Grocery**: substitution_management + temperature_zones features, substitutionAllowed/substitutionNotes/temperatureZone on orders, GroceryTab settings (substitution policy, temp monitoring), demo data with frozen/refrigerated/ambient zones

@@ -8,6 +8,7 @@ import { orders } from '../../lib/db/schema/orders.js';
 import { routes } from '../../lib/db/schema/routes.js';
 import { generateLocalAddresses, getNearestCity, type GeneratedAddress } from '../../lib/geocoding.js';
 import { generateIndustryOrders, pickIndustryItem } from './industry-data.js';
+import { notificationTemplates } from '../../lib/db/schema/notification-templates.js';
 
 // ---------------------------------------------------------------------------
 // Bay Area locations (24 total, all within lat 37.2–38.0, lng -122.6 to -121.7)
@@ -341,8 +342,66 @@ export async function seedDemoOrg(tenantId: string, options?: SeedDemoOptions): 
       .where(eq(drivers.id, insertedDrivers[1].id));
   }
 
+  // --- Industry-specific notification templates ---
+  await seedNotificationTemplates(tenantId, industry);
+
   // --- Historical analytics data (90 days of realistic orders + routes) ---
   await seedDemoAnalytics(tenantId, insertedDrivers.map(d => d.id), insertedVehicles.map(v => v.id), locationList, cityContext, industry);
+}
+
+// ---------------------------------------------------------------------------
+// Industry-specific notification templates
+// ---------------------------------------------------------------------------
+
+const INDUSTRY_TEMPLATES: Record<string, Array<{
+  trigger: 'order_assigned' | 'driver_en_route' | 'delivery_approaching' | 'delivered' | 'failed';
+  channel: 'sms' | 'email';
+  subject: string | null;
+  bodyTemplate: string;
+  recipientType: string;
+}>> = {
+  cannabis: [
+    { trigger: 'driver_en_route', channel: 'sms', subject: null, bodyTemplate: 'Your delivery is on the way! Track it here: {{trackingUrl}}', recipientType: 'recipient' },
+    { trigger: 'delivered', channel: 'sms', subject: null, bodyTemplate: 'Your delivery has been completed. Signature verified. Thank you!', recipientType: 'recipient' },
+  ],
+  florist: [
+    { trigger: 'driver_en_route', channel: 'email', subject: 'Your flowers are on the way!', bodyTemplate: 'Hi {{recipientName}}, a special delivery is heading your way! Track it here: {{trackingUrl}}', recipientType: 'recipient' },
+    { trigger: 'delivered', channel: 'email', subject: 'Your gift has been delivered!', bodyTemplate: 'Hi {{senderName}}, your flowers for {{recipientName}} have been delivered! Here\'s a photo: {{deliveryPhotoUrl}}', recipientType: 'sender' },
+    { trigger: 'delivered', channel: 'sms', subject: null, bodyTemplate: '💐 Your flowers have arrived, {{recipientName}}! Enjoy!', recipientType: 'recipient' },
+  ],
+  pharmacy: [
+    { trigger: 'driver_en_route', channel: 'sms', subject: null, bodyTemplate: 'Your pharmacy delivery is on the way. Track it here: {{trackingUrl}}', recipientType: 'recipient' },
+    { trigger: 'delivered', channel: 'sms', subject: null, bodyTemplate: 'Your pharmacy delivery has arrived. Please check your doorstep.', recipientType: 'recipient' },
+  ],
+  restaurant: [
+    { trigger: 'driver_en_route', channel: 'sms', subject: null, bodyTemplate: 'Your order is on the way! ETA: {{eta}}. Track: {{trackingUrl}}', recipientType: 'recipient' },
+    { trigger: 'delivered', channel: 'sms', subject: null, bodyTemplate: 'Your order has been delivered. Enjoy your meal!', recipientType: 'recipient' },
+  ],
+  grocery: [
+    { trigger: 'driver_en_route', channel: 'sms', subject: null, bodyTemplate: 'Your grocery delivery is on the way! ETA: {{eta}}. Track: {{trackingUrl}}', recipientType: 'recipient' },
+    { trigger: 'delivered', channel: 'sms', subject: null, bodyTemplate: 'Your groceries have been delivered. Please refrigerate cold items promptly.', recipientType: 'recipient' },
+  ],
+  furniture: [
+    { trigger: 'delivery_approaching', channel: 'sms', subject: null, bodyTemplate: 'Your delivery team is approaching! Please ensure the delivery area is accessible.', recipientType: 'recipient' },
+    { trigger: 'delivered', channel: 'sms', subject: null, bodyTemplate: 'Your delivery is complete. Thank you for choosing us!', recipientType: 'recipient' },
+  ],
+};
+
+async function seedNotificationTemplates(tenantId: string, industry: string): Promise<void> {
+  const templates = INDUSTRY_TEMPLATES[industry] ?? INDUSTRY_TEMPLATES.restaurant ?? [];
+  if (templates.length === 0) return;
+
+  await db.insert(notificationTemplates).values(
+    templates.map(t => ({
+      tenantId,
+      trigger: t.trigger,
+      channel: t.channel,
+      subject: t.subject,
+      bodyTemplate: t.bodyTemplate,
+      recipientType: t.recipientType,
+      isActive: true,
+    })),
+  );
 }
 
 // ---------------------------------------------------------------------------
