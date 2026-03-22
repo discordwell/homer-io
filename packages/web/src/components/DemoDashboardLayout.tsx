@@ -3,9 +3,9 @@ import { Outlet, Link, useLocation, useSearchParams, NavLink } from 'react-route
 import { Sidebar } from './Sidebar.js';
 import { DemoBanner } from './DemoBanner.js';
 import { AIChatPanel } from './AIChatPanel.js';
+import { DemoEmailGate } from './DemoEmailGate.js';
 import { useDemoStore } from '../stores/demo.js';
 import { useAuthStore } from '../stores/auth.js';
-import { DEMO_USER } from '../data/demo-data.js';
 import { C } from '../theme.js';
 
 function useIsMobile(breakpoint = 768) {
@@ -24,19 +24,17 @@ function useIsMobile(breakpoint = 768) {
 
 /**
  * Dashboard layout for public demo mode.
- * - Injects a synthetic demo user into the auth store so components that
- *   read user info (Sidebar, Dashboard greeting) work without real auth.
+ * - Shows email gate overlay until user provides an email.
+ * - Once provisioned, renders the full dashboard with real tenant data.
  * - Shows a persistent DemoBanner at the top.
- * - Kicks off background tenant provisioning for AI Copilot access.
  * - Includes <AIChatPanel /> with warming-up state during provisioning.
  */
 export function DemoDashboardLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [searchParams] = useSearchParams();
   const enterDemo = useDemoStore((s) => s.enterDemo);
   const exitDemo = useDemoStore((s) => s.exitDemo);
-  const provisionTenant = useDemoStore((s) => s.provisionTenant);
+  const demoEmail = useDemoStore((s) => s.demoEmail);
   const logout = useAuthStore((s) => s.logout);
   const isMobile = useIsMobile();
   const location = useLocation();
@@ -73,29 +71,20 @@ export function DemoDashboardLayout() {
   }, [isMobile]);
 
   useEffect(() => {
-    // Enter demo mode and inject synthetic user (instant browse)
+    // Enter demo mode (provisioning happens on email submit via DemoEmailGate)
     enterDemo();
-    useAuthStore.getState().setAuth({
-      accessToken: 'demo-token',
-      refreshToken: 'demo-refresh',
-      user: DEMO_USER,
-    });
-
-    // Background: provision real tenant for AI Copilot
-    const lat = searchParams.get('lat');
-    const lng = searchParams.get('lng');
-    provisionTenant(
-      lat ? parseFloat(lat) : undefined,
-      lng ? parseFloat(lng) : undefined,
-    );
 
     return () => {
-      // Clean up on unmount — exit demo mode and clear synthetic auth
       exitDemo();
       logout();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Show email gate until user submits email and provisioning succeeds
+  if (!demoEmail) {
+    return <DemoEmailGate />;
+  }
 
   return (
     <div style={{ minHeight: '100vh' }}>

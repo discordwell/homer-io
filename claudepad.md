@@ -2,6 +2,14 @@
 
 ## Session Summaries
 
+### 2026-03-21T23:50 UTC — Email-Gated Demo Sessions
+- **Abuse prevention**: Demo sessions now require email address (was zero-auth `{}`)
+- **Backend**: email field in schema with `.transform(toLowerCase)`, disposable domain blocklist (~80 domains), email-based dedup (Redis 7d TTL + DB slow path), replaces IP-based 1hr dedup
+- **Frontend**: `DemoEmailGate.tsx` full-screen overlay, provisioning on email submit (no more background provisioning), 422 error handling
+- **Shared**: `demoSessionSchema` exported from shared package for frontend validation
+- **Tests**: 25 new tests (13 disposable-domains + 12 demo-email-gate), all 517 passing
+- **Files**: 4 new (disposable-domains.ts, DemoEmailGate.tsx, 2 test files), 4 modified (demo-session.ts, routes.ts, shared auth.ts, demo store, DemoDashboardLayout)
+
 ### 2026-03-21T19:00 UTC — Industry Selection & Sample Data
 - Added industry field to tenant model (8 industries: courier, restaurant, florist, pharmacy, cannabis, grocery, furniture, other)
 - Created industry-specific order templates (industry-data.ts) with realistic items, notes, flags per vertical

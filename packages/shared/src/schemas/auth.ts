@@ -51,3 +51,11 @@ export const apiKeyCreateSchema = z.object({
   scopes: z.array(z.string()).min(1),
 });
 export type ApiKeyCreateInput = z.infer<typeof apiKeyCreateSchema>;
+
+export const demoSessionSchema = z.object({
+  email: z.string().email().max(255),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  city: z.string().max(100).optional(),
+});
+export type DemoSessionInput = z.infer<typeof demoSessionSchema>;

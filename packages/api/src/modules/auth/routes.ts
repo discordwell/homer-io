@@ -55,10 +55,9 @@ export async function authRoutes(app: FastifyInstance) {
     await demoScope.register(rateLimit, { max: 5, timeWindow: '1 minute' });
 
     demoScope.post('/demo-session', async (request, reply) => {
-      const body = demoSessionSchema.parse(request.body || {});
-      const ip = request.ip;
-      const result = await handleDemoSession(demoScope, ip, body);
-      reply.code(201).send(result);
+      const body = demoSessionSchema.parse(request.body);
+      const { isNew, auth } = await handleDemoSession(demoScope, body);
+      reply.code(isNew ? 201 : 200).send(auth);
     });
   });
 

@@ -9,12 +9,18 @@ interface DemoState {
   isDemoMode: boolean;
   /** Status of the backend demo tenant provisioning */
   tenantStatus: TenantStatus;
+  /** Email used for this demo session (null = gate not yet passed) */
+  demoEmail: string | null;
+  /** Error message from email validation or provisioning */
+  emailError: string | null;
   /** Enter demo mode */
   enterDemo: () => void;
   /** Exit demo mode */
   exitDemo: () => void;
-  /** Provision a real backend tenant in the background */
-  provisionTenant: (lat?: number, lng?: number) => Promise<void>;
+  /** Set email error message */
+  setEmailError: (error: string | null) => void;
+  /** Provision a real backend tenant with email identification */
+  provisionTenant: (email: string, lat?: number, lng?: number) => Promise<void>;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -22,17 +28,20 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 export const useDemoStore = create<DemoState>()((set, get) => ({
   isDemoMode: false,
   tenantStatus: 'static',
-  enterDemo: () => set({ isDemoMode: true, tenantStatus: 'static' }),
-  exitDemo: () => set({ isDemoMode: false, tenantStatus: 'static' }),
+  demoEmail: null,
+  emailError: null,
+  enterDemo: () => set({ isDemoMode: true, tenantStatus: 'static', demoEmail: null, emailError: null }),
+  exitDemo: () => set({ isDemoMode: false, tenantStatus: 'static', demoEmail: null, emailError: null }),
+  setEmailError: (error) => set({ emailError: error }),
 
-  provisionTenant: async (lat?: number, lng?: number) => {
+  provisionTenant: async (email: string, lat?: number, lng?: number) => {
     const { tenantStatus } = get();
     if (tenantStatus === 'provisioning' || tenantStatus === 'ready') return;
 
-    set({ tenantStatus: 'provisioning' });
+    set({ tenantStatus: 'provisioning', emailError: null });
 
     try {
-      const body: Record<string, number> = {};
+      const body: Record<string, string | number> = { email };
       if (lat != null) body.lat = lat;
       if (lng != null) body.lng = lng;
 
@@ -43,18 +52,29 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
       });
 
       if (!res.ok) {
-        throw new Error(`Demo session failed: ${res.status}`);
+        const data = await res.json().catch(() => null);
+        const message = data?.message || data?.error || `Demo session failed (${res.status})`;
+
+        if (res.status === 422) {
+          set({ tenantStatus: 'static', emailError: message });
+          return;
+        }
+        throw new Error(message);
       }
 
       const data: AuthResponse = await res.json();
 
-      // Silently swap auth token from demo-token to real JWT
+      // Swap auth from demo-token to real JWT
       useAuthStore.getState().setAuth(data);
 
-      set({ tenantStatus: 'ready' });
+      set({ tenantStatus: 'ready', demoEmail: email });
     } catch (err) {
       console.error('[demo] Tenant provisioning failed:', err);
-      set({ tenantStatus: 'failed' });
+      // Reset to static so user can retry the same email without changing input
+      set({
+        tenantStatus: 'static',
+        emailError: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+      });
     }
   },
 }));
