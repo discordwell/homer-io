@@ -2,12 +2,16 @@ import type { EcommerceConnector } from './connector.js';
 import { ShopifyConnector } from './shopify.js';
 import { WooCommerceConnector } from './woocommerce.js';
 import { DutchieConnector } from './dutchie.js';
+import { FTDConnector } from './ftd.js';
+import { TelefloraConnector } from './teleflora.js';
 import type { PlatformInfo } from '@homer-io/shared';
 
 export { encrypt, decrypt } from './crypto.js';
 export { ShopifyConnector } from './shopify.js';
 export { WooCommerceConnector } from './woocommerce.js';
 export { DutchieConnector } from './dutchie.js';
+export { FTDConnector } from './ftd.js';
+export { TelefloraConnector } from './teleflora.js';
 export { MetrcConnector, getMetrcStates } from './metrc.js';
 export type { EcommerceConnector, ExternalOrder } from './connector.js';
 export type { SeedToSaleConnector, MetrcPackage, MetrcTransferInput } from './metrc.js';
@@ -16,6 +20,8 @@ const connectors: Record<string, EcommerceConnector> = {
   shopify: new ShopifyConnector(),
   woocommerce: new WooCommerceConnector(),
   dutchie: new DutchieConnector(),
+  ftd: new FTDConnector(),
+  teleflora: new TelefloraConnector(),
 };
 
 export function getConnector(platform: string): EcommerceConnector {
@@ -55,6 +61,26 @@ export function getAvailablePlatforms(): PlatformInfo[] {
         { key: 'dispensaryId', label: 'Dispensary ID', type: 'text', placeholder: 'Your Dutchie dispensary ID' },
       ],
       industryGate: 'cannabis',
+    },
+    {
+      platform: 'ftd',
+      name: 'FTD',
+      description: 'Import incoming wire orders from FTD Mercury with sender and gift data.',
+      requiredCredentials: [
+        { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'FTD Mercury API key' },
+        { key: 'shopCode', label: 'Shop Code', type: 'text', placeholder: 'Your FTD shop code' },
+      ],
+      industryGate: 'florist',
+    },
+    {
+      platform: 'teleflora',
+      name: 'Teleflora',
+      description: 'Import incoming wire orders from Teleflora with sender and gift data.',
+      requiredCredentials: [
+        { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'Teleflora API key' },
+        { key: 'shopId', label: 'Shop ID', type: 'text', placeholder: 'Your Teleflora shop ID' },
+      ],
+      industryGate: 'florist',
     },
   ];
 }

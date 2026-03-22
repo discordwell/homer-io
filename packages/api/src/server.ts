@@ -19,7 +19,7 @@ import { teamRoutes } from './modules/team/routes.js';
 import { apiKeyRoutes } from './modules/api-keys/routes.js';
 import { notificationRoutes } from './modules/notifications/routes.js';
 import { customerNotificationTemplateRoutes, customerNotificationLogRoutes } from './modules/customer-notifications/routes.js';
-import { driverRoutes } from './modules/driver/routes.js';
+import { driverRoutes, driverInvitePublicRoutes } from './modules/driver/routes.js';
 import { deviceRoutes } from './modules/devices/routes.js';
 import { podRoutes } from './modules/pod/routes.js';
 import { dispatchRoutes } from './modules/dispatch/routes.js';
@@ -133,6 +133,7 @@ await app.register(async (api) => {
 
   // Public routes — no auth required, rate limited within the plugin
   await api.register(publicRoutes, { prefix: '/public' });
+  await api.register(driverInvitePublicRoutes, { prefix: '/driver/invite' });
   await api.register(analyticsRoutes, { prefix: '/analytics' });
   await api.register(settingsRoutes, { prefix: '/settings' });
   await api.register(teamRoutes, { prefix: '/team' });

@@ -2,7 +2,7 @@ import { pgTable, uuid, varchar, timestamp, boolean, integer, jsonb, pgEnum, uni
 import { tenants } from './tenants.js';
 
 export const integrationPlatformEnum = pgEnum('integration_platform', [
-  'shopify', 'woocommerce', 'dutchie',
+  'shopify', 'woocommerce', 'dutchie', 'ftd', 'teleflora',
   'tookan', 'onfleet', 'optimoroute', 'speedyroute', 'getswift', 'circuit',
 ]);
 

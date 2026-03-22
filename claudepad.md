@@ -2,6 +2,14 @@
 
 ## Session Summaries
 
+### 2026-03-22T04:05 UTC — Florist Delivery Vertical Phase 2
+- **Temp driver quick-onboard**: driver_invites table, token generation, public redeem endpoint, creates user+driver with minimal info, auto-expires
+- **FTD connector**: EcommerceConnector for FTD Mercury wire orders, maps sender/recipient/gift message, industryGate='florist'
+- **Teleflora connector**: Same pattern for Teleflora WinDSR, maps sender/recipient/gift, industryGate='florist'
+- Public invite routes registered separately (no auth needed for redemption)
+- Migration: 0007_add_driver_invites.sql
+- 10 new tests, 593 total passing
+
 ### 2026-03-22T03:25 UTC — Florist Delivery Vertical Phase 1
 - **Two-customer model**: sender fields (name/email/phone) + gift message + isGift on orders
 - **Dual notifications**: recipientType on templates (recipient/sender/both), 3 new variables: senderName, giftMessage, deliveryPhotoUrl
