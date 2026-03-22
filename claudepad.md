@@ -2,6 +2,13 @@
 
 ## Session Summaries
 
+### 2026-03-22T14:00 UTC — Wet Test + UI Fixes
+- **Deploy fix**: `/opt/homer-io/site` was stale copy, symlinked to `packages/web/dist` for automatic freshness
+- **Vertical landing cards**: increased width (380→440px), font size (12.5→13.5px), padding, description length (80→120 chars)
+- **Register page**: added "Setting up for [industry] delivery" amber badge when arriving from vertical landing with ?industry= param
+- **SW caching**: confirmed `registerType: 'autoUpdate'` is correct, stale dir was the real issue
+- All 8 public pages verified rendering correctly
+
 ### 2026-03-22T13:30 UTC — Vertical Landing Pages + Onboarding Polish + Pricing
 - **6 vertical landing pages**: /cannabis, /florist, /pharmacy, /restaurant, /grocery, /furniture — each with industry-specific hero, pain points, feature highlights, competitor comparison, compliance section, pricing notes
 - **VerticalLanding.tsx** shared component (19KB) + vertical-content.ts (21KB) — parameterized by industry
