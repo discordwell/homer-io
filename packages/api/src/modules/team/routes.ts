@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { inviteUserSchema, ROLES } from '@homer-io/shared';
-import { authenticate, requireRole, denyDemo } from '../../plugins/auth.js';
+import { authenticate, requireRole } from '../../plugins/auth.js';
 import { inviteUser, listTeamMembers, updateMemberRole, deactivateMember } from './service.js';
 
 const updateRoleSchema = z.object({
@@ -10,7 +10,7 @@ const updateRoleSchema = z.object({
 
 export async function teamRoutes(app: FastifyInstance) {
   app.post('/invite', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const body = inviteUserSchema.parse(request.body);
     const result = await inviteUser(
@@ -29,7 +29,7 @@ export async function teamRoutes(app: FastifyInstance) {
   });
 
   app.put('/:userId/role', {
-    preHandler: [authenticate, requireRole('owner'), denyDemo],
+    preHandler: [authenticate, requireRole('owner')],
   }, async (request, reply) => {
     const { userId } = request.params as { userId: string };
     const { role } = updateRoleSchema.parse(request.body);
@@ -43,7 +43,7 @@ export async function teamRoutes(app: FastifyInstance) {
   });
 
   app.delete('/:userId', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const { userId } = request.params as { userId: string };
     const result = await deactivateMember(

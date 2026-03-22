@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { createWebhookEndpointSchema, updateWebhookEndpointSchema } from '@homer-io/shared';
-import { authenticate, requireRole, denyDemo } from '../../plugins/auth.js';
+import { authenticate, requireRole } from '../../plugins/auth.js';
 import {
   createEndpoint,
   listEndpoints,
@@ -13,7 +13,7 @@ import {
 export async function webhookRoutes(app: FastifyInstance) {
   // POST / — Create a new webhook endpoint
   app.post('/', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const body = createWebhookEndpointSchema.parse(request.body);
     const result = await createEndpoint(
@@ -34,7 +34,7 @@ export async function webhookRoutes(app: FastifyInstance) {
 
   // PUT /:id — Update a webhook endpoint
   app.put('/:id', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = updateWebhookEndpointSchema.parse(request.body);
@@ -49,7 +49,7 @@ export async function webhookRoutes(app: FastifyInstance) {
 
   // DELETE /:id — Delete a webhook endpoint
   app.delete('/:id', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     await deleteEndpoint(
@@ -62,7 +62,7 @@ export async function webhookRoutes(app: FastifyInstance) {
 
   // POST /:id/test — Send a test webhook
   app.post('/:id/test', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await testEndpoint(

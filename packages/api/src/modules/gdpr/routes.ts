@@ -1,12 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { dataDeletionRequestSchema, dataDeletionConfirmSchema, paginationSchema } from '@homer-io/shared';
-import { authenticate, requireRole, denyDemo } from '../../plugins/auth.js';
+import { authenticate, requireRole } from '../../plugins/auth.js';
 import { requestDataExport, getExportStatus, listExportRequests, requestAccountDeletion, confirmDeletion, cancelDeletion, listDeletionRequests } from './service.js';
 
 export async function gdprRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
-  app.post('/export', { preHandler: [requireRole('owner'), denyDemo] }, async (request, reply) => {
+  app.post('/export', { preHandler: [requireRole('owner')] }, async (request, reply) => {
     const result = await requestDataExport(request.user.tenantId, request.user.id);
     reply.code(201).send(result);
   });
@@ -21,18 +21,18 @@ export async function gdprRoutes(app: FastifyInstance) {
     return listExportRequests(request.user.tenantId, query);
   });
 
-  app.post('/delete-account', { preHandler: [requireRole('owner'), denyDemo] }, async (request, reply) => {
+  app.post('/delete-account', { preHandler: [requireRole('owner')] }, async (request, reply) => {
     const body = dataDeletionRequestSchema.parse(request.body);
     const result = await requestAccountDeletion(request.user.tenantId, request.user.id, body.confirmPhrase);
     reply.send(result);
   });
 
-  app.post('/delete-account/confirm', { preHandler: [denyDemo] }, async (request) => {
+  app.post('/delete-account/confirm', async (request) => {
     const body = dataDeletionConfirmSchema.parse(request.body);
     return confirmDeletion(request.user.tenantId, body.token);
   });
 
-  app.delete('/delete-account', { preHandler: [requireRole('owner'), denyDemo] }, async (request) => {
+  app.delete('/delete-account', { preHandler: [requireRole('owner')] }, async (request) => {
     return cancelDeletion(request.user.tenantId);
   });
 

@@ -1,11 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { apiKeyCreateSchema } from '@homer-io/shared';
-import { authenticate, requireRole, denyDemo } from '../../plugins/auth.js';
+import { authenticate, requireRole } from '../../plugins/auth.js';
 import { createApiKey, listApiKeys, revokeApiKey } from './service.js';
 
 export async function apiKeyRoutes(app: FastifyInstance) {
   app.post('/', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const body = apiKeyCreateSchema.parse(request.body);
     const result = await createApiKey(
@@ -24,7 +24,7 @@ export async function apiKeyRoutes(app: FastifyInstance) {
   });
 
   app.delete('/:id', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await revokeApiKey(

@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { createNotificationTemplateSchema, updateNotificationTemplateSchema } from '@homer-io/shared';
-import { authenticate, requireRole, denyDemo } from '../../plugins/auth.js';
+import { authenticate, requireRole } from '../../plugins/auth.js';
 import {
   listTemplates,
   createTemplate,
@@ -19,28 +19,28 @@ export async function customerNotificationTemplateRoutes(app: FastifyInstance) {
   });
 
   // POST /settings/notification-templates — create template
-  app.post('/', { preHandler: [requireRole('admin'), denyDemo] }, async (request, reply) => {
+  app.post('/', { preHandler: [requireRole('admin')] }, async (request, reply) => {
     const body = createNotificationTemplateSchema.parse(request.body);
     const template = await createTemplate(request.user.tenantId, body);
     reply.code(201).send(template);
   });
 
   // PUT /settings/notification-templates/:id — update template
-  app.put('/:id', { preHandler: [requireRole('admin'), denyDemo] }, async (request) => {
+  app.put('/:id', { preHandler: [requireRole('admin')] }, async (request) => {
     const { id } = request.params as { id: string };
     const body = updateNotificationTemplateSchema.parse(request.body);
     return updateTemplate(request.user.tenantId, id, body);
   });
 
   // DELETE /settings/notification-templates/:id — delete template
-  app.delete('/:id', { preHandler: [requireRole('admin'), denyDemo] }, async (request, reply) => {
+  app.delete('/:id', { preHandler: [requireRole('admin')] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     await deleteTemplate(request.user.tenantId, id);
     reply.code(204).send();
   });
 
   // POST /settings/notification-templates/:id/test — send test notification
-  app.post('/:id/test', { preHandler: [requireRole('admin'), denyDemo] }, async (request) => {
+  app.post('/:id/test', { preHandler: [requireRole('admin')] }, async (request) => {
     const { id } = request.params as { id: string };
     return sendTestNotification(request.user.tenantId, id);
   });

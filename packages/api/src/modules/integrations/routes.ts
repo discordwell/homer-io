@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { createConnectionSchema, updateConnectionSchema } from '@homer-io/shared';
-import { authenticate, requireRole, denyDemo } from '../../plugins/auth.js';
+import { authenticate, requireRole } from '../../plugins/auth.js';
 import {
   listConnections,
   getConnection,
@@ -33,7 +33,7 @@ export async function integrationRoutes(app: FastifyInstance) {
 
   // POST /connections — Create a new connection
   app.post('/connections', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const body = createConnectionSchema.parse(request.body);
     const result = await createConnection(
@@ -55,7 +55,7 @@ export async function integrationRoutes(app: FastifyInstance) {
 
   // PUT /connections/:id — Update a connection
   app.put('/connections/:id', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = updateConnectionSchema.parse(request.body);
@@ -70,7 +70,7 @@ export async function integrationRoutes(app: FastifyInstance) {
 
   // DELETE /connections/:id — Delete a connection
   app.delete('/connections/:id', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     await deleteConnection(
@@ -83,7 +83,7 @@ export async function integrationRoutes(app: FastifyInstance) {
 
   // POST /connections/:id/test — Test credentials
   app.post('/connections/:id/test', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await testConnection(request.user.tenantId, id);
@@ -92,7 +92,7 @@ export async function integrationRoutes(app: FastifyInstance) {
 
   // POST /connections/:id/sync — Trigger manual sync
   app.post('/connections/:id/sync', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await syncOrders(request.user.tenantId, id);

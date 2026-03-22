@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { createMigrationJobSchema, validateMigrationCredentialsSchema } from '@homer-io/shared';
-import { authenticate, requireRole, denyDemo } from '../../plugins/auth.js';
+import { authenticate, requireRole } from '../../plugins/auth.js';
 import {
   createMigrationJob,
   listMigrationJobs,
@@ -16,7 +16,7 @@ export async function migrationRoutes(app: FastifyInstance) {
 
   // POST /validate — Test API credentials and return counts
   app.post('/validate', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const body = validateMigrationCredentialsSchema.parse(request.body);
     const result = await validateMigrationCredentials(body.platform, body.apiKey);
@@ -34,7 +34,7 @@ export async function migrationRoutes(app: FastifyInstance) {
 
   // POST / — Create a new migration job
   app.post('/', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
     bodyLimit: 10 * 1024 * 1024, // 10MB for CSV data
   }, async (request, reply) => {
     const body = createMigrationJobSchema.parse(request.body);
@@ -70,7 +70,7 @@ export async function migrationRoutes(app: FastifyInstance) {
 
   // POST /:id/cancel — Cancel a pending/in_progress job
   app.post('/:id/cancel', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await cancelMigrationJob(request.user.tenantId, id);
@@ -79,7 +79,7 @@ export async function migrationRoutes(app: FastifyInstance) {
 
   // DELETE /:id — Delete a completed/failed/cancelled job
   app.delete('/:id', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     await deleteMigrationJob(request.user.tenantId, id);
