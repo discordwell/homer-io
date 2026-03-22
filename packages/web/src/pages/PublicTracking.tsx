@@ -15,6 +15,10 @@ interface TrackingData {
   timeline: Array<{ action: string; createdAt: string; metadata?: Record<string, unknown> }>;
   createdAt: string;
   completedAt: string | null;
+  isGift: boolean;
+  giftMessage: string | null;
+  senderName: string | null;
+  deliveryPhotoUrl: string | null;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -258,6 +262,99 @@ export function PublicTrackingPage() {
                 Tracking ID: {data.orderId}
               </div>
             </div>
+
+            {/* Gift message card */}
+            {data.isGift && data.giftMessage && (
+              <div
+                style={{
+                  background: `linear-gradient(135deg, ${alpha(C.purple, 0.08)}, ${alpha(C.accent, 0.06)})`,
+                  borderRadius: 12,
+                  padding: '24px',
+                  border: `1px solid ${alpha(C.purple, 0.18)}`,
+                  marginBottom: 24,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    textTransform: 'uppercase' as const,
+                    letterSpacing: '0.08em',
+                    color: C.purple,
+                    fontWeight: 700,
+                    marginBottom: 12,
+                  }}
+                >
+                  A message for you
+                </div>
+                <div
+                  style={{
+                    fontSize: 16,
+                    lineHeight: 1.6,
+                    color: C.text,
+                    fontStyle: 'italic',
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {data.giftMessage}
+                </div>
+                {data.senderName && (
+                  <div
+                    style={{
+                      marginTop: 16,
+                      fontSize: 14,
+                      color: C.dim,
+                      textAlign: 'right',
+                    }}
+                  >
+                    &mdash; {data.senderName}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Delivery photo — shown after delivery */}
+            {data.deliveryPhotoUrl && (
+              <div
+                style={{
+                  background: C.bg2,
+                  borderRadius: 12,
+                  border: `1px solid ${C.border}`,
+                  marginBottom: 24,
+                  overflow: 'hidden',
+                }}
+              >
+                <img
+                  src={data.deliveryPhotoUrl}
+                  alt="Delivery photo"
+                  style={{
+                    width: '100%',
+                    display: 'block',
+                    maxHeight: 360,
+                    objectFit: 'cover',
+                  }}
+                />
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: C.green,
+                    }}
+                  />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: C.green }}>
+                    Your delivery has arrived!
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Map — only show if in_transit and driver location is available */}
             {data.status === 'in_transit' && data.driverLocation && (

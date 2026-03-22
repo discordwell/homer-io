@@ -186,6 +186,7 @@ describe('B6: Activity logging on createOrder', () => {
       customFields: {},
       requiresSignature: false,
       requiresPhoto: false,
+      isGift: false,
     });
 
     expect(mockLogActivity).toHaveBeenCalledWith({

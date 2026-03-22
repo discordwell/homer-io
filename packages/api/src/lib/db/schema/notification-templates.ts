@@ -17,6 +17,7 @@ export const notificationTemplates = pgTable('notification_templates', {
   subject: text('subject'),
   bodyTemplate: text('body_template').notNull(),
   isActive: boolean('is_active').default(true).notNull(),
+  recipientType: varchar('recipient_type', { length: 20 }).default('recipient').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [

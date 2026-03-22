@@ -14,6 +14,7 @@ import { useToast } from '../components/Toast.js';
 import { api } from '../api/client.js';
 import { hashAddressBrowser } from '../utils/address-hash.js';
 import { C, F, alpha, primaryBtnStyle, secondaryBtnStyle } from '../theme.js';
+import { useSettingsStore } from '../stores/settings.js';
 
 interface AddressIntelligence {
   addressHash: string;
@@ -44,6 +45,7 @@ const emptyForm = {
   recipientName: '', recipientPhone: '', recipientEmail: '',
   street: '', city: '', state: '', zip: '',
   packageCount: 1, priority: 'normal' as const, notes: '',
+  isGift: false, senderName: '', senderEmail: '', senderPhone: '', giftMessage: '',
 };
 
 export function OrdersPage() {
@@ -53,6 +55,8 @@ export function OrdersPage() {
     setStatusFilter, setSearch,
   } = useOrdersStore();
   const { toast } = useToast();
+  const { orgSettings } = useSettingsStore();
+  const isFlorist = orgSettings?.industry === 'florist';
   const [modalOpen, setModalOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -168,7 +172,7 @@ export function OrdersPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const input = {
+    const input: Record<string, unknown> = {
       recipientName: form.recipientName,
       recipientPhone: form.recipientPhone || undefined,
       recipientEmail: form.recipientEmail || undefined,
@@ -176,7 +180,14 @@ export function OrdersPage() {
       packageCount: form.packageCount,
       priority: form.priority,
       notes: form.notes || undefined,
+      isGift: form.isGift,
     };
+    if (form.isGift) {
+      input.senderName = form.senderName || undefined;
+      input.senderEmail = form.senderEmail || undefined;
+      input.senderPhone = form.senderPhone || undefined;
+      input.giftMessage = form.giftMessage || undefined;
+    }
     try {
       await createOrder(input);
       toast('Order created', 'success');

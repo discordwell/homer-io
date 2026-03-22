@@ -3,6 +3,7 @@ import { db } from '../../lib/db/index.js';
 import { orders } from '../../lib/db/schema/orders.js';
 import { routes } from '../../lib/db/schema/routes.js';
 import { drivers } from '../../lib/db/schema/drivers.js';
+import { proofOfDelivery } from '../../lib/db/schema/proof-of-delivery.js';
 import { activityLog } from '../../lib/db/schema/activity-log.js';
 import { NotFoundError } from '../../lib/errors.js';
 
@@ -93,6 +94,28 @@ export async function getPublicTracking(orderId: string) {
     estimatedDelivery = order.timeWindowEnd.toISOString();
   }
 
+  // Gift delivery extras
+  let giftMessage: string | null = null;
+  let senderFirstName: string | null = null;
+  let deliveryPhotoUrl: string | null = null;
+
+  if (order.isGift) {
+    giftMessage = order.giftMessage || null;
+    senderFirstName = order.senderName ? order.senderName.split(' ')[0] : null;
+  }
+
+  // Delivery photo (show after delivered — useful for gift senders)
+  if (order.status === 'delivered') {
+    try {
+      const [pod] = await db.select({ photoUrls: proofOfDelivery.photoUrls })
+        .from(proofOfDelivery)
+        .where(eq(proofOfDelivery.orderId, orderId))
+        .limit(1);
+      const urls = (pod?.photoUrls ?? []) as string[];
+      deliveryPhotoUrl = urls[0] || null;
+    } catch { /* no POD */ }
+  }
+
   return {
     orderId: order.id,
     status: order.status,
@@ -104,5 +127,10 @@ export async function getPublicTracking(orderId: string) {
     timeline,
     createdAt: order.createdAt.toISOString(),
     completedAt: order.completedAt?.toISOString() ?? null,
+    // Gift delivery extras
+    isGift: order.isGift,
+    giftMessage,
+    senderName: senderFirstName,
+    deliveryPhotoUrl,
   };
 }

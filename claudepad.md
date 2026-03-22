@@ -2,6 +2,17 @@
 
 ## Session Summaries
 
+### 2026-03-22T03:25 UTC — Florist Delivery Vertical Phase 1
+- **Two-customer model**: sender fields (name/email/phone) + gift message + isGift on orders
+- **Dual notifications**: recipientType on templates (recipient/sender/both), 3 new variables: senderName, giftMessage, deliveryPhotoUrl
+- **Public tracking enhanced**: gift message card, delivery photo display, sender name for gift orders
+- **Florist settings tab**: auto-photo toggle, default gift delivery, default instructions
+- **Order form**: "This is a gift" toggle with conditional sender/gift fields
+- **Demo data**: 80% of florist orders now have structured sender/gift data
+- **Industry auto-defaults**: florist orders auto-require delivery photo
+- Migration: 0006_add_florist_support.sql
+- 14 new tests, 583 total passing
+
 ### 2026-03-22T02:20 UTC — Cannabis Delivery Vertical Phase 3
 - **Jurisdiction data**: 27 delivery-legal states (14 rec + 13 medical), 58 CA counties + 55 cities from DCC
 - **Delivery zones**: radius (miles) + zip code list validation on order creation, zone-check endpoint

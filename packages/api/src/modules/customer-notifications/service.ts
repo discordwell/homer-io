@@ -191,40 +191,68 @@ export async function enqueueCustomerNotification(
     return;
   }
 
-  // Determine recipient based on channel
-  for (const template of templates) {
-    const recipient =
-      template.channel === 'sms'
-        ? (order.recipientPhone || '')
-        : (order.recipientEmail || '');
+  // Try to get real ETA (shared across all templates for this order)
+  let etaText = 'soon';
+  if (order.routeId) {
+    try {
+      const { calculateRouteETAs } = await import('../eta/service.js');
+      const etas = await calculateRouteETAs(order.routeId, tenantId);
+      const stopEta = etas.stops.find(s => s.orderId === orderId);
+      if (stopEta) {
+        etaText = `${stopEta.etaMinutes} minutes`;
+      }
+    } catch { /* fallback to 'soon' */ }
+  }
 
-    if (!recipient) {
+  // Try to get delivery photo URL (for {{deliveryPhotoUrl}} variable)
+  let deliveryPhotoUrl = '';
+  if (trigger === 'delivered') {
+    try {
+      const { proofOfDelivery } = await import('../../lib/db/schema/proof-of-delivery.js');
+      const [pod] = await db.select({ photoUrls: proofOfDelivery.photoUrls })
+        .from(proofOfDelivery)
+        .where(eq(proofOfDelivery.orderId, orderId))
+        .limit(1);
+      const urls = (pod?.photoUrls ?? []) as string[];
+      deliveryPhotoUrl = urls[0] || '';
+    } catch { /* no POD yet */ }
+  }
+
+  // Determine recipients and send for each template
+  for (const template of templates) {
+    // Determine who to send to based on recipientType
+    const recipientType = (template as Record<string, unknown>).recipientType as string || 'recipient';
+    const targets: Array<{ contact: string; name: string }> = [];
+
+    if (recipientType === 'recipient' || recipientType === 'both') {
+      const contact = template.channel === 'sms' ? (order.recipientPhone || '') : (order.recipientEmail || '');
+      if (contact) targets.push({ contact, name: order.recipientName || 'Customer' });
+    }
+    if (recipientType === 'sender' || recipientType === 'both') {
+      const contact = template.channel === 'sms' ? (order.senderPhone || '') : (order.senderEmail || '');
+      if (contact) targets.push({ contact, name: order.senderName || 'Sender' });
+    }
+
+    if (targets.length === 0) {
       console.log(
-        `[customer-notification] No ${template.channel} recipient for order ${orderId}, skipping template ${template.id}`,
+        `[customer-notification] No ${template.channel} ${recipientType} for order ${orderId}, skipping template ${template.id}`,
       );
       continue;
     }
 
-    // Try to get real ETA
-    let etaText = 'soon';
-    if (order.routeId) {
-      try {
-        const { calculateRouteETAs } = await import('../eta/service.js');
-        const etas = await calculateRouteETAs(order.routeId, tenantId);
-        const stopEta = etas.stops.find(s => s.orderId === orderId);
-        if (stopEta) {
-          etaText = `${stopEta.etaMinutes} minutes`;
-        }
-      } catch { /* fallback to 'soon' */ }
-    }
+    for (const target of targets) {
+    const recipient = target.contact;
 
     // Render template variables
     const vars: Record<string, string> = {
       recipientName: order.recipientName || 'Customer',
+      senderName: order.senderName || '',
       driverName: 'Your Driver',
       eta: etaText,
       trackingUrl: `https://track.homer.io/${orderId}`,
       orderRef: order.externalId || orderId.slice(0, 8),
+      giftMessage: order.giftMessage || '',
+      deliveryPhotoUrl,
     };
 
     let body = template.bodyTemplate;
@@ -279,7 +307,8 @@ export async function enqueueCustomerNotification(
     );
 
     console.log(
-      `[customer-notification] Enqueued ${template.channel} notification for order ${orderId} (trigger: ${trigger})`,
+      `[customer-notification] Enqueued ${template.channel} notification for order ${orderId} (trigger: ${trigger}, to: ${recipientType})`,
     );
-  }
+    } // end for target of targets
+  } // end for template of templates
 }

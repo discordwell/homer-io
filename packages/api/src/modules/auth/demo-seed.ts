@@ -212,6 +212,10 @@ export async function seedDemoOrg(tenantId: string, options?: SeedDemoOptions): 
         if ('packageCount' in o) base.packageCount = o.packageCount;
         if ('weight' in o && o.weight) base.weight = o.weight;
         if ('customFields' in o) base.customFields = o.customFields;
+        if ('senderName' in o && o.senderName) base.senderName = o.senderName;
+        if ('senderEmail' in o && o.senderEmail) base.senderEmail = o.senderEmail;
+        if ('giftMessage' in o && o.giftMessage) base.giftMessage = o.giftMessage;
+        if ('isGift' in o) base.isGift = o.isGift;
         return base;
       }) as Array<typeof orders.$inferInsert>,
     )

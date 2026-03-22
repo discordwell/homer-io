@@ -45,6 +45,12 @@ export const orders = pgTable('orders', {
   routeId: uuid('route_id').references(() => routes.id, { onDelete: 'set null' }),
   stopSequence: integer('stop_sequence'),
   completedAt: timestamp('completed_at', { withTimezone: true }),
+  // Sender info (florist: sender != recipient)
+  senderName: varchar('sender_name', { length: 255 }),
+  senderEmail: varchar('sender_email', { length: 255 }),
+  senderPhone: varchar('sender_phone', { length: 20 }),
+  giftMessage: text('gift_message'),
+  isGift: boolean('is_gift').default(false).notNull(),
   // Cash-on-delivery (cannabis)
   cashAmount: numeric('cash_amount', { precision: 10, scale: 2 }),
   cashCollected: numeric('cash_collected', { precision: 10, scale: 2 }),

@@ -8,12 +8,16 @@ export type NotificationTrigger = (typeof notificationTriggers)[number];
 export const notificationChannels = ['sms', 'email'] as const;
 export type NotificationChannel = (typeof notificationChannels)[number];
 
+export const notificationRecipientTypes = ['recipient', 'sender', 'both'] as const;
+export type NotificationRecipientType = (typeof notificationRecipientTypes)[number];
+
 export const createNotificationTemplateSchema = z.object({
   trigger: z.enum(notificationTriggers),
   channel: z.enum(notificationChannels),
   subject: z.string().max(255).optional(),
   bodyTemplate: z.string().min(1).max(2000),
   isActive: z.boolean().default(true),
+  recipientType: z.enum(notificationRecipientTypes).default('recipient'),
 });
 export type CreateNotificationTemplateInput = z.infer<typeof createNotificationTemplateSchema>;
 

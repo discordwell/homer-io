@@ -36,6 +36,12 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
     }
   }
 
+  // Florist industry: auto-enforce photo based on florist settings
+  if (tenant?.industry === 'florist') {
+    const florist = (tenant.settings as Record<string, unknown>)?.florist as Record<string, unknown> | undefined;
+    if (florist?.autoRequirePhoto !== false) requiresPhoto = true;
+  }
+
   const [order] = await db
     .insert(orders)
     .values({
@@ -61,6 +67,13 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
       customFields: input.customFields,
       requiresSignature,
       requiresPhoto,
+      // Sender / gift fields
+      senderName: input.senderName,
+      senderEmail: input.senderEmail,
+      senderPhone: input.senderPhone,
+      giftMessage: input.giftMessage,
+      isGift: input.isGift || !!input.giftMessage,
+      // Cash-on-delivery
       cashAmount: input.cashAmount?.toString(),
       paymentMethod: input.paymentMethod,
     })

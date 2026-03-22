@@ -34,6 +34,12 @@ export const createOrderSchema = z.object({
   notes: z.string().max(1000).optional(),
   requiresSignature: z.boolean().default(false),
   requiresPhoto: z.boolean().default(false),
+  // Sender info (florist: sender != recipient)
+  senderName: z.string().max(255).optional(),
+  senderEmail: z.string().email().optional(),
+  senderPhone: z.string().max(20).optional(),
+  giftMessage: z.string().max(2000).optional(),
+  isGift: z.boolean().default(false),
   // Cash-on-delivery (cannabis)
   cashAmount: z.number().min(0).optional(),
   paymentMethod: z.enum(['cash', 'prepaid', 'card']).optional(),

@@ -88,11 +88,15 @@ describe('generateIndustryOrders', () => {
     expect(orders).toHaveLength(10);
   });
 
-  it('generates florist orders with gift messages in notes', () => {
-    // Generate enough to statistically hit notes with "Card:"
+  it('generates florist orders with structured gift messages', () => {
+    // ~80% of florist orders are gifts with sender data
     const orders = generateIndustryOrders('florist', 50, locations);
-    const withCards = orders.filter(o => o.notes?.includes('Card:'));
-    expect(withCards.length).toBeGreaterThan(0);
+    const gifts = orders.filter(o => o.isGift);
+    expect(gifts.length).toBeGreaterThan(10);
+    for (const gift of gifts) {
+      expect(gift.senderName).toBeDefined();
+      expect(gift.giftMessage).toBeDefined();
+    }
   });
 
   it('generates pharmacy orders with signature required', () => {

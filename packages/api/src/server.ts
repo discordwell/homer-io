@@ -42,6 +42,7 @@ import { adminHealthRoutes } from './modules/health/routes.js';
 import { intelligenceRoutes } from './modules/intelligence/routes.js';
 import { migrationRoutes } from './modules/migration/routes.js';
 import { cannabisRoutes } from './modules/cannabis/routes.js';
+import { floristRoutes } from './modules/florist/routes.js';
 
 const app = Fastify({
   logger: {
@@ -162,6 +163,7 @@ await app.register(async (api) => {
   await api.register(intelligenceRoutes, { prefix: '/intelligence' });
   await api.register(migrationRoutes, { prefix: '/migrations' });
   await api.register(cannabisRoutes, { prefix: '/cannabis' });
+  await api.register(floristRoutes, { prefix: '/florist' });
 }, { prefix: '/api' });
 
 // Graceful shutdown

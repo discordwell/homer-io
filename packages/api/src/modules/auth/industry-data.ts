@@ -74,15 +74,13 @@ const FLORIST: IndustryTemplate = {
     'Lavender & Eucalyptus Bundle', 'Tropical Arrangement — Birds of Paradise',
   ],
   notes: [
-    'Card: "Happy Birthday Mom! Love, Sarah & Tim"',
-    'Card: "Congratulations on the new home!"',
-    'Card: "With deepest sympathy — The Johnsons"',
-    'Card: "Thank you for everything! — Your Team"',
-    'Card: "Just because I love you"',
     'Surprise delivery — do not call recipient ahead',
     'Leave on porch if not home, text photo to sender',
     'Deliver between 2-4pm — surprise party at 5',
-    '', '',
+    'Ring doorbell, leave at door if not home',
+    'Fragile — handle with care, keep upright',
+    'Deliver to reception desk — office building',
+    '', '', '', '',
   ],
   requiresSignature: false,
   requiresPhoto: true,
@@ -241,6 +239,11 @@ export interface IndustryOrderData {
   weight: string | null;
   customFields: Record<string, unknown>;
   createdAt: Date;
+  // Gift/sender fields (florist)
+  senderName?: string;
+  senderEmail?: string;
+  giftMessage?: string;
+  isGift?: boolean;
 }
 
 function pick<T>(arr: T[]): T {
@@ -289,6 +292,30 @@ export function generateIndustryOrders(
       customFields.rxVerification = true;
     }
 
+    // Florist: add sender info and gift message for ~80% of orders
+    let senderName: string | undefined;
+    let senderEmail: string | undefined;
+    let giftMessage: string | undefined;
+    let isGift = false;
+    if (industry === 'florist' && Math.random() < 0.8) {
+      const sFirst = pick(RECIPIENT_FIRST);
+      const sLast = pick(RECIPIENT_LAST);
+      senderName = `${sFirst} ${sLast}`;
+      senderEmail = `${sFirst.toLowerCase()}.${sLast.toLowerCase()}@example.com`;
+      isGift = true;
+      const giftMessages = [
+        `Happy Birthday! Love, ${sFirst}`,
+        `Congratulations on the new home! — ${sFirst} & family`,
+        `With deepest sympathy — The ${sLast} family`,
+        `Thank you for everything! — ${sFirst}`,
+        `Just because I love you`,
+        `Get well soon! Thinking of you — ${sFirst}`,
+        `Happy Anniversary! Here's to many more years together`,
+        `Wishing you a wonderful day!`,
+      ];
+      giftMessage = pick(giftMessages);
+    }
+
     return {
       recipientName: `${first} ${last}`,
       deliveryAddress: {
@@ -308,6 +335,10 @@ export function generateIndustryOrders(
       weight,
       customFields,
       createdAt,
+      ...(senderName ? { senderName } : {}),
+      ...(senderEmail ? { senderEmail } : {}),
+      ...(giftMessage ? { giftMessage } : {}),
+      ...(isGift ? { isGift } : {}),
     };
   });
 }

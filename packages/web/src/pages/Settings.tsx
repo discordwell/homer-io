@@ -10,6 +10,7 @@ import { IntegrationsTab } from '../components/settings/IntegrationsTab.js';
 import { PrivacyTab } from '../components/settings/PrivacyTab.js';
 import { HealthDashboard } from '../components/settings/HealthDashboard.js';
 import { CannabisTab } from '../components/settings/CannabisTab.js';
+import { FloristTab } from '../components/settings/FloristTab.js';
 import { useSettingsStore } from '../stores/settings.js';
 import { C, F } from '../theme.js';
 
@@ -25,7 +26,7 @@ const BASE_TABS = [
   { id: 'health', label: 'Health' },
 ] as const;
 
-type TabId = (typeof BASE_TABS)[number]['id'] | 'cannabis';
+type TabId = (typeof BASE_TABS)[number]['id'] | 'cannabis' | 'florist';
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('organization');
@@ -38,6 +39,11 @@ export function SettingsPage() {
       // Insert cannabis tab after integrations
       const idx = all.findIndex(t => t.id === 'integrations');
       all.splice(idx + 1, 0, { id: 'cannabis', label: 'Cannabis Compliance' });
+    }
+    if (orgSettings?.industry === 'florist') {
+      // Insert florist tab after integrations
+      const idx = all.findIndex(t => t.id === 'integrations');
+      all.splice(idx + 1, 0, { id: 'florist', label: 'Florist' });
     }
     return all;
   }, [orgSettings?.industry]);
@@ -101,6 +107,7 @@ export function SettingsPage() {
       {activeTab === 'privacy' && <PrivacyTab />}
       {activeTab === 'health' && <HealthDashboard />}
       {activeTab === 'cannabis' && <CannabisTab />}
+      {activeTab === 'florist' && <FloristTab />}
     </div>
   );
 }
