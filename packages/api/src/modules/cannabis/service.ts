@@ -106,14 +106,18 @@ export async function createManifest(
   input: CreateManifestInput,
   userId?: string,
 ) {
-  const manifestNumber = await generateManifestNumber(tenantId);
+  let manifestNumber = await generateManifestNumber(tenantId);
   const settings = await getCannabisSettings(tenantId);
 
-  // Fetch route details for driver/vehicle info
+  // Fetch route details for driver/vehicle info (tenant-isolated)
   const [route] = await db.select({
     driverId: routes.driverId,
     vehicleId: routes.vehicleId,
-  }).from(routes).where(eq(routes.id, input.routeId)).limit(1);
+  }).from(routes).where(sql`${routes.id} = ${input.routeId} AND ${routes.tenantId} = ${tenantId}`).limit(1);
+
+  if (!route) {
+    throw Object.assign(new Error('Route not found'), { statusCode: 404 });
+  }
 
   let driverLicenseNumber: string | null = null;
   let vehicleLicensePlate: string | null = null;
@@ -142,22 +146,39 @@ export async function createManifest(
     }
   }
 
-  const [manifest] = await db.insert(deliveryManifests).values({
-    tenantId,
-    routeId: input.routeId,
-    driverId: route?.driverId ?? null,
-    vehicleId: route?.vehicleId ?? null,
-    manifestNumber,
-    status: 'draft',
-    licenseNumber: settings?.licenseNumber ?? null,
-    driverLicenseNumber,
-    vehicleLicensePlate,
-    totalItems,
-    totalValue: String(Math.round(totalValue * 100) / 100),
-    totalWeight: String(Math.round(totalWeight * 100) / 100),
-    items: input.items,
-    notes: input.notes ?? null,
-  }).returning();
+  // Insert with retry on unique constraint violation (concurrent manifest creation)
+  let manifest;
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      const [row] = await db.insert(deliveryManifests).values({
+        tenantId,
+        routeId: input.routeId,
+        driverId: route.driverId ?? null,
+        vehicleId: route.vehicleId ?? null,
+        manifestNumber,
+        status: 'draft',
+        licenseNumber: settings?.licenseNumber ?? null,
+        driverLicenseNumber,
+        vehicleLicensePlate,
+        totalItems,
+        totalValue: String(Math.round(totalValue * 100) / 100),
+        totalWeight: String(Math.round(totalWeight * 100) / 100),
+        items: input.items,
+        notes: input.notes ?? null,
+      }).returning();
+      manifest = row;
+      break;
+    } catch (err: any) {
+      if ((err?.code === '23505' || err?.message?.includes('duplicate')) && retries > 1) {
+        retries--;
+        manifestNumber = await generateManifestNumber(tenantId);
+        continue;
+      }
+      throw err;
+    }
+  }
+  if (!manifest) throw new Error('Failed to create manifest after retries');
 
   // Generate PDF
   try {
@@ -218,6 +239,14 @@ export async function listManifests(
 }
 
 export async function completeManifest(tenantId: string, manifestId: string, userId?: string) {
+  // Guard: only active manifests can be completed
+  const [current] = await db.select({ status: deliveryManifests.status })
+    .from(deliveryManifests).where(sql`${deliveryManifests.id} = ${manifestId} AND ${deliveryManifests.tenantId} = ${tenantId}`).limit(1);
+  if (!current) return null;
+  if (current.status !== 'active') {
+    throw Object.assign(new Error(`Cannot complete a ${current.status} manifest — must be active`), { statusCode: 422 });
+  }
+
   const [updated] = await db.update(deliveryManifests)
     .set({ status: 'completed', returnedAt: new Date(), updatedAt: new Date() })
     .where(sql`${deliveryManifests.id} = ${manifestId} AND ${deliveryManifests.tenantId} = ${tenantId}`)
@@ -238,6 +267,14 @@ export async function completeManifest(tenantId: string, manifestId: string, use
 }
 
 export async function voidManifest(tenantId: string, manifestId: string, userId?: string) {
+  // Guard: only draft or active manifests can be voided
+  const [current] = await db.select({ status: deliveryManifests.status })
+    .from(deliveryManifests).where(sql`${deliveryManifests.id} = ${manifestId} AND ${deliveryManifests.tenantId} = ${tenantId}`).limit(1);
+  if (!current) return null;
+  if (current.status !== 'draft' && current.status !== 'active') {
+    throw Object.assign(new Error(`Cannot void a ${current.status} manifest`), { statusCode: 422 });
+  }
+
   const [updated] = await db.update(deliveryManifests)
     .set({ status: 'voided', updatedAt: new Date() })
     .where(sql`${deliveryManifests.id} = ${manifestId} AND ${deliveryManifests.tenantId} = ${tenantId}`)
@@ -258,6 +295,14 @@ export async function voidManifest(tenantId: string, manifestId: string, userId?
 }
 
 export async function activateManifest(tenantId: string, manifestId: string, userId?: string) {
+  // Guard: only draft manifests can be activated
+  const [current] = await db.select({ status: deliveryManifests.status })
+    .from(deliveryManifests).where(sql`${deliveryManifests.id} = ${manifestId} AND ${deliveryManifests.tenantId} = ${tenantId}`).limit(1);
+  if (!current) return null;
+  if (current.status !== 'draft') {
+    throw Object.assign(new Error(`Cannot activate a ${current.status} manifest — must be draft`), { statusCode: 422 });
+  }
+
   const [updated] = await db.update(deliveryManifests)
     .set({ status: 'active', departedAt: new Date(), updatedAt: new Date() })
     .where(sql`${deliveryManifests.id} = ${manifestId} AND ${deliveryManifests.tenantId} = ${tenantId}`)

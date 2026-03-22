@@ -56,8 +56,8 @@ export type CreateManifestInput = z.infer<typeof createManifestSchema>;
 // ---------------------------------------------------------------------------
 
 export const idVerificationInputSchema = z.object({
-  idPhotoBase64: z.string().min(1),
-  idNumber: z.string().max(50),
+  idPhotoBase64: z.string().min(1).max(10_000_000), // ~7MB base64
+  idNumber: z.string().min(1).max(20),
   idDob: z.string().date(),
   idExpirationDate: z.string().date(),
   idNameOnId: z.string().max(255),

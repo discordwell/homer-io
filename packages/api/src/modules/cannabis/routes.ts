@@ -1,12 +1,22 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { z } from 'zod';
+import { eq, and } from 'drizzle-orm';
 import { createManifestSchema, updateCannabisSettingsSchema, idVerificationInputSchema } from '@homer-io/shared';
 import { authenticate, requireRole } from '../../plugins/auth.js';
+import { db } from '../../lib/db/index.js';
+import { orders } from '../../lib/db/schema/orders.js';
 import {
   getCannabisSettings, updateCannabisSettings, requireCannabisIndustry,
   createManifest, getManifest, listManifests, completeManifest, voidManifest, activateManifest,
   verifyAge, validateIdMatch,
 } from './service.js';
-import { createPod, uploadPodFiles } from '../pod/service.js';
+import { uploadPodFiles } from '../pod/service.js';
+
+const listManifestsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+  routeId: z.string().uuid().optional(),
+});
 
 // Industry gate — reusable preHandler
 async function requireCannabis(request: FastifyRequest, reply: FastifyReply) {
@@ -41,12 +51,8 @@ export async function cannabisRoutes(app: FastifyInstance) {
   });
 
   app.get('/manifests', { preHandler: [requireRole('dispatcher')] }, async (request) => {
-    const { limit, offset, routeId } = request.query as { limit?: string; offset?: string; routeId?: string };
-    return listManifests(request.user.tenantId, {
-      limit: limit ? parseInt(limit, 10) : undefined,
-      offset: offset ? parseInt(offset, 10) : undefined,
-      routeId,
-    });
+    const query = listManifestsQuery.parse(request.query);
+    return listManifests(request.user.tenantId, query);
   });
 
   app.get('/manifests/:id', { preHandler: [requireRole('driver')] }, async (request, reply) => {
@@ -87,16 +93,29 @@ export async function cannabisRoutes(app: FastifyInstance) {
 
   // ── ID Verification ────────────────────────────────────────────────
 
-  app.post('/verify-id', { preHandler: [requireRole('driver')] }, async (request) => {
+  app.post('/verify-id', { preHandler: [requireRole('driver')] }, async (request, reply) => {
     const input = idVerificationInputSchema.parse(request.body);
     const settings = await getCannabisSettings(request.user.tenantId);
     const minimumAge = settings?.minimumAge ?? 21;
 
+    // Fetch order to get recipient name for comparison
+    const [order] = await db.select({ recipientName: orders.recipientName })
+      .from(orders)
+      .where(and(eq(orders.id, input.orderId), eq(orders.tenantId, request.user.tenantId)))
+      .limit(1);
+    if (!order) return reply.notFound('Order not found');
+
     // Verify age
     const ageResult = verifyAge(input.idDob, minimumAge);
 
-    // Check name match (get order recipient name)
-    const nameResult = validateIdMatch(input.idNameOnId, input.idNameOnId); // placeholder — real name comes from order
+    // Check ID expiration
+    const idExpired = new Date(input.idExpirationDate) < new Date();
+
+    // Check name match against order recipient
+    const nameResult = validateIdMatch(input.idNameOnId, order.recipientName);
+
+    // Truncate ID number to last 4 for storage
+    const truncatedIdNumber = input.idNumber.slice(-4);
 
     // Upload ID photo
     const [idPhotoUrl] = await uploadPodFiles(request.user.tenantId, input.orderId, [{
@@ -106,11 +125,13 @@ export async function cannabisRoutes(app: FastifyInstance) {
     }]);
 
     return {
-      ageVerified: ageResult.verified,
+      ageVerified: ageResult.verified && !idExpired,
       age: ageResult.age,
       minimumAge,
+      idExpired,
       nameMatch: nameResult.match,
       nameConfidence: nameResult.confidence,
+      idNumber: truncatedIdNumber,
       idPhotoUrl,
       idVerifiedAt: new Date().toISOString(),
     };

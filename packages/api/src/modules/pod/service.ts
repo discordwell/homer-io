@@ -68,6 +68,14 @@ export async function createPod(
         recipientNameSigned: input.recipientNameSigned ?? null,
         locationLat: input.locationLat?.toString() ?? null,
         locationLng: input.locationLng?.toString() ?? null,
+        // ID verification (cannabis compliance)
+        idPhotoUrl: input.idPhotoUrl ?? null,
+        idNumber: input.idNumber ? input.idNumber.slice(-4) : null,
+        idDob: input.idDob ?? null,
+        idExpirationDate: input.idExpirationDate ?? null,
+        idNameOnId: input.idNameOnId ?? null,
+        idVerifiedAt: input.idVerifiedAt ? new Date(input.idVerifiedAt) : null,
+        ageVerified: input.ageVerified ?? false,
       })
       .returning();
 
