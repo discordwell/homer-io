@@ -69,11 +69,12 @@ app.setErrorHandler((error, request, reply) => {
     });
   }
   // @fastify/sensible and Fastify-native 4xx errors — pass through with sanitized shape
-  if ('statusCode' in error && typeof error.statusCode === 'number' && error.statusCode < 500) {
-    return reply.status(error.statusCode).send({
-      statusCode: error.statusCode,
-      error: error.name === 'FastifyError' ? 'Bad Request' : (error.name || 'Error'),
-      message: error.message,
+  const err = error as { statusCode?: unknown; name?: string; message?: string };
+  if (typeof err.statusCode === 'number' && err.statusCode < 500) {
+    return reply.status(err.statusCode).send({
+      statusCode: err.statusCode,
+      error: err.name === 'FastifyError' ? 'Bad Request' : (err.name || 'Error'),
+      message: err.message,
     });
   }
   // Everything else (DB errors, unexpected throws) — log and return generic 500
