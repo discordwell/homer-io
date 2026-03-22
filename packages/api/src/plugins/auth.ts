@@ -1,8 +1,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { eq } from 'drizzle-orm';
+import { createHash } from 'crypto';
 import { hasMinRole, type Role } from '@homer-io/shared';
 import { db } from '../lib/db/index.js';
 import { tenants } from '../lib/db/schema/tenants.js';
+import { apiKeys } from '../lib/db/schema/api-keys.js';
+import { users } from '../lib/db/schema/users.js';
 import { cacheGet, cacheSet } from '../lib/cache.js';
 
 export interface JwtPayload {
@@ -19,7 +22,46 @@ declare module '@fastify/jwt' {
   }
 }
 
+/** Authenticate via JWT token or API key (hio_ prefix) */
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
+  const authHeader = request.headers.authorization;
+
+  // API key auth: Bearer hio_...
+  if (authHeader?.startsWith('Bearer hio_')) {
+    const rawKey = authHeader.slice(7);
+    const keyHash = createHash('sha256').update(rawKey).digest('hex');
+
+    const [key] = await db.select({
+      id: apiKeys.id,
+      tenantId: apiKeys.tenantId,
+      createdBy: apiKeys.createdBy,
+      expiresAt: apiKeys.expiresAt,
+    })
+      .from(apiKeys)
+      .where(eq(apiKeys.keyHash, keyHash))
+      .limit(1);
+
+    if (!key) return reply.unauthorized('Invalid API key');
+    if (key.expiresAt && new Date() > key.expiresAt) return reply.unauthorized('API key has expired');
+
+    const [user] = await db.select({ id: users.id, email: users.email, role: users.role })
+      .from(users).where(eq(users.id, key.createdBy)).limit(1);
+
+    if (!user) return reply.unauthorized('API key owner not found');
+
+    (request as any).user = {
+      id: user.id,
+      tenantId: key.tenantId,
+      email: user.email,
+      role: user.role,
+    };
+
+    // Update lastUsedAt (fire-and-forget)
+    db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, key.id)).catch(() => {});
+    return;
+  }
+
+  // JWT auth (default)
   try {
     await request.jwtVerify();
   } catch (err) {
