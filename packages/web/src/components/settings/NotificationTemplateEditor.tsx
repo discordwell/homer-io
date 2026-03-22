@@ -3,6 +3,7 @@ import { Modal } from '../Modal.js';
 import { FormField, inputStyle } from '../FormField.js';
 import { SelectField } from '../SelectField.js';
 import { C, F, alpha, primaryBtnStyle } from '../../theme.js';
+import { useSettingsStore } from '../../stores/settings.js';
 import type { NotificationTemplate, CreateTemplateInput, UpdateTemplateInput } from '../../stores/customer-notifications.js';
 
 const triggerOptions = [
@@ -20,19 +21,31 @@ const channelOptions = [
 
 const templateVariables = [
   { key: '{{recipientName}}', label: 'Recipient Name' },
+  { key: '{{senderName}}', label: 'Sender Name' },
   { key: '{{driverName}}', label: 'Driver Name' },
   { key: '{{eta}}', label: 'ETA' },
   { key: '{{trackingUrl}}', label: 'Tracking URL' },
   { key: '{{orderRef}}', label: 'Order Reference' },
+  { key: '{{giftMessage}}', label: 'Gift Message' },
+  { key: '{{deliveryPhotoUrl}}', label: 'Delivery Photo URL' },
 ];
 
 const sampleData: Record<string, string> = {
   '{{recipientName}}': 'Jane Doe',
+  '{{senderName}}': 'Sarah Johnson',
   '{{driverName}}': 'John Smith',
   '{{eta}}': '2:30 PM',
   '{{trackingUrl}}': 'https://track.homer.io/abc123',
   '{{orderRef}}': 'ORD-00042',
+  '{{giftMessage}}': 'Happy Birthday! Love, Sarah',
+  '{{deliveryPhotoUrl}}': 'https://homer.io/photos/delivery-123.jpg',
 };
+
+const recipientTypeOptions = [
+  { value: 'recipient', label: 'Recipient (person receiving delivery)' },
+  { value: 'sender', label: 'Sender (person who ordered)' },
+  { value: 'both', label: 'Both sender and recipient' },
+];
 
 interface Props {
   open: boolean;
@@ -42,16 +55,20 @@ interface Props {
 }
 
 export function NotificationTemplateEditor({ open, onClose, template, onSave }: Props) {
+  const { orgSettings } = useSettingsStore();
+  const isPharmacy = orgSettings?.industry === 'pharmacy';
   const [trigger, setTrigger] = useState('order_assigned');
   const [channel, setChannel] = useState('sms');
   const [subject, setSubject] = useState('');
   const [bodyTemplate, setBodyTemplate] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [recipientType, setRecipientType] = useState('recipient');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (template) {
       setTrigger(template.trigger);
+      setRecipientType((template as Record<string, unknown>).recipientType as string || 'recipient');
       setChannel(template.channel);
       setSubject(template.subject || '');
       setBodyTemplate(template.bodyTemplate);
@@ -95,6 +112,7 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
         subject: channel === 'email' ? subject : undefined,
         bodyTemplate,
         isActive,
+        recipientType: recipientType as 'recipient' | 'sender' | 'both',
       });
       onClose();
     } finally {
@@ -122,6 +140,13 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
           />
         </div>
 
+        <SelectField
+          label="Send to"
+          value={recipientType}
+          onChange={(e) => setRecipientType(e.target.value)}
+          options={recipientTypeOptions}
+        />
+
         {channel === 'email' && (
           <FormField
             label="Subject"
@@ -130,6 +155,16 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
             placeholder="e.g., Your delivery {{orderRef}} is on its way!"
             required
           />
+        )}
+
+        {isPharmacy && (
+          <div style={{
+            padding: '10px 14px', borderRadius: 8, marginBottom: 12,
+            background: alpha(C.yellow, 0.08), border: `1px solid ${alpha(C.yellow, 0.2)}`,
+            fontSize: 12, color: C.yellow, lineHeight: 1.5,
+          }}>
+            <strong>HIPAA Notice:</strong> Do not include medication names, dosages, or prescription details in notification templates. Use generic language like "your pharmacy delivery" instead.
+          </div>
         )}
 
         <div style={{ marginBottom: 16 }}>

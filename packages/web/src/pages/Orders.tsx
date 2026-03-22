@@ -50,6 +50,10 @@ const emptyForm = {
   isControlledSubstance: false, controlledSchedule: '' as string,
   isColdChain: false, patientDob: '', prescriberName: '', prescriberNpi: '',
   driverNotesHipaa: '',
+  // Grocery fields
+  substitutionAllowed: true, temperatureZone: 'ambient' as string, substitutionNotes: '',
+  // Furniture fields
+  crewSize: '2', assemblyRequired: false, haulAway: false,
 };
 
 export function OrdersPage() {
@@ -62,6 +66,8 @@ export function OrdersPage() {
   const { orgSettings } = useSettingsStore();
   const isFlorist = orgSettings?.industry === 'florist';
   const isPharmacy = orgSettings?.industry === 'pharmacy';
+  const isGrocery = orgSettings?.industry === 'grocery';
+  const isFurniture = orgSettings?.industry === 'furniture';
   const [modalOpen, setModalOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -203,6 +209,16 @@ export function OrdersPage() {
       input.prescriberName = form.prescriberName || undefined;
       input.prescriberNpi = form.prescriberNpi || undefined;
       input.driverNotesHipaa = form.driverNotesHipaa || undefined;
+    }
+    if (isGrocery) {
+      input.substitutionAllowed = form.substitutionAllowed;
+      input.temperatureZone = form.temperatureZone || undefined;
+      input.substitutionNotes = form.substitutionNotes || undefined;
+    }
+    if (isFurniture) {
+      input.crewSize = Number(form.crewSize) || 2;
+      input.assemblyRequired = form.assemblyRequired;
+      input.haulAway = form.haulAway;
     }
     try {
       await createOrder(input);
@@ -473,7 +489,97 @@ export function OrdersPage() {
             </>
           )}
 
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+          {/* Grocery fields */}
+          {isGrocery && (
+            <>
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginTop: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 14, color: C.text, fontWeight: 500 }}>Grocery Fields</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+                <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.substitutionAllowed}
+                    onChange={(e) => setForm({ ...form, substitutionAllowed: e.target.checked })}
+                    style={{ width: 18, height: 18, accentColor: C.accent }}
+                  />
+                  <span style={{ fontSize: 14, color: C.text }}>Substitutions Allowed</span>
+                </label>
+              </div>
+
+              <SelectField
+                label="Temperature Zone"
+                value={form.temperatureZone}
+                onChange={(e) => setForm({ ...form, temperatureZone: e.target.value })}
+                options={[
+                  { value: 'ambient', label: 'Ambient' },
+                  { value: 'refrigerated', label: 'Refrigerated' },
+                  { value: 'frozen', label: 'Frozen' },
+                ]}
+              />
+
+              <label style={{ display: 'block', marginBottom: 16 }}>
+                <span style={{ color: C.dim, fontSize: 13, display: 'block', marginBottom: 6 }}>Substitution Notes</span>
+                <textarea
+                  value={form.substitutionNotes}
+                  onChange={(e) => setForm({ ...form, substitutionNotes: e.target.value })}
+                  placeholder="e.g., No gluten-free substitutions, prefer organic"
+                  style={{
+                    width: '100%', padding: 12, borderRadius: 8,
+                    background: C.bg, border: `1px solid ${C.muted}`,
+                    color: C.text, fontSize: 14, outline: 'none',
+                    fontFamily: F.body, boxSizing: 'border-box' as const,
+                    minHeight: 80, resize: 'vertical' as const,
+                  }}
+                />
+              </label>
+            </>
+          )}
+
+          {/* Furniture fields */}
+          {isFurniture && (
+            <>
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginTop: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 14, color: C.text, fontWeight: 500 }}>Furniture Fields</span>
+              </div>
+
+              <SelectField
+                label="Crew Size"
+                value={form.crewSize}
+                onChange={(e) => setForm({ ...form, crewSize: e.target.value })}
+                options={[
+                  { value: '1', label: '1 person' },
+                  { value: '2', label: '2 people' },
+                  { value: '3', label: '3 people' },
+                  { value: '4', label: '4 people' },
+                ]}
+              />
+
+              <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+                <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.assemblyRequired}
+                    onChange={(e) => setForm({ ...form, assemblyRequired: e.target.checked })}
+                    style={{ width: 18, height: 18, accentColor: C.accent }}
+                  />
+                  <span style={{ fontSize: 14, color: C.text }}>Assembly Required</span>
+                </label>
+                <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.haulAway}
+                    onChange={(e) => setForm({ ...form, haulAway: e.target.checked })}
+                    style={{ width: 18, height: 18, accentColor: C.accent }}
+                  />
+                  <span style={{ fontSize: 14, color: C.text }}>Haul-Away</span>
+                </label>
+              </div>
+            </>
+          )}
+
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
             <button type="button" onClick={() => setModalOpen(false)} style={cancelBtnStyle}>Cancel</button>
             <button type="submit" style={primaryBtnStyle}>Create Order</button>
           </div>
