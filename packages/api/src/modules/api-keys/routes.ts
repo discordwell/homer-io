@@ -17,7 +17,7 @@ export async function apiKeyRoutes(app: FastifyInstance) {
   });
 
   app.get('/', {
-    preHandler: [authenticate, requireRole('admin'), denyDemo],
+    preHandler: [authenticate, requireRole('admin')],
   }, async (request, reply) => {
     const keys = await listApiKeys(request.user.tenantId);
     reply.send(keys);
