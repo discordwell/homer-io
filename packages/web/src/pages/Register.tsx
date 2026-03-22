@@ -86,6 +86,21 @@ export function RegisterPage() {
         <h1>HOMER<span className="dot">.</span></h1>
         <p className="subtitle">Create your account</p>
 
+        {preselectedIndustry && (
+          <div style={{
+            padding: '8px 14px',
+            borderRadius: 8,
+            background: 'rgba(245,158,11,0.08)',
+            border: '1px solid rgba(245,158,11,0.2)',
+            fontSize: 13,
+            color: '#F59E0B',
+            textAlign: 'center',
+            marginBottom: 8,
+          }}>
+            Setting up for <strong>{preselectedIndustry}</strong> delivery
+          </div>
+        )}
+
         {error && <div className="error-box">{error}</div>}
 
         <GoogleSignInButton

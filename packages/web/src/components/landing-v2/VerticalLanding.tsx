@@ -112,11 +112,11 @@ function VerticalHero({ content }: { content: VerticalContent }) {
           </div>
         </div>
 
-        {/* Right: compact feature preview card */}
+        {/* Right: feature preview card */}
         <div style={{
-          width: 380,
+          width: 440,
           flexShrink: 0,
-          background: 'rgba(12,18,32,0.82)',
+          background: 'rgba(12,18,32,0.85)',
           backdropFilter: 'blur(24px)',
           border: '1px solid var(--border2)',
           borderRadius: 16,
@@ -127,11 +127,12 @@ function VerticalHero({ content }: { content: VerticalContent }) {
             display: 'flex',
             alignItems: 'center',
             gap: 10,
-            padding: '14px 20px',
+            padding: '16px 24px',
             borderBottom: '1px solid var(--border2)',
             fontFamily: 'var(--fm)',
             fontSize: 13,
             color: 'var(--t3)',
+            letterSpacing: '0.5px',
           }}>
             <span style={{
               width: 8,
@@ -142,18 +143,18 @@ function VerticalHero({ content }: { content: VerticalContent }) {
             }} />
             <span>Built for {content.industry.toLowerCase()} delivery</span>
           </div>
-          <div style={{ padding: '20px 20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ padding: '24px 24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
             {featurePreview.map((f) => (
-              <div key={f.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+              <div key={f.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
                 <span style={{
-                  fontSize: 20,
-                  width: 36,
-                  height: 36,
+                  fontSize: 22,
+                  width: 42,
+                  height: 42,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   background: 'var(--accent-bg)',
-                  borderRadius: 8,
+                  borderRadius: 10,
                   flexShrink: 0,
                 }}>
                   {f.icon}
@@ -162,14 +163,14 @@ function VerticalHero({ content }: { content: VerticalContent }) {
                   <div style={{
                     fontFamily: 'var(--fd)',
                     fontWeight: 700,
-                    fontSize: 14,
+                    fontSize: 15,
                     color: 'var(--t1)',
-                    marginBottom: 2,
+                    marginBottom: 4,
                   }}>
                     {f.title}
                   </div>
-                  <div style={{ fontSize: 12.5, color: 'var(--t3)', lineHeight: 1.5 }}>
-                    {f.description.slice(0, 80)}{f.description.length > 80 ? '\u2026' : ''}
+                  <div style={{ fontSize: 13.5, color: 'var(--t3)', lineHeight: 1.55 }}>
+                    {f.description.slice(0, 120)}{f.description.length > 120 ? '\u2026' : ''}
                   </div>
                 </div>
               </div>
