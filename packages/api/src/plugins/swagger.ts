@@ -7,8 +7,8 @@ export async function registerSwagger(app: FastifyInstance) {
     openapi: {
       info: {
         title: 'HOMER.io API',
-        version: '0.2.0',
-        description: 'AI-powered logistics platform',
+        version: '1.0.0',
+        description: 'AI-powered last-mile delivery platform serving 8 industry verticals (cannabis, florist, pharmacy, restaurant, grocery, furniture, courier). Features route optimization, real-time fleet tracking, proof of delivery, industry-specific compliance, and 9 POS/integration connectors.',
       },
       servers: [{ url: '/api' }],
       components: {

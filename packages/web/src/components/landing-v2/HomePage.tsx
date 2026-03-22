@@ -478,6 +478,11 @@ function Footer() {
 /* ---- Main page export ---- */
 
 export function HomePage() {
+  useEffect(() => {
+    document.title = 'HOMER.io — AI-Powered Last-Mile Delivery Platform';
+    return () => { document.title = 'HOMER.io — AI-Powered Logistics Platform'; };
+  }, []);
+
   return (
     <div className="hp">
       <Nav />

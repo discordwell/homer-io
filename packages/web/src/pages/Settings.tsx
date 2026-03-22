@@ -12,6 +12,9 @@ import { HealthDashboard } from '../components/settings/HealthDashboard.js';
 import { CannabisTab } from '../components/settings/CannabisTab.js';
 import { FloristTab } from '../components/settings/FloristTab.js';
 import { PharmacyTab } from '../components/settings/PharmacyTab.js';
+import { RestaurantTab } from '../components/settings/RestaurantTab.js';
+import { GroceryTab } from '../components/settings/GroceryTab.js';
+import { FurnitureTab } from '../components/settings/FurnitureTab.js';
 import { useSettingsStore } from '../stores/settings.js';
 import { C, F } from '../theme.js';
 
@@ -27,7 +30,7 @@ const BASE_TABS = [
   { id: 'health', label: 'Health' },
 ] as const;
 
-type TabId = (typeof BASE_TABS)[number]['id'] | 'cannabis' | 'florist' | 'pharmacy';
+type TabId = (typeof BASE_TABS)[number]['id'] | 'cannabis' | 'florist' | 'pharmacy' | 'restaurant' | 'grocery' | 'furniture';
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('organization');
@@ -50,6 +53,18 @@ export function SettingsPage() {
       // Insert pharmacy tab after integrations
       const idx = all.findIndex(t => t.id === 'integrations');
       all.splice(idx + 1, 0, { id: 'pharmacy', label: 'Pharmacy' });
+    }
+    if (orgSettings?.industry === 'restaurant') {
+      const idx = all.findIndex(t => t.id === 'integrations');
+      all.splice(idx + 1, 0, { id: 'restaurant', label: 'Restaurant' });
+    }
+    if (orgSettings?.industry === 'grocery') {
+      const idx = all.findIndex(t => t.id === 'integrations');
+      all.splice(idx + 1, 0, { id: 'grocery', label: 'Grocery' });
+    }
+    if (orgSettings?.industry === 'furniture') {
+      const idx = all.findIndex(t => t.id === 'integrations');
+      all.splice(idx + 1, 0, { id: 'furniture', label: 'Furniture' });
     }
     return all;
   }, [orgSettings?.industry]);
@@ -115,6 +130,9 @@ export function SettingsPage() {
       {activeTab === 'cannabis' && <CannabisTab />}
       {activeTab === 'florist' && <FloristTab />}
       {activeTab === 'pharmacy' && <PharmacyTab />}
+      {activeTab === 'restaurant' && <RestaurantTab />}
+      {activeTab === 'grocery' && <GroceryTab />}
+      {activeTab === 'furniture' && <FurnitureTab />}
     </div>
   );
 }

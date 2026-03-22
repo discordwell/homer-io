@@ -44,6 +44,9 @@ import { migrationRoutes } from './modules/migration/routes.js';
 import { cannabisRoutes } from './modules/cannabis/routes.js';
 import { floristRoutes } from './modules/florist/routes.js';
 import { pharmacyRoutes } from './modules/pharmacy/routes.js';
+import { restaurantRoutes } from './modules/restaurant/routes.js';
+import { groceryRoutes } from './modules/grocery/routes.js';
+import { furnitureRoutes } from './modules/furniture/routes.js';
 
 const app = Fastify({
   logger: {
@@ -167,6 +170,9 @@ await app.register(async (api) => {
   await api.register(cannabisRoutes, { prefix: '/cannabis' });
   await api.register(floristRoutes, { prefix: '/florist' });
   await api.register(pharmacyRoutes, { prefix: '/pharmacy' });
+  await api.register(restaurantRoutes, { prefix: '/restaurant' });
+  await api.register(groceryRoutes, { prefix: '/grocery' });
+  await api.register(furnitureRoutes, { prefix: '/furniture' });
 }, { prefix: '/api' });
 
 // Graceful shutdown

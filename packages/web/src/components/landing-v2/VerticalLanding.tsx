@@ -558,6 +558,15 @@ export function VerticalLanding({ content }: { content: VerticalContent }) {
   // Scroll to top on mount
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
+  // SEO: set document title and meta description from vertical content
+  useEffect(() => {
+    document.title = `${content.hero.headline} | HOMER`;
+    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement;
+    if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta); }
+    meta.content = content.hero.subheadline;
+    return () => { document.title = 'HOMER.io — AI-Powered Logistics Platform'; };
+  }, [content]);
+
   return (
     <div className="hp">
       <VerticalNav industry={content.slug} />

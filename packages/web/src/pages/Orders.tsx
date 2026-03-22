@@ -325,7 +325,7 @@ export function OrdersPage() {
             <button onClick={() => { setForm({ ...emptyForm, isGift: isFlorist }); setModalOpen(true); }} style={primaryBtnStyle}>+ Add Order</button>
           </div>} />
       ) : (
-        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16, overflowX: 'auto' }}>
           <DataTable columns={columns} data={orders}
             onRowClick={toggleOrderExpand}
             pagination={{ page, totalPages, onPageChange: fetchOrders }} />

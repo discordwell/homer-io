@@ -82,7 +82,7 @@ function QuickActionsSection({ industry, ordersToday }: { industry: string; orde
       <p style={{ color: C.dim, fontSize: 13, marginBottom: 16 }}>
         Recommended next steps for your {industry} delivery operation
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
         {actions.map((action, idx) => (
           <div
             key={action.title}
@@ -158,7 +158,7 @@ export function DashboardPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
+      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
         <KPICard icon={'\u{1F5FA}\uFE0F'} label="Active Routes" value={stats?.activeRoutes ?? 0} color={C.accent} />
         <KPICard icon={'\u{1F4E6}'} label="Orders Today" value={stats?.ordersToday ?? 0} color={C.green} />
         <KPICard icon={'\u{1F464}'} label="Active Drivers" value={stats?.activeDrivers ?? 0} color={C.yellow} />

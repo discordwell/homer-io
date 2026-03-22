@@ -43,6 +43,7 @@ function IndustryPicker({ onSelect, loading: isLoading }: { onSelect: (v: string
       {INDUSTRY_OPTIONS.map(opt => (
         <button
           key={opt.value}
+          aria-label={`Select ${opt.label}`}
           onClick={() => onSelect(opt.value)}
           onMouseEnter={() => setHovered(opt.value)}
           onMouseLeave={() => setHovered(null)}

@@ -231,6 +231,11 @@ export function PricingPage() {
   const [annual, setAnnual] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
+  useEffect(() => {
+    document.title = 'Pricing — Per-Order Delivery Software | HOMER';
+    return () => { document.title = 'HOMER.io — AI-Powered Logistics Platform'; };
+  }, []);
+
   return (
     <div className="hp">
       <Nav />
@@ -251,7 +256,11 @@ export function PricingPage() {
           </p>
 
           {/* Annual/Monthly toggle */}
-          <div style={{
+          <div
+            role="switch"
+            aria-checked={annual}
+            aria-label="Toggle annual billing"
+            style={{
             display: 'inline-flex', alignItems: 'center', gap: 12,
             background: 'var(--bg-card)', borderRadius: 10,
             border: '1px solid var(--border)', padding: 4,

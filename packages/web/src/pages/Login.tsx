@@ -72,13 +72,13 @@ export function LoginPage() {
         <label>
           <span>Email</span>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-            required autoFocus />
+            required autoFocus autoComplete="email" />
         </label>
 
         <label>
           <span>Password</span>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-            required />
+            required autoComplete="current-password" />
         </label>
 
         <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 16 }}>

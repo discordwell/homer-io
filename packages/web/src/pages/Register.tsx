@@ -118,25 +118,25 @@ export function RegisterPage() {
         <label>
           <span>Your Name</span>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-            required autoFocus />
+            required autoFocus autoComplete="name" />
         </label>
 
         <label>
           <span>Organization Name</span>
           <input type="text" value={orgName} onChange={(e) => setOrgName(e.target.value)}
-            required />
+            required autoComplete="organization" />
         </label>
 
         <label>
           <span>Email</span>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-            required />
+            required autoComplete="email" />
         </label>
 
         <label>
           <span>Password</span>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-            required minLength={8} />
+            required minLength={8} autoComplete="new-password" />
         </label>
 
         <button type="submit" disabled={loading} className="btn-primary">
