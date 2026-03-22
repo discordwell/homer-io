@@ -51,8 +51,19 @@ export function IntegrationsTab() {
   const { connections, platforms: allPlatforms, loading, loadPlatforms, loadConnections, deleteConnection, testConnection } = useIntegrationsStore();
   const { orgSettings } = useSettingsStore();
   const tenantIndustry = orgSettings?.industry ?? null;
-  // Filter platforms by industry gate — only show industry-specific integrations to matching tenants
-  const platforms = allPlatforms.filter(p => !p.industryGate || p.industryGate === tenantIndustry);
+  const enabledFeatures = orgSettings?.enabledFeatures ?? [];
+  // Show integrations if: no gate, industry matches, or any feature from that industry's set is enabled
+  const INDUSTRY_FEATURE_MAP: Record<string, string[]> = {
+    cannabis: ['id_verification', 'manifests', 'delivery_limits', 'driver_kits'],
+    florist: ['gift_messages', 'sender_notifications'],
+    pharmacy: ['controlled_substances', 'hipaa_display', 'cold_chain'],
+  };
+  const platforms = allPlatforms.filter(p => {
+    if (!p.industryGate) return true;
+    if (p.industryGate === tenantIndustry) return true;
+    const relevantFeatures = INDUSTRY_FEATURE_MAP[p.industryGate] ?? [];
+    return relevantFeatures.some(f => enabledFeatures.includes(f));
+  });
 
   const [connectFormOpen, setConnectFormOpen] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformInfo | null>(null);

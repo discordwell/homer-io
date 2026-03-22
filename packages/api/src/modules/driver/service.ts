@@ -36,14 +36,16 @@ export async function getCurrentRoute(tenantId: string, userId: string) {
     .where(and(eq(orders.routeId, route.id), eq(orders.tenantId, tenantId)))
     .orderBy(orders.stopSequence);
 
-  // HIPAA-safe display: strip PHI from notes for pharmacy tenants
-  const [tenant] = await db.select({ industry: tenants.industry })
+  // HIPAA-safe display: strip PHI from notes when hipaa_display feature is enabled
+  const [tenant] = await db.select({ settings: tenants.settings })
     .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+  const tenantSettings = (tenant?.settings ?? {}) as Record<string, unknown>;
+  const features = (tenantSettings.enabledFeatures ?? []) as string[];
 
-  const sanitizedStops = tenant?.industry === 'pharmacy'
+  const sanitizedStops = features.includes('hipaa_display')
     ? stops.map(stop => ({
         ...stop,
-        notes: stop.hipaaSafeNotes || 'Prescription delivery', // Replace PHI notes with safe version
+        notes: stop.hipaaSafeNotes || 'Delivery', // Replace PHI notes with safe version
       }))
     : stops;
 

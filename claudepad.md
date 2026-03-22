@@ -2,6 +2,16 @@
 
 ## Session Summaries
 
+### 2026-03-22T05:15 UTC — Cross-Industry Feature Toggle System
+- **Feature decoupling**: 16 features (id_verification, manifests, cold_chain, gift_messages, etc.) now independent of industry
+- **Industry sets defaults**: selecting cannabis auto-enables 7 features, florist enables 4, pharmacy enables 7
+- **Any tenant can enable any feature**: medical cannabis pharmacy can enable both cannabis + pharmacy features
+- **enabledFeatures array** in tenant.settings JSONB, exposed via auth response + org settings
+- **All gating swapped**: backend (orders, routes, driver) and mobile (stop detail) now check features not industry
+- **Features panel** in Organization settings tab with toggles by category (Compliance, Operations, CX)
+- **Integrations filtering** updated: connectors show when industry matches OR relevant features enabled
+- No migration needed (JSONB settings), no new tests (existing tests unchanged)
+
 ### 2026-03-22T04:30 UTC — Pharmacy Delivery Vertical
 - **HIPAA-safe driver view**: driver sees hipaaSafeNotes (no medication names), PHI stripped for pharmacy tenants
 - **Controlled substances**: isControlledSubstance + controlledSchedule (II-V) on orders, auto-require signature

@@ -127,10 +127,22 @@ export async function skipOnboarding(tenantId: string): Promise<void> {
     .where(eq(tenants.id, tenantId));
 }
 
-export async function setIndustry(tenantId: string, industry: Industry): Promise<{ success: boolean; industry: Industry }> {
-  await db.update(tenants).set({ industry, updatedAt: new Date() })
-    .where(eq(tenants.id, tenantId));
-  return { success: true, industry };
+export async function setIndustry(tenantId: string, industry: Industry): Promise<{ success: boolean; industry: Industry; enabledFeatures: string[] }> {
+  // Auto-populate default features for this industry
+  const { getDefaultFeatures } = await import('@homer-io/shared');
+  const enabledFeatures = getDefaultFeatures(industry);
+
+  const [row] = await db.select({ settings: tenants.settings })
+    .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+  const settings = (row?.settings ?? {}) as Record<string, unknown>;
+
+  await db.update(tenants).set({
+    industry,
+    settings: { ...settings, enabledFeatures },
+    updatedAt: new Date(),
+  }).where(eq(tenants.id, tenantId));
+
+  return { success: true, industry, enabledFeatures };
 }
 
 export async function loadSampleData(tenantId: string): Promise<{ success: boolean; ordersCreated: number; message?: string }> {

@@ -178,6 +178,7 @@ export async function getMe(userId: string): Promise<UserResponse> {
       avatarUrl: users.avatarUrl,
       isDemo: tenants.isDemo,
       industry: tenants.industry,
+      settings: tenants.settings,
     })
     .from(users)
     .innerJoin(tenants, eq(users.tenantId, tenants.id))
@@ -188,12 +189,16 @@ export async function getMe(userId: string): Promise<UserResponse> {
     throw new NotFoundError('User not found');
   }
 
+  const userSettings = (user.settings ?? {}) as Record<string, unknown>;
+  const enabledFeatures = Array.isArray(userSettings.enabledFeatures) ? userSettings.enabledFeatures as string[] : [];
+
   return {
     ...user,
     createdAt: user.createdAt.toISOString(),
     avatarUrl: user.avatarUrl || null,
     isDemo: user.isDemo,
     industry: user.industry ?? null,
+    enabledFeatures,
   };
 }
 
@@ -283,10 +288,13 @@ export async function generateAuthResponse(
 
   // Look up tenant flags
   const [tenant] = await db
-    .select({ isDemo: tenants.isDemo, industry: tenants.industry })
+    .select({ isDemo: tenants.isDemo, industry: tenants.industry, settings: tenants.settings })
     .from(tenants)
     .where(eq(tenants.id, user.tenantId))
     .limit(1);
+
+  const tenantSettings = (tenant?.settings ?? {}) as Record<string, unknown>;
+  const enabledFeatures = Array.isArray(tenantSettings.enabledFeatures) ? tenantSettings.enabledFeatures as string[] : [];
 
   return {
     accessToken,
@@ -301,6 +309,7 @@ export async function generateAuthResponse(
       avatarUrl: user.avatarUrl || null,
       isDemo: tenant?.isDemo ?? false,
       industry: tenant?.industry ?? null,
+      enabledFeatures,
     },
   };
 }

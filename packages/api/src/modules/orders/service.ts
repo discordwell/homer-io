@@ -7,10 +7,10 @@ import { orders, orderStatusEnum } from '../../lib/db/schema/orders.js';
 import { routes } from '../../lib/db/schema/routes.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
+import { hasFeature } from '@homer-io/shared';
 import { checkDeliveryZone } from '../cannabis/service.js';
 
 export async function createOrder(tenantId: string, input: CreateOrderInput) {
-  // Cannabis industry: auto-enforce compliance defaults
   let requiresSignature = input.requiresSignature;
   let requiresPhoto = input.requiresPhoto;
   let serviceDurationMinutes = input.serviceDurationMinutes;
@@ -18,13 +18,22 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
   const [tenant] = await db.select({ industry: tenants.industry, settings: tenants.settings })
     .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
 
-  if (tenant?.industry === 'cannabis') {
-    const cannabis = (tenant.settings as Record<string, unknown>)?.cannabis as Record<string, unknown> | undefined;
-    if (cannabis?.requireSignature !== false) requiresSignature = true;
-    if (cannabis?.requirePhoto !== false) requiresPhoto = true;
-    if (!serviceDurationMinutes) serviceDurationMinutes = 5;
+  const tenantSettings = (tenant?.settings ?? {}) as Record<string, unknown>;
+  const features = (tenantSettings.enabledFeatures ?? []) as string[];
 
-    // Delivery zone validation
+  // Feature-based auto-enforcement (works across all industries)
+  if (hasFeature(features, 'id_verification') || hasFeature(features, 'controlled_substances')) {
+    requiresSignature = true;
+  }
+  if (hasFeature(features, 'delivery_photo')) {
+    requiresPhoto = true;
+  }
+  if (hasFeature(features, 'id_verification') && !serviceDurationMinutes) {
+    serviceDurationMinutes = 5;
+  }
+
+  // Delivery zone validation (any industry with delivery_zones enabled)
+  if (hasFeature(features, 'delivery_zones')) {
     const lat = input.deliveryAddress.coords?.lat;
     const lng = input.deliveryAddress.coords?.lng;
     const zip = input.deliveryAddress.zip || '';
@@ -34,18 +43,6 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
         throw Object.assign(new Error(zoneCheck.reason || 'Delivery address is outside allowed zone'), { statusCode: 422 });
       }
     }
-  }
-
-  // Florist industry: auto-enforce photo based on florist settings
-  if (tenant?.industry === 'florist') {
-    const florist = (tenant.settings as Record<string, unknown>)?.florist as Record<string, unknown> | undefined;
-    if (florist?.autoRequirePhoto !== false) requiresPhoto = true;
-  }
-
-  // Pharmacy industry: auto-enforce signature + photo
-  if (tenant?.industry === 'pharmacy') {
-    requiresSignature = true;
-    requiresPhoto = true;
   }
 
   const [order] = await db

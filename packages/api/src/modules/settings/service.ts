@@ -12,12 +12,15 @@ export async function getOrgSettings(tenantId: string) {
     .where(eq(orgSettings.tenantId, tenantId))
     .limit(1);
 
-  // Fetch industry from tenants table
+  // Fetch industry + features from tenants table
   const [tenant] = await db
-    .select({ industry: tenants.industry })
+    .select({ industry: tenants.industry, tenantSettings: tenants.settings })
     .from(tenants)
     .where(eq(tenants.id, tenantId))
     .limit(1);
+
+  const tenantSettingsObj = (tenant?.tenantSettings ?? {}) as Record<string, unknown>;
+  const enabledFeatures = Array.isArray(tenantSettingsObj.enabledFeatures) ? tenantSettingsObj.enabledFeatures as string[] : [];
 
   const settings = existing ?? (await db
     .insert(orgSettings)
@@ -25,7 +28,7 @@ export async function getOrgSettings(tenantId: string) {
     .returning()
   )[0];
 
-  return { ...settings, industry: tenant?.industry ?? null };
+  return { ...settings, industry: tenant?.industry ?? null, enabledFeatures };
 }
 
 export async function updateOrgSettings(
@@ -33,12 +36,22 @@ export async function updateOrgSettings(
   input: UpdateOrgSettingsInput,
   userId?: string,
 ) {
-  // Extract industry — it lives on tenants table, not org_settings
-  const { industry, ...settingsInput } = input;
+  // Extract industry + enabledFeatures — they live on tenants table, not org_settings
+  const { industry, enabledFeatures, ...settingsInput } = input;
 
   if (industry) {
     await db.update(tenants).set({ industry, updatedAt: new Date() })
       .where(eq(tenants.id, tenantId));
+  }
+
+  if (enabledFeatures) {
+    const [row] = await db.select({ settings: tenants.settings })
+      .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+    const existing = (row?.settings ?? {}) as Record<string, unknown>;
+    await db.update(tenants).set({
+      settings: { ...existing, enabledFeatures },
+      updatedAt: new Date(),
+    }).where(eq(tenants.id, tenantId));
   }
 
   // Upsert: try update first, insert if not exists

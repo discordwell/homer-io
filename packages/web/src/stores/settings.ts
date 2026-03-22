@@ -11,6 +11,7 @@ interface OrgSettings {
   branding: Record<string, unknown>;
   notificationPrefs: Record<string, unknown>;
   industry: string | null;
+  enabledFeatures: string[];
   createdAt: string;
   updatedAt: string;
 }

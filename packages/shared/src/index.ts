@@ -30,6 +30,7 @@ export * from './schemas/migration.js';
 export * from './schemas/devices.js';
 export * from './schemas/cannabis.js';
 export * from './schemas/pharmacy.js';
+export * from './schemas/features.js';
 export * from './types/roles.js';
 export * from './utils/address.js';
 export * from './utils/geo.js';

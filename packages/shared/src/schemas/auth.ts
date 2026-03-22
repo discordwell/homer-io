@@ -37,6 +37,7 @@ export const userResponseSchema = z.object({
   avatarUrl: z.string().nullable().optional(),
   isDemo: z.boolean().optional(),
   industry: z.string().nullable().optional(),
+  enabledFeatures: z.array(z.string()).optional(),
 });
 export type UserResponse = z.infer<typeof userResponseSchema>;
 

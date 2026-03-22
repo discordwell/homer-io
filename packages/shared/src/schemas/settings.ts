@@ -19,5 +19,6 @@ export type OrgSettings = z.infer<typeof orgSettingsSchema>;
 
 export const updateOrgSettingsSchema = orgSettingsSchema.partial().extend({
   industry: industrySchema.optional(),
+  enabledFeatures: z.array(z.string()).optional(),
 });
 export type UpdateOrgSettingsInput = z.infer<typeof updateOrgSettingsSchema>;

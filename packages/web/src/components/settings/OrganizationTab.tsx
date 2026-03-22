@@ -6,6 +6,7 @@ import { SelectField } from '../SelectField.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
 import { C, F } from '../../theme.js';
+import { FEATURE_DEFINITIONS, type FeatureKey } from '@homer-io/shared';
 
 const timezoneOptions = [
   { value: 'America/New_York', label: 'Eastern (ET)' },
@@ -97,6 +98,7 @@ export function OrganizationTab() {
   if (loading && !orgSettings) return <LoadingSpinner />;
 
   return (
+    <>
     <div style={{
       background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
       padding: 24, maxWidth: 560,
@@ -214,5 +216,64 @@ export function OrganizationTab() {
         </div>
       </form>
     </div>
+
+    {/* Feature Toggles */}
+    <div style={{
+      background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
+      padding: 24, maxWidth: 560, marginTop: 24,
+    }}>
+      <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 4, color: C.text }}>
+        Enabled Features
+      </h3>
+      <p style={{ color: C.dim, fontSize: 13, marginBottom: 16 }}>
+        Features are auto-enabled by your industry. Toggle additional features from other industries.
+      </p>
+      {(['compliance', 'operations', 'customer_experience'] as const).map(cat => {
+        const catFeatures = FEATURE_DEFINITIONS.filter(f => f.category === cat);
+        const catLabel = cat === 'compliance' ? 'Compliance' : cat === 'operations' ? 'Operations' : 'Customer Experience';
+        return (
+          <div key={cat} style={{ marginBottom: 16 }}>
+            <span style={{ color: C.dim, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              {catLabel}
+            </span>
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {catFeatures.map(feat => {
+                const currentFeatures = orgSettings?.enabledFeatures ?? [];
+                const isEnabled = currentFeatures.includes(feat.key);
+                return (
+                  <label key={feat.key} style={{
+                    display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer',
+                    padding: '6px 8px', borderRadius: 6,
+                    background: isEnabled ? 'transparent' : 'transparent',
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={isEnabled}
+                      onChange={async (e) => {
+                        const updated = e.target.checked
+                          ? [...currentFeatures, feat.key]
+                          : currentFeatures.filter((f: string) => f !== feat.key);
+                        try {
+                          await updateSettings({ enabledFeatures: updated });
+                          toast(`${feat.label} ${e.target.checked ? 'enabled' : 'disabled'}`, 'success');
+                        } catch (err) {
+                          toast('Failed to update feature', 'error');
+                        }
+                      }}
+                      style={{ width: 16, height: 16, accentColor: C.accent, marginTop: 2, flexShrink: 0 }}
+                    />
+                    <div>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{feat.label}</span>
+                      <span style={{ fontSize: 12, color: C.dim, display: 'block', marginTop: 1 }}>{feat.description}</span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+    </>
   );
 }

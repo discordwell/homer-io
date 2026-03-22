@@ -73,12 +73,14 @@ export async function createRoute(tenantId: string, input: CreateRouteInput) {
     }
   }
 
-  // Cannabis delivery limits check
+  // Delivery limits check (any industry with delivery_limits feature)
   if (input.orderIds?.length) {
     try {
-      const [tenant] = await db.select({ industry: tenants.industry })
+      const [tenant] = await db.select({ settings: tenants.settings })
         .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-      if (tenant?.industry === 'cannabis') {
+      const tSettings = (tenant?.settings ?? {}) as Record<string, unknown>;
+      const feats = (tSettings.enabledFeatures ?? []) as string[];
+      if (feats.includes('delivery_limits')) {
         const limits = await checkDeliveryLimits(tenantId, route.id);
         warnings.push(...limits.warnings);
       }
