@@ -4,6 +4,7 @@ import { ConfirmDialog } from '../ConfirmDialog.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
 import { useIntegrationsStore } from '../../stores/integrations.js';
+import { useSettingsStore } from '../../stores/settings.js';
 import { IntegrationConnectForm } from './IntegrationConnectForm.js';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel.js';
 import { C, F, alpha, primaryBtnStyle, secondaryBtnStyle } from '../../theme.js';
@@ -47,7 +48,11 @@ function syncStatusColor(status: string): string {
 
 export function IntegrationsTab() {
   const { toast } = useToast();
-  const { connections, platforms, loading, loadPlatforms, loadConnections, deleteConnection, testConnection } = useIntegrationsStore();
+  const { connections, platforms: allPlatforms, loading, loadPlatforms, loadConnections, deleteConnection, testConnection } = useIntegrationsStore();
+  const { orgSettings } = useSettingsStore();
+  const tenantIndustry = orgSettings?.industry ?? null;
+  // Filter platforms by industry gate — only show industry-specific integrations to matching tenants
+  const platforms = allPlatforms.filter(p => !p.industryGate || p.industryGate === tenantIndustry);
 
   const [connectFormOpen, setConnectFormOpen] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformInfo | null>(null);

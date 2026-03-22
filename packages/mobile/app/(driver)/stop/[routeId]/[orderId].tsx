@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet, Linking } from 'react-na
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDriverStore } from '@/stores/driver';
+import { useAuthStore } from '@/stores/auth';
 import { NavigateButton } from '@/components/driver/NavigateButton';
 import { PODFlow } from '@/components/driver/PODFlow';
 import { DeliveryFailureFlow } from '@/components/driver/DeliveryFailureFlow';
@@ -22,6 +23,8 @@ export default function StopDetailScreen() {
   const { routeId, orderId } = useLocalSearchParams<{ routeId: string; orderId: string }>();
   const router = useRouter();
   const { currentRoute, fetchCurrentRoute } = useDriverStore();
+  const user = useAuthStore((s) => s.user);
+  const isCannabis = user?.industry === 'cannabis';
   const [showPOD, setShowPOD] = useState(false);
   const [showFailure, setShowFailure] = useState(false);
 
@@ -50,6 +53,8 @@ export default function StopDetailScreen() {
         orderId={stop.id}
         routeId={routeId!}
         recipientName={stop.recipientName}
+        requireIdVerification={isCannabis}
+        minimumAge={isCannabis ? 21 : undefined}
         onComplete={() => {
           setShowPOD(false);
           router.back();
