@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
 import { C, F } from '../../theme.js';
 import type { CannabisSettings } from '@homer-io/shared';
+import { KitManagement } from '../cannabis/KitManagement.js';
 
 const US_STATES = [
   { value: '', label: 'Select state...' },
@@ -283,6 +284,8 @@ export function CannabisTab() {
           </div>
         )}
       </div>
+      {/* Kit Management */}
+      <KitManagement />
     </div>
   );
 }

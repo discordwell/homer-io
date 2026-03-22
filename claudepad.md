@@ -2,6 +2,17 @@
 
 ## Session Summaries
 
+### 2026-03-22T02:05 UTC — Cannabis Delivery Vertical Phase 2
+- **Driver Kits**: New table + CRUD — track what product is loaded in the vehicle per route
+- **Kit lifecycle**: loading → loaded → in_transit → reconciling → reconciled, with state guards
+- **Reconciliation**: Compare loaded vs returned items, auto-detect discrepancies
+- **Cash-on-Delivery**: cashAmount/cashCollected/paymentMethod columns on orders, collection endpoint
+- **Delivery Limits**: checkDeliveryLimits() sums route value/weight against cannabis settings, warnings on route creation
+- **Mobile**: DriverKitView, CashCollection, ReconciliationFlow components
+- **Web**: KitManagement table + ReconciliationView side-by-side, added to CannabisTab
+- Migration: 0005_add_cannabis_kits.sql
+- 12 new tests, 554 total passing
+
 ### 2026-03-22T01:45 UTC — Cannabis Delivery Vertical Phase 1
 - **ID Verification**: New IDVerification.tsx mobile component (camera capture, DOB picker, age check, name match)
 - **POD Flow Extended**: PODFlow.tsx now conditionally adds id_verification step for cannabis tenants

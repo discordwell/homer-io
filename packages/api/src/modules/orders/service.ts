@@ -49,6 +49,8 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
       customFields: input.customFields,
       requiresSignature,
       requiresPhoto,
+      cashAmount: input.cashAmount?.toString(),
+      paymentMethod: input.paymentMethod,
     })
     .returning();
   logActivity({ tenantId, action: 'order_created', entityType: 'order', entityId: order.id });

@@ -34,6 +34,9 @@ export const createOrderSchema = z.object({
   notes: z.string().max(1000).optional(),
   requiresSignature: z.boolean().default(false),
   requiresPhoto: z.boolean().default(false),
+  // Cash-on-delivery (cannabis)
+  cashAmount: z.number().min(0).optional(),
+  paymentMethod: z.enum(['cash', 'prepaid', 'card']).optional(),
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 

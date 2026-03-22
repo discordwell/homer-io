@@ -12,6 +12,8 @@ import { logActivity } from '../../lib/activity.js';
 import { enqueueWebhook } from '../../lib/webhooks.js';
 import { enqueueCustomerNotification } from '../customer-notifications/service.js';
 import { enqueueDeliveryLearning } from '../../lib/delivery-learning.js';
+import { tenants } from '../../lib/db/schema/tenants.js';
+import { checkDeliveryLimits } from '../cannabis/service.js';
 
 export async function createRoute(tenantId: string, input: CreateRouteInput) {
   const [route] = await db.transaction(async (tx) => {
@@ -68,6 +70,20 @@ export async function createRoute(tenantId: string, input: CreateRouteInput) {
       if (prev.timeWindowEnd! > curr.timeWindowStart!) {
         warnings.push(`Time windows overlap between stop ${prev.stopSequence} (${prev.recipientName}) and stop ${curr.stopSequence} (${curr.recipientName})`);
       }
+    }
+  }
+
+  // Cannabis delivery limits check
+  if (input.orderIds?.length) {
+    try {
+      const [tenant] = await db.select({ industry: tenants.industry })
+        .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+      if (tenant?.industry === 'cannabis') {
+        const limits = await checkDeliveryLimits(tenantId, route.id);
+        warnings.push(...limits.warnings);
+      }
+    } catch {
+      // Non-critical — don't block route creation
     }
   }
 

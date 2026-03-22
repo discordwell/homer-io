@@ -45,6 +45,11 @@ export const orders = pgTable('orders', {
   routeId: uuid('route_id').references(() => routes.id, { onDelete: 'set null' }),
   stopSequence: integer('stop_sequence'),
   completedAt: timestamp('completed_at', { withTimezone: true }),
+  // Cash-on-delivery (cannabis)
+  cashAmount: numeric('cash_amount', { precision: 10, scale: 2 }),
+  cashCollected: numeric('cash_collected', { precision: 10, scale: 2 }),
+  paymentMethod: varchar('payment_method', { length: 20 }),
+  paymentCollectedAt: timestamp('payment_collected_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [

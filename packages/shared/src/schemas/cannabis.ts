@@ -64,3 +64,55 @@ export const idVerificationInputSchema = z.object({
   orderId: z.string().uuid(),
 });
 export type IdVerificationInput = z.infer<typeof idVerificationInputSchema>;
+
+// ---------------------------------------------------------------------------
+// Driver kits (inventory management)
+// ---------------------------------------------------------------------------
+
+export const kitProductSchema = z.object({
+  name: z.string(),
+  quantity: z.number().int().positive(),
+  trackingTag: z.string().optional(),
+  price: z.number().optional(),
+  weight: z.number().optional(),
+});
+
+export const kitItemSchema = z.object({
+  orderId: z.string().uuid(),
+  recipientName: z.string().optional(),
+  products: z.array(kitProductSchema).min(1),
+  status: z.enum(['loaded', 'delivered', 'returned']).default('loaded'),
+});
+export type KitItem = z.infer<typeof kitItemSchema>;
+
+export const createDriverKitSchema = z.object({
+  routeId: z.string().uuid(),
+  manifestId: z.string().uuid().optional(),
+  items: z.array(kitItemSchema).min(1),
+  notes: z.string().max(1000).optional(),
+});
+export type CreateDriverKitInput = z.infer<typeof createDriverKitSchema>;
+
+export const returnedProductSchema = z.object({
+  name: z.string(),
+  quantityReturned: z.number().int().min(0),
+  trackingTag: z.string().optional(),
+});
+
+export const reconcileKitSchema = z.object({
+  returnedItems: z.array(z.object({
+    orderId: z.string().uuid(),
+    products: z.array(returnedProductSchema),
+  })),
+  notes: z.string().max(1000).optional(),
+});
+export type ReconcileKitInput = z.infer<typeof reconcileKitSchema>;
+
+// ---------------------------------------------------------------------------
+// Cash collection
+// ---------------------------------------------------------------------------
+
+export const cashCollectionSchema = z.object({
+  cashCollected: z.number().min(0),
+});
+export type CashCollectionInput = z.infer<typeof cashCollectionSchema>;
