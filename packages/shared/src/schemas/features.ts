@@ -21,6 +21,16 @@ export const FEATURE_KEYS = [
   'copay_collection',
   'prescriber_info',
   'temp_drivers',
+  // Restaurant
+  'speed_priority',
+  // Grocery
+  'substitution_management',
+  'temperature_zones',
+  // Furniture
+  'crew_assignment',
+  'assembly_tracking',
+  'haul_away',
+  'wide_time_windows',
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -56,6 +66,19 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
   { key: 'sender_notifications', label: 'Sender Notifications', description: 'Notify the person who ordered (not just recipient)', category: 'customer_experience' },
   { key: 'delivery_photo', label: 'Delivery Photo', description: 'Auto-require photo proof of every delivery', category: 'customer_experience' },
   { key: 'prescriber_info', label: 'Prescriber Info', description: 'Track prescriber/doctor name and NPI on orders', category: 'customer_experience' },
+
+  // Restaurant
+  { key: 'speed_priority', label: 'Speed Priority', description: 'Optimize for fastest delivery times with tight windows', category: 'operations' },
+
+  // Grocery
+  { key: 'substitution_management', label: 'Substitution Management', description: 'Allow item substitutions when products are out of stock', category: 'operations' },
+  { key: 'temperature_zones', label: 'Temperature Zones', description: 'Track frozen, refrigerated, and ambient items separately', category: 'operations' },
+
+  // Furniture
+  { key: 'crew_assignment', label: 'Crew Assignment', description: 'Assign 2+ person delivery crews to heavy/large items', category: 'operations' },
+  { key: 'assembly_tracking', label: 'Assembly Tracking', description: 'Track assembly-required deliveries with extended service times', category: 'operations' },
+  { key: 'haul_away', label: 'Haul Away', description: 'Flag deliveries that include old item removal', category: 'operations' },
+  { key: 'wide_time_windows', label: 'Wide Time Windows', description: '4-hour delivery windows with day-before notifications', category: 'customer_experience' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -74,9 +97,9 @@ export const INDUSTRY_DEFAULT_FEATURES: Record<string, FeatureKey[]> = {
     'controlled_substances', 'cold_chain', 'dob_verification', 'hipaa_display',
     'copay_collection', 'prescriber_info', 'delivery_photo',
   ],
-  restaurant: ['delivery_photo'],
-  grocery: ['cold_chain', 'delivery_photo'],
-  furniture: ['delivery_photo'],
+  restaurant: ['delivery_photo', 'speed_priority'],
+  grocery: ['cold_chain', 'delivery_photo', 'substitution_management', 'temperature_zones'],
+  furniture: ['delivery_photo', 'crew_assignment', 'assembly_tracking', 'haul_away', 'wide_time_windows'],
   courier: ['delivery_photo'],
   other: [],
 };

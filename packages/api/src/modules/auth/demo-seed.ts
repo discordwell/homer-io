@@ -224,6 +224,13 @@ export async function seedDemoOrg(tenantId: string, options?: SeedDemoOptions): 
         if ('prescriberName' in o) base.prescriberName = o.prescriberName;
         if ('prescriberNpi' in o) base.prescriberNpi = o.prescriberNpi;
         if ('hipaaSafeNotes' in o) base.hipaaSafeNotes = o.hipaaSafeNotes;
+        // Grocery fields
+        if ('temperatureZone' in o) base.temperatureZone = o.temperatureZone;
+        if ('substitutionAllowed' in o) base.substitutionAllowed = o.substitutionAllowed;
+        // Furniture fields
+        if ('crewSize' in o) base.crewSize = o.crewSize;
+        if ('assemblyRequired' in o) base.assemblyRequired = o.assemblyRequired;
+        if ('haulAway' in o) base.haulAway = o.haulAway;
         return base;
       }) as Array<typeof orders.$inferInsert>,
     )

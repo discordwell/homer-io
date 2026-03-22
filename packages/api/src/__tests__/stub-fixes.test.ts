@@ -189,6 +189,10 @@ describe('B6: Activity logging on createOrder', () => {
       isGift: false,
       isControlledSubstance: false,
       isColdChain: false,
+      substitutionAllowed: true,
+      crewSize: 1,
+      assemblyRequired: false,
+      haulAway: false,
     });
 
     expect(mockLogActivity).toHaveBeenCalledWith({

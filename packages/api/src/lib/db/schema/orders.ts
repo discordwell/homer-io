@@ -61,6 +61,14 @@ export const orders = pgTable('orders', {
   prescriberName: varchar('prescriber_name', { length: 255 }),
   prescriberNpi: varchar('prescriber_npi', { length: 20 }),
   hipaaSafeNotes: text('hipaa_safe_notes'),
+  // Grocery: substitutions + temperature
+  substitutionAllowed: boolean('substitution_allowed').default(true).notNull(),
+  substitutionNotes: text('substitution_notes'),
+  temperatureZone: varchar('temperature_zone', { length: 20 }),
+  // Furniture: crew + assembly + haul-away
+  crewSize: integer('crew_size').default(1),
+  assemblyRequired: boolean('assembly_required').default(false).notNull(),
+  haulAway: boolean('haul_away').default(false).notNull(),
   // Cash-on-delivery (cannabis) / Copay (pharmacy)
   cashAmount: numeric('cash_amount', { precision: 10, scale: 2 }),
   cashCollected: numeric('cash_collected', { precision: 10, scale: 2 }),

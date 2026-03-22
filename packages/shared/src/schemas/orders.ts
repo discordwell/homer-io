@@ -48,6 +48,14 @@ export const createOrderSchema = z.object({
   prescriberName: z.string().max(255).optional(),
   prescriberNpi: z.string().max(20).optional(),
   hipaaSafeNotes: z.string().max(2000).optional(),
+  // Grocery: substitutions + temperature
+  substitutionAllowed: z.boolean().default(true),
+  substitutionNotes: z.string().max(1000).optional(),
+  temperatureZone: z.enum(['frozen', 'refrigerated', 'ambient']).optional(),
+  // Furniture: crew + assembly + haul-away
+  crewSize: z.number().int().min(1).max(4).default(1),
+  assemblyRequired: z.boolean().default(false),
+  haulAway: z.boolean().default(false),
   // Cash-on-delivery (cannabis) / Copay (pharmacy)
   cashAmount: z.number().min(0).optional(),
   paymentMethod: z.enum(['cash', 'prepaid', 'card']).optional(),

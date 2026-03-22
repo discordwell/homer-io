@@ -84,6 +84,14 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
       prescriberName: input.prescriberName,
       prescriberNpi: input.prescriberNpi,
       hipaaSafeNotes: input.hipaaSafeNotes,
+      // Grocery
+      substitutionAllowed: input.substitutionAllowed,
+      substitutionNotes: input.substitutionNotes,
+      temperatureZone: input.temperatureZone,
+      // Furniture
+      crewSize: input.crewSize,
+      assemblyRequired: input.assemblyRequired,
+      haulAway: input.haulAway,
       // Cash-on-delivery / Copay
       cashAmount: input.cashAmount?.toString(),
       paymentMethod: input.paymentMethod,

@@ -252,6 +252,13 @@ export interface IndustryOrderData {
   prescriberName?: string;
   prescriberNpi?: string;
   hipaaSafeNotes?: string;
+  // Grocery fields
+  temperatureZone?: string;
+  substitutionAllowed?: boolean;
+  // Furniture fields
+  crewSize?: number;
+  assemblyRequired?: boolean;
+  haulAway?: boolean;
 }
 
 function pick<T>(arr: T[]): T {
@@ -366,6 +373,25 @@ export function generateIndustryOrders(
       hipaaSafeNotes = pick(safeNotes) || undefined;
     }
 
+    // Grocery: temperature zones + substitutions
+    let temperatureZone: string | undefined;
+    let substitutionAllowed: boolean | undefined;
+    if (industry === 'grocery') {
+      const zones = ['frozen', 'refrigerated', 'ambient', 'ambient', 'ambient']; // 60% ambient
+      temperatureZone = pick(zones);
+      substitutionAllowed = Math.random() < 0.7; // 70% allow substitutions
+    }
+
+    // Furniture: crew + assembly + haul-away
+    let crewSize: number | undefined;
+    let assemblyRequired: boolean | undefined;
+    let haulAway: boolean | undefined;
+    if (industry === 'furniture') {
+      crewSize = Math.random() < 0.7 ? 2 : 1; // 70% need 2-person crew
+      assemblyRequired = Math.random() < 0.5; // 50% need assembly
+      haulAway = Math.random() < 0.3; // 30% want old item hauled away
+    }
+
     return {
       recipientName: `${first} ${last}`,
       deliveryAddress: {
@@ -394,6 +420,11 @@ export function generateIndustryOrders(
       ...(patientDob ? { patientDob } : {}),
       ...(prescriberName ? { prescriberName, prescriberNpi } : {}),
       ...(hipaaSafeNotes ? { hipaaSafeNotes } : {}),
+      ...(temperatureZone ? { temperatureZone } : {}),
+      ...(substitutionAllowed !== undefined ? { substitutionAllowed } : {}),
+      ...(crewSize ? { crewSize } : {}),
+      ...(assemblyRequired ? { assemblyRequired } : {}),
+      ...(haulAway ? { haulAway } : {}),
     };
   });
 }

@@ -5,6 +5,8 @@ import { DutchieConnector } from './dutchie.js';
 import { FTDConnector } from './ftd.js';
 import { TelefloraConnector } from './teleflora.js';
 import { PioneerRxConnector } from './pioneerrx.js';
+import { SquareConnector } from './square.js';
+import { ToastConnector } from './toast.js';
 import type { PlatformInfo } from '@homer-io/shared';
 
 export { encrypt, decrypt } from './crypto.js';
@@ -14,6 +16,8 @@ export { DutchieConnector } from './dutchie.js';
 export { FTDConnector } from './ftd.js';
 export { TelefloraConnector } from './teleflora.js';
 export { PioneerRxConnector } from './pioneerrx.js';
+export { SquareConnector } from './square.js';
+export { ToastConnector } from './toast.js';
 export { MetrcConnector, getMetrcStates } from './metrc.js';
 export type { EcommerceConnector, ExternalOrder } from './connector.js';
 export type { SeedToSaleConnector, MetrcPackage, MetrcTransferInput } from './metrc.js';
@@ -25,6 +29,8 @@ const connectors: Record<string, EcommerceConnector> = {
   ftd: new FTDConnector(),
   teleflora: new TelefloraConnector(),
   pioneerrx: new PioneerRxConnector(),
+  square: new SquareConnector(),
+  toast: new ToastConnector(),
 };
 
 export function getConnector(platform: string): EcommerceConnector {
@@ -94,6 +100,26 @@ export function getAvailablePlatforms(): PlatformInfo[] {
         { key: 'pharmacyId', label: 'Pharmacy ID', type: 'text', placeholder: 'Your PioneerRx pharmacy ID' },
       ],
       industryGate: 'pharmacy',
+    },
+    {
+      platform: 'square',
+      name: 'Square',
+      description: 'Import delivery orders from Square POS with menu items and delivery notes.',
+      requiredCredentials: [
+        { key: 'accessToken', label: 'Access Token', type: 'password', placeholder: 'Square access token' },
+        { key: 'locationId', label: 'Location ID', type: 'text', placeholder: 'Your Square location ID' },
+      ],
+      industryGate: 'restaurant',
+    },
+    {
+      platform: 'toast',
+      name: 'Toast',
+      description: 'Import delivery orders from Toast POS with menu items and delivery windows.',
+      requiredCredentials: [
+        { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'Toast partner API key' },
+        { key: 'restaurantGuid', label: 'Restaurant GUID', type: 'text', placeholder: 'Your Toast restaurant GUID' },
+      ],
+      industryGate: 'restaurant',
     },
   ];
 }

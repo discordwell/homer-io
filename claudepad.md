@@ -2,6 +2,14 @@
 
 ## Session Summaries
 
+### 2026-03-22T09:40 UTC — Restaurant + Grocery + Furniture Verticals
+- **Restaurant**: speed_priority feature, Square + Toast POS connectors (industryGate='restaurant'), RestaurantTab settings (delivery window, batch size), high-priority demo data
+- **Grocery**: substitution_management + temperature_zones features, substitutionAllowed/substitutionNotes/temperatureZone on orders, GroceryTab settings (substitution policy, temp monitoring), demo data with frozen/refrigerated/ambient zones
+- **Furniture**: crew_assignment + assembly_tracking + haul_away + wide_time_windows features, crewSize/assemblyRequired/haulAway on orders, FurnitureTab settings (crew size, assembly, haul-away, window size), demo data with 70% 2-person crews, 50% assembly, 30% haul-away
+- **9 POS connectors total**: Shopify, WooCommerce, Dutchie, FTD, Teleflora, PioneerRx, Square, Toast, METRC
+- Migration: 0009_add_remaining_verticals.sql
+- 14 new tests, 619 total passing
+
 ### 2026-03-22T05:15 UTC — Cross-Industry Feature Toggle System
 - **Feature decoupling**: 16 features (id_verification, manifests, cold_chain, gift_messages, etc.) now independent of industry
 - **Industry sets defaults**: selecting cannabis auto-enables 7 features, florist enables 4, pharmacy enables 7
