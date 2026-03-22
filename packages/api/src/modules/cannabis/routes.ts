@@ -10,9 +10,10 @@ import {
   createManifest, getManifest, listManifests, completeManifest, voidManifest, activateManifest,
   verifyAge, validateIdMatch,
   createDriverKit, getDriverKit, getKitByRoute, listDriverKits, markKitLoaded, startKitTransit, reconcileKit,
-  checkDeliveryLimits, collectCash,
+  checkDeliveryLimits, collectCash, checkDeliveryZone,
 } from './service.js';
 import { uploadPodFiles } from '../pod/service.js';
+import { DELIVERY_LEGAL_STATES, getCADeliveryJurisdictions } from '../../lib/cannabis-jurisdictions.js';
 
 const listManifestsQuery = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
@@ -205,5 +206,26 @@ export async function cannabisRoutes(app: FastifyInstance) {
     const result = await collectCash(request.user.tenantId, orderId, cashCollected, request.user.id);
     if (!result) return reply.notFound('Order not found');
     return result;
+  });
+
+  // ── Delivery Zones ──────────────────────────────────────────────────
+
+  app.post('/zone-check', { preHandler: [requireRole('dispatcher')] }, async (request) => {
+    const body = z.object({
+      lat: z.number().min(-90).max(90),
+      lng: z.number().min(-180).max(180),
+      zip: z.string().max(10).default(''),
+    }).parse(request.body);
+    return checkDeliveryZone(request.user.tenantId, body.lat, body.lng, body.zip);
+  });
+
+  // ── Jurisdiction Data (static, no auth needed beyond cannabis gate) ─
+
+  app.get('/jurisdictions/states', async () => {
+    return DELIVERY_LEGAL_STATES;
+  });
+
+  app.get('/jurisdictions/ca', async () => {
+    return getCADeliveryJurisdictions();
   });
 }

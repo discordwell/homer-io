@@ -71,6 +71,9 @@ export function CannabisTab() {
     minimumAge: '21',
     allowCashOnDelivery: true,
     manifestPrefix: 'MAN',
+    deliveryRadiusMiles: '',
+    allowedZipCodes: '',
+    jurisdiction: '',
   });
 
   useEffect(() => {
@@ -94,6 +97,9 @@ export function CannabisTab() {
           minimumAge: String(settings.minimumAge ?? 21),
           allowCashOnDelivery: settings.allowCashOnDelivery ?? true,
           manifestPrefix: settings.manifestPrefix || 'MAN',
+          deliveryRadiusMiles: settings.deliveryRadiusMiles ? String(settings.deliveryRadiusMiles) : '',
+          allowedZipCodes: (settings.allowedZipCodes ?? []).join(', '),
+          jurisdiction: settings.jurisdiction || '',
         });
       }
     } catch { /* first time — no settings yet */ }
@@ -122,6 +128,9 @@ export function CannabisTab() {
         minimumAge: Number(form.minimumAge),
         allowCashOnDelivery: form.allowCashOnDelivery,
         manifestPrefix: form.manifestPrefix,
+        deliveryRadiusMiles: form.deliveryRadiusMiles ? Number(form.deliveryRadiusMiles) : null,
+        allowedZipCodes: form.allowedZipCodes ? form.allowedZipCodes.split(/[,\n]+/).map(z => z.trim()).filter(Boolean) : [],
+        jurisdiction: form.jurisdiction,
       });
       toast('Cannabis settings saved', 'success');
     } catch (err) {
@@ -218,6 +227,45 @@ export function CannabisTab() {
             onChange={(e) => setForm({ ...form, manifestPrefix: e.target.value })}
             placeholder="MAN"
           />
+
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginTop: 8, marginBottom: 16 }}>
+            <span style={{ color: C.dim, fontSize: 13, display: 'block', marginBottom: 12 }}>
+              Delivery Zones
+            </span>
+          </div>
+
+          <FormField
+            label="Jurisdiction"
+            value={form.jurisdiction}
+            onChange={(e) => setForm({ ...form, jurisdiction: e.target.value })}
+            placeholder="e.g., San Francisco, Los Angeles County"
+          />
+
+          <FormField
+            label="Delivery Radius (miles)"
+            value={form.deliveryRadiusMiles}
+            onChange={(e) => setForm({ ...form, deliveryRadiusMiles: e.target.value })}
+            placeholder="e.g., 15 — leave blank for no limit"
+            type="number"
+          />
+
+          <label style={{ display: 'block', marginBottom: 16 }}>
+            <span style={{ color: C.dim, fontSize: 13, display: 'block', marginBottom: 6 }}>
+              Allowed Zip Codes
+            </span>
+            <textarea
+              value={form.allowedZipCodes}
+              onChange={(e) => setForm({ ...form, allowedZipCodes: e.target.value })}
+              placeholder="94102, 94103, 94104&#10;Comma or newline separated"
+              style={{
+                ...inputStyle, width: '100%', minHeight: 60, resize: 'vertical',
+                fontFamily: F.mono, fontSize: 13,
+              }}
+            />
+            <span style={{ fontSize: 11, color: C.muted, display: 'block', marginTop: 4 }}>
+              Orders outside the radius AND not in these zip codes will be rejected
+            </span>
+          </label>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
             <button type="submit" disabled={saving} style={{

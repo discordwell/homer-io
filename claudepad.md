@@ -2,6 +2,15 @@
 
 ## Session Summaries
 
+### 2026-03-22T02:20 UTC — Cannabis Delivery Vertical Phase 3
+- **Jurisdiction data**: 27 delivery-legal states (14 rec + 13 medical), 58 CA counties + 55 cities from DCC
+- **Delivery zones**: radius (miles) + zip code list validation on order creation, zone-check endpoint
+- **Dutchie connector**: EcommerceConnector implementation mapping cannabis products with tracking tags, THC/CBD, strain, medical/rec, cash-on-delivery
+- **METRC connector**: SeedToSaleConnector with state-specific API bases (16 states), credential validation, package listing, transfer creation
+- **CannabisTab extended**: jurisdiction dropdown, radius slider, zip code textarea
+- Integration index updated: Dutchie registered with industryGate='cannabis'
+- 15 new tests, 569 total passing
+
 ### 2026-03-22T02:05 UTC — Cannabis Delivery Vertical Phase 2
 - **Driver Kits**: New table + CRUD — track what product is loaded in the vehicle per route
 - **Kit lifecycle**: loading → loaded → in_transit → reconciling → reconciled, with state guards

@@ -1,6 +1,6 @@
 import { eq, sql, desc, and } from 'drizzle-orm';
 import type { CannabisSettings, UpdateCannabisSettingsInput, CreateManifestInput, CreateDriverKitInput, ReconcileKitInput } from '@homer-io/shared';
-import { cannabisSettingsSchema } from '@homer-io/shared';
+import { cannabisSettingsSchema, haversineDistance } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { tenants } from '../../lib/db/schema/tenants.js';
 import { deliveryManifests } from '../../lib/db/schema/delivery-manifests.js';
@@ -616,5 +616,89 @@ export async function collectCash(tenantId: string, orderId: string, cashCollect
     expected: Number(updated.cashAmount) || 0,
     collected: cashCollected,
     mismatch: !!mismatch,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Delivery zone validation
+// ---------------------------------------------------------------------------
+
+export interface ZoneCheckResult {
+  allowed: boolean;
+  reason?: string;
+  radiusMiles?: number | null;
+  distanceMiles?: number | null;
+  matchedZipCode?: boolean;
+}
+
+/**
+ * Check if a delivery address is within the tenant's allowed delivery zone.
+ * Uses radius from depot AND/OR zip code list. Either passing = allowed.
+ */
+export async function checkDeliveryZone(
+  tenantId: string,
+  deliveryLat: number,
+  deliveryLng: number,
+  deliveryZip: string,
+): Promise<ZoneCheckResult> {
+  const settings = await getCannabisSettings(tenantId);
+  if (!settings) return { allowed: true, reason: 'No cannabis settings configured' };
+
+  const radiusMiles = settings.deliveryRadiusMiles;
+  const allowedZips = settings.allowedZipCodes ?? [];
+
+  // If neither radius nor zip codes configured, allow everything
+  if (!radiusMiles && allowedZips.length === 0) {
+    return { allowed: true, reason: 'No delivery zones configured' };
+  }
+
+  // Get depot coordinates from the tenant's first route or settings
+  // For now, use a simple approach: check against any active route's depot
+  const [depotRoute] = await db.select({
+    depotLat: routes.depotLat,
+    depotLng: routes.depotLng,
+  }).from(routes)
+    .where(eq(routes.tenantId, tenantId))
+    .orderBy(desc(routes.createdAt))
+    .limit(1);
+
+  // Check zip code
+  const zipOk = allowedZips.length > 0 && !!deliveryZip && allowedZips.includes(deliveryZip.trim());
+
+  // Check radius
+  let radiusOk = false;
+  let distanceMiles: number | undefined;
+  if (radiusMiles && depotRoute?.depotLat && depotRoute?.depotLng) {
+    const depotLat = Number(depotRoute.depotLat);
+    const depotLng = Number(depotRoute.depotLng);
+    const distanceKm = haversineDistance(depotLat, depotLng, deliveryLat, deliveryLng);
+    distanceMiles = distanceKm * 0.621371;
+    radiusOk = distanceMiles <= radiusMiles;
+  }
+
+  const allowed = zipOk || radiusOk;
+
+  if (!allowed) {
+    const reasons: string[] = [];
+    if (radiusMiles && distanceMiles !== undefined) {
+      reasons.push(`${distanceMiles.toFixed(1)} miles from depot (max ${radiusMiles})`);
+    }
+    if (allowedZips.length > 0) {
+      reasons.push(`zip ${deliveryZip} not in allowed list`);
+    }
+    return {
+      allowed: false,
+      reason: `Outside delivery zone: ${reasons.join(', ')}`,
+      radiusMiles,
+      distanceMiles,
+      matchedZipCode: false,
+    };
+  }
+
+  return {
+    allowed: true,
+    radiusMiles,
+    distanceMiles,
+    matchedZipCode: zipOk,
   };
 }

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const integrationPlatformEnum = z.enum([
-  'shopify', 'woocommerce',
+  'shopify', 'woocommerce', 'dutchie',
   'tookan', 'onfleet', 'optimoroute', 'speedyroute', 'getswift', 'circuit',
 ]);
 export type IntegrationPlatform = z.infer<typeof integrationPlatformEnum>;
@@ -55,5 +55,6 @@ export const platformInfoSchema = z.object({
     type: z.enum(['text', 'password']),
     placeholder: z.string().optional(),
   })),
+  industryGate: z.string().optional(),
 });
 export type PlatformInfo = z.infer<typeof platformInfoSchema>;

@@ -7,6 +7,7 @@ import { orders, orderStatusEnum } from '../../lib/db/schema/orders.js';
 import { routes } from '../../lib/db/schema/routes.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
+import { checkDeliveryZone } from '../cannabis/service.js';
 
 export async function createOrder(tenantId: string, input: CreateOrderInput) {
   // Cannabis industry: auto-enforce compliance defaults
@@ -22,6 +23,17 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
     if (cannabis?.requireSignature !== false) requiresSignature = true;
     if (cannabis?.requirePhoto !== false) requiresPhoto = true;
     if (!serviceDurationMinutes) serviceDurationMinutes = 5;
+
+    // Delivery zone validation
+    const lat = input.deliveryAddress.coords?.lat;
+    const lng = input.deliveryAddress.coords?.lng;
+    const zip = input.deliveryAddress.zip || '';
+    if (lat && lng) {
+      const zoneCheck = await checkDeliveryZone(tenantId, lat, lng, zip);
+      if (!zoneCheck.allowed) {
+        throw Object.assign(new Error(zoneCheck.reason || 'Delivery address is outside allowed zone'), { statusCode: 422 });
+      }
+    }
   }
 
   const [order] = await db
