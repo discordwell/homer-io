@@ -2,7 +2,25 @@
 
 ## Overview
 
-HOMER.io is an AI-powered last-mile delivery logistics platform targeting SMB courier companies (5–50 drivers). It provides route optimization, real-time fleet tracking, order management, and an AI copilot — all with growth-friendly per-order pricing.
+HOMER.io is an AI-powered last-mile delivery logistics platform serving 8 industry verticals (cannabis, florist, pharmacy, restaurant, grocery, furniture, courier, and more). It provides route optimization, real-time fleet tracking, order management, an AI copilot, and industry-specific compliance features — all with growth-friendly per-order pricing.
+
+## Industry Vertical System
+
+HOMER supports 8 industries with 23 cross-industry features that can be mixed and matched:
+
+| Industry | Default Features | POS Connectors |
+|----------|-----------------|----------------|
+| Cannabis | ID verification, manifests, delivery limits, cash-on-delivery, delivery zones, driver kits | Dutchie, METRC |
+| Florist | Gift messages, sender notifications, delivery photo, temp drivers | FTD, Teleflora |
+| Pharmacy | Controlled substances, cold chain, DOB verification, HIPAA display, copay, prescriber info | PioneerRx |
+| Restaurant | Speed priority, delivery photo | Square, Toast |
+| Grocery | Cold chain, substitution management, temperature zones, delivery photo | Shopify, WooCommerce |
+| Furniture | Crew assignment, assembly tracking, haul-away, wide time windows, delivery photo | Shopify, WooCommerce |
+| Courier | Delivery photo | Shopify, WooCommerce |
+
+**Feature toggle system:** Industry sets defaults, but any tenant can enable any feature. A medical cannabis pharmacy can enable both cannabis compliance and pharmacy HIPAA features. Features are stored in `tenant.settings.enabledFeatures` and checked via `hasFeature()`.
+
+**Integration gating:** POS connectors show in the UI when the matching industry is selected OR when relevant cross-industry features are enabled.
 
 ## System Architecture
 
