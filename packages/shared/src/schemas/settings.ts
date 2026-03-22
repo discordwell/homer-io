@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { industrySchema } from './onboarding.js';
 import { notificationPrefsSchema } from './notifications.js';
 
 export const brandingSchema = z.object({
@@ -16,5 +17,7 @@ export const orgSettingsSchema = z.object({
 });
 export type OrgSettings = z.infer<typeof orgSettingsSchema>;
 
-export const updateOrgSettingsSchema = orgSettingsSchema.partial();
+export const updateOrgSettingsSchema = orgSettingsSchema.partial().extend({
+  industry: industrySchema.optional(),
+});
 export type UpdateOrgSettingsInput = z.infer<typeof updateOrgSettingsSchema>;

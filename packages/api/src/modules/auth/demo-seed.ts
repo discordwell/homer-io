@@ -1,10 +1,13 @@
 import { eq } from 'drizzle-orm';
+import type { Industry } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
+import { tenants } from '../../lib/db/schema/tenants.js';
 import { vehicles } from '../../lib/db/schema/vehicles.js';
 import { drivers } from '../../lib/db/schema/drivers.js';
 import { orders } from '../../lib/db/schema/orders.js';
 import { routes } from '../../lib/db/schema/routes.js';
 import { generateLocalAddresses, getNearestCity, type GeneratedAddress } from '../../lib/geocoding.js';
+import { generateIndustryOrders, pickIndustryItem } from './industry-data.js';
 
 // ---------------------------------------------------------------------------
 // Bay Area locations (24 total, all within lat 37.2–38.0, lng -122.6 to -121.7)
@@ -72,31 +75,36 @@ export function generateDemoDriverNames(): string[] {
 // Demo order generation
 // ---------------------------------------------------------------------------
 
-const RECIPIENT_FIRST = [
+export const RECIPIENT_FIRST = [
   'Emma', 'Liam', 'Olivia', 'Noah', 'Ava', 'Ethan', 'Sophia', 'Mason',
   'Isabella', 'James', 'Mia', 'Benjamin', 'Charlotte', 'Lucas', 'Amelia',
   'Henry', 'Harper', 'Alexander', 'Evelyn', 'Daniel',
 ];
 
-const RECIPIENT_LAST = [
+export const RECIPIENT_LAST = [
   'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller',
   'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez',
   'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
 ];
 
-export function generateDemoOrders(locationOverrides?: GeneratedAddress[]) {
+export function generateDemoOrders(locationOverrides?: GeneratedAddress[], industry?: Industry) {
   const count = 15 + Math.floor(Math.random() * 6); // 15–20
-  const now = new Date();
-  const locs = locationOverrides
+  const locs: Array<{ name: string; lat: number; lng: number; city?: string; state?: string; zip?: string }> = locationOverrides
     ? [...locationOverrides].sort(() => Math.random() - 0.5)
     : [...BAY_AREA_LOCATIONS].sort(() => Math.random() - 0.5);
 
+  // When industry is provided, use the richer industry-aware generator
+  if (industry) {
+    return generateIndustryOrders(industry, count, locs);
+  }
+
+  // Fallback: generic orders (backward compat)
+  const now = new Date();
   return Array.from({ length: count }, (_, i) => {
     const loc = locs[i % locs.length];
     const first = RECIPIENT_FIRST[Math.floor(Math.random() * RECIPIENT_FIRST.length)];
     const last = RECIPIENT_LAST[Math.floor(Math.random() * RECIPIENT_LAST.length)];
 
-    // Stagger createdAt across the morning (06:00–10:00 UTC) so toISOString stays on the same date
     const createdAt = new Date(Date.UTC(
       now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
       6 + Math.floor(i / 5), (i * 7) % 60, 0, 0,
@@ -123,6 +131,7 @@ export function generateDemoOrders(locationOverrides?: GeneratedAddress[]) {
 export interface SeedDemoOptions {
   lat?: number;
   lng?: number;
+  industry?: Industry;
 }
 
 export async function seedDemoOrg(tenantId: string, options?: SeedDemoOptions): Promise<void> {
@@ -175,21 +184,36 @@ export async function seedDemoOrg(tenantId: string, options?: SeedDemoOptions): 
     )
     .returning({ id: drivers.id });
 
+  // Set industry on tenant if provided
+  const industry = options?.industry ?? 'courier';
+  await db.update(tenants).set({ industry, updatedAt: new Date() }).where(eq(tenants.id, tenantId));
+
   // --- Orders ---
   const generatedAddresses = options?.lat != null ? locationList as GeneratedAddress[] : undefined;
-  const orderData = generateDemoOrders(generatedAddresses);
+  const orderData = generateDemoOrders(generatedAddresses, industry);
   const insertedOrders = await db
     .insert(orders)
     .values(
-      orderData.map(o => ({
-        tenantId,
-        recipientName: o.recipientName,
-        deliveryAddress: o.deliveryAddress,
-        deliveryLat: o.deliveryLat,
-        deliveryLng: o.deliveryLng,
-        status: 'received' as const,
-        createdAt: o.createdAt,
-      })),
+      orderData.map(o => {
+        const base: Record<string, unknown> = {
+          tenantId,
+          recipientName: o.recipientName,
+          deliveryAddress: o.deliveryAddress,
+          deliveryLat: o.deliveryLat,
+          deliveryLng: o.deliveryLng,
+          status: 'received' as const,
+          createdAt: o.createdAt,
+        };
+        if ('notes' in o && o.notes) base.notes = o.notes;
+        if ('requiresSignature' in o) base.requiresSignature = o.requiresSignature;
+        if ('requiresPhoto' in o) base.requiresPhoto = o.requiresPhoto;
+        if ('serviceDurationMinutes' in o) base.serviceDurationMinutes = o.serviceDurationMinutes;
+        if ('priority' in o) base.priority = o.priority;
+        if ('packageCount' in o) base.packageCount = o.packageCount;
+        if ('weight' in o && o.weight) base.weight = o.weight;
+        if ('customFields' in o) base.customFields = o.customFields;
+        return base;
+      }) as Array<typeof orders.$inferInsert>,
     )
     .returning({ id: orders.id });
 
@@ -299,7 +323,7 @@ export async function seedDemoOrg(tenantId: string, options?: SeedDemoOptions): 
   }
 
   // --- Historical analytics data (90 days of realistic orders + routes) ---
-  await seedDemoAnalytics(tenantId, insertedDrivers.map(d => d.id), insertedVehicles.map(v => v.id), locationList, cityContext);
+  await seedDemoAnalytics(tenantId, insertedDrivers.map(d => d.id), insertedVehicles.map(v => v.id), locationList, cityContext, industry);
 }
 
 // ---------------------------------------------------------------------------
@@ -345,6 +369,7 @@ export async function seedDemoAnalytics(
   vehicleIds: string[],
   locationPool?: Array<{ name: string; lat: number; lng: number; city?: string; state?: string; zip?: string }>,
   cityCtx?: { city: string; state: string },
+  industry?: Industry,
 ): Promise<void> {
   const locations = locationPool || BAY_AREA_LOCATIONS;
   const depotCity = cityCtx?.city || 'San Francisco';
@@ -363,6 +388,7 @@ export async function seedDemoAnalytics(
     failureCategory: FailureCategory | null;
     timeWindowStart: Date | null;
     timeWindowEnd: Date | null;
+    notes: string | null;
   }> = [];
 
   const allRoutes: Array<{
@@ -445,6 +471,9 @@ export async function seedDemoAnalytics(
         const windowStart = hasTimeWindow ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, 0) : null;
         const windowEnd = hasTimeWindow ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour + 2, 0) : null;
 
+        // Industry-flavored item description as notes for analytics orders
+        const itemNote = industry ? pickIndustryItem(industry) : null;
+
         allOrders.push({
           tenantId,
           recipientName: `${first} ${last}`,
@@ -457,6 +486,7 @@ export async function seedDemoAnalytics(
           failureCategory: succeeded ? null : pickFailureCategory(),
           timeWindowStart: windowStart,
           timeWindowEnd: windowEnd,
+          notes: itemNote,
         });
 
         if (succeeded) routeDelivered++;
@@ -503,7 +533,7 @@ export async function seedDemoAnalytics(
       insertedRouteIds.length - 1,
     );
     orderIdx++;
-    return { ...o, routeId: insertedRouteIds[routeIdx] ?? null };
+    return { ...o, routeId: insertedRouteIds[routeIdx] ?? null, ...(o.notes ? { notes: o.notes } : {}) };
   });
 
   // Batch insert orders

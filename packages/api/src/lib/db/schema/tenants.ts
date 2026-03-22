@@ -16,6 +16,7 @@ export const tenants = pgTable('tenants', {
   orgDomain: varchar('org_domain', { length: 255 }),
   autoJoinEnabled: boolean('auto_join_enabled').default(true).notNull(),
   isDemo: boolean('is_demo').default(false).notNull(),
+  industry: varchar('industry', { length: 50 }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index('idx_tenants_org_domain').on(table.orgDomain),

@@ -183,7 +183,7 @@ export async function googleOrgChoice(app: FastifyInstance, input: OrgChoiceInpu
     .catch(err => console.error('[google-auth] Stripe customer creation failed:', err));
 
   if (input.choice === 'demo') {
-    await seedDemoOrg(result.tenant.id);
+    await seedDemoOrg(result.tenant.id, { industry: 'courier' });
   }
 
   const auth = await generateAuthResponse(app, result.user);

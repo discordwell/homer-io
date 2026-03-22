@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../../stores/settings.js';
+import { useOnboardingStore } from '../../stores/onboarding.js';
 import { FormField, inputStyle } from '../FormField.js';
 import { SelectField } from '../SelectField.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
@@ -27,13 +28,27 @@ const unitOptions = [
   { value: 'metric', label: 'Metric (km, kg)' },
 ];
 
+const industryOptions = [
+  { value: '', label: 'Select industry...' },
+  { value: 'courier', label: 'Courier & Parcels' },
+  { value: 'restaurant', label: 'Restaurant' },
+  { value: 'florist', label: 'Florist' },
+  { value: 'pharmacy', label: 'Pharmacy' },
+  { value: 'cannabis', label: 'Cannabis' },
+  { value: 'grocery', label: 'Grocery' },
+  { value: 'furniture', label: 'Furniture' },
+  { value: 'other', label: 'Other' },
+];
+
 export function OrganizationTab() {
   const { orgSettings, loading, fetchSettings, updateSettings } = useSettingsStore();
+  const { loadSampleData, sampleDataLoading } = useOnboardingStore();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     timezone: 'America/Los_Angeles',
     units: 'imperial',
+    industry: '',
     companyName: '',
     primaryColor: '#F59E0B',
   });
@@ -49,6 +64,7 @@ export function OrganizationTab() {
       setForm({
         timezone: orgSettings.timezone,
         units: orgSettings.units,
+        industry: orgSettings.industry || '',
         companyName: branding.companyName || '',
         primaryColor: branding.primaryColor || '#F59E0B',
       });
@@ -62,6 +78,7 @@ export function OrganizationTab() {
       await updateSettings({
         timezone: form.timezone,
         units: form.units as 'imperial' | 'metric',
+        ...(form.industry ? { industry: form.industry as 'courier' | 'restaurant' | 'florist' | 'pharmacy' | 'cannabis' | 'grocery' | 'furniture' | 'other' } : {}),
         branding: {
           companyName: form.companyName || undefined,
           primaryColor: form.primaryColor || undefined,
@@ -74,6 +91,8 @@ export function OrganizationTab() {
       setSaving(false);
     }
   }
+
+  const industryDirty = form.industry !== (orgSettings?.industry || '');
 
   if (loading && !orgSettings) return <LoadingSpinner />;
 
@@ -100,6 +119,47 @@ export function OrganizationTab() {
           options={unitOptions}
           required
         />
+
+        <SelectField
+          label="Industry"
+          value={form.industry}
+          onChange={(e) => setForm({ ...form, industry: e.target.value })}
+          options={industryOptions}
+        />
+
+        <div style={{
+          padding: '12px 14px', borderRadius: 8, background: C.bg3,
+          marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <span style={{ fontSize: 13, color: C.dim, display: 'block' }}>Sample Data</span>
+            <span style={{ fontSize: 12, color: C.muted }}>
+              Load ~20 sample orders for {form.industry ? industryOptions.find(o => o.value === form.industry)?.label || form.industry : 'your industry'}
+            </span>
+          </div>
+          <button
+            type="button"
+            disabled={sampleDataLoading || !form.industry || industryDirty}
+            onClick={async () => {
+              if (!confirm('This will add ~20 sample orders to your account. Continue?')) return;
+              try {
+                const result = await loadSampleData();
+                toast(`${result.ordersCreated} sample orders created`, 'success');
+              } catch (err) {
+                toast(err instanceof Error ? err.message : 'Failed to load sample data', 'error');
+              }
+            }}
+            style={{
+              padding: '6px 14px', borderRadius: 6,
+              background: 'transparent', border: `1px solid ${C.muted}`,
+              color: C.dim, cursor: sampleDataLoading || !form.industry || industryDirty ? 'not-allowed' : 'pointer',
+              fontFamily: F.body, fontSize: 12, fontWeight: 500,
+              opacity: sampleDataLoading || !form.industry || industryDirty ? 0.5 : 1,
+            }}
+          >
+            {sampleDataLoading ? 'Loading...' : industryDirty ? 'Save settings first' : 'Load Sample Data'}
+          </button>
+        </div>
 
         <div style={{
           borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 8, marginBottom: 16,

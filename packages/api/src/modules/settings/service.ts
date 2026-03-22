@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { UpdateOrgSettingsInput } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
+import { tenants } from '../../lib/db/schema/tenants.js';
 import { orgSettings } from '../../lib/db/schema/settings.js';
 import { logActivity } from '../../lib/activity.js';
 
@@ -11,17 +12,20 @@ export async function getOrgSettings(tenantId: string) {
     .where(eq(orgSettings.tenantId, tenantId))
     .limit(1);
 
-  if (existing) {
-    return existing;
-  }
+  // Fetch industry from tenants table
+  const [tenant] = await db
+    .select({ industry: tenants.industry })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
 
-  // Create default settings
-  const [created] = await db
+  const settings = existing ?? (await db
     .insert(orgSettings)
     .values({ tenantId })
-    .returning();
+    .returning()
+  )[0];
 
-  return created;
+  return { ...settings, industry: tenant?.industry ?? null };
 }
 
 export async function updateOrgSettings(
@@ -29,6 +33,14 @@ export async function updateOrgSettings(
   input: UpdateOrgSettingsInput,
   userId?: string,
 ) {
+  // Extract industry — it lives on tenants table, not org_settings
+  const { industry, ...settingsInput } = input;
+
+  if (industry) {
+    await db.update(tenants).set({ industry, updatedAt: new Date() })
+      .where(eq(tenants.id, tenantId));
+  }
+
   // Upsert: try update first, insert if not exists
   const [existing] = await db
     .select({ id: orgSettings.id })
@@ -42,7 +54,7 @@ export async function updateOrgSettings(
     const [updated] = await db
       .update(orgSettings)
       .set({
-        ...input,
+        ...settingsInput,
         updatedAt: new Date(),
       })
       .where(eq(orgSettings.tenantId, tenantId))
@@ -53,7 +65,7 @@ export async function updateOrgSettings(
       .insert(orgSettings)
       .values({
         tenantId,
-        ...input,
+        ...settingsInput,
       })
       .returning();
     result = created;
@@ -68,5 +80,12 @@ export async function updateOrgSettings(
     metadata: input as Record<string, unknown>,
   });
 
-  return result;
+  // Re-fetch industry to include in response
+  const [tenant] = await db
+    .select({ industry: tenants.industry })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+
+  return { ...result, industry: tenant?.industry ?? null };
 }

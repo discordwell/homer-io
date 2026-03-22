@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+export const INDUSTRIES = ['courier', 'restaurant', 'florist', 'pharmacy', 'cannabis', 'grocery', 'furniture', 'other'] as const;
+export const industrySchema = z.enum(INDUSTRIES);
+export type Industry = z.infer<typeof industrySchema>;
+
+export const setIndustrySchema = z.object({ industry: industrySchema });
+export type SetIndustryInput = z.infer<typeof setIndustrySchema>;
+
 export const onboardingStepSchema = z.object({
   key: z.string(),
   label: z.string(),

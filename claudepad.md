@@ -2,6 +2,15 @@
 
 ## Session Summaries
 
+### 2026-03-21T19:00 UTC — Industry Selection & Sample Data
+- Added industry field to tenant model (8 industries: courier, restaurant, florist, pharmacy, cannabis, grocery, furniture, other)
+- Created industry-specific order templates (industry-data.ts) with realistic items, notes, flags per vertical
+- Industry selection is now the first onboarding step (inline card grid picker)
+- Demo seed generates industry-flavored orders (today's + 90-day historical)
+- Settings page has industry selector + "Load sample data" button
+- Migration: 0003_add_tenant_industry.sql
+- 22 new tests, 492 total passing
+
 ### 2026-03-21T17:40 UTC — Demo Privilege Escalation Fix
 - **Security**: Blocked demo tenants from 37 sensitive endpoints across 10 route modules (api-keys, webhooks, team, integrations, gdpr, billing, customer-notifications, settings, migration, onboarding)
 - **Guard**: Created reusable `checkIsDemo()` (cached 60s) and `denyDemo` preHandler in `plugins/auth.ts`, extracted from `ai/routes.ts`

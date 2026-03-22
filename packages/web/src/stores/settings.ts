@@ -10,6 +10,7 @@ interface OrgSettings {
   units: string;
   branding: Record<string, unknown>;
   notificationPrefs: Record<string, unknown>;
+  industry: string | null;
   createdAt: string;
   updatedAt: string;
 }

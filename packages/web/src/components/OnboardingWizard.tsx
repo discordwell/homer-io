@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOnboardingStore } from '../stores/onboarding.js';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 const STEP_LINKS: Record<string, string> = {
   vehicle: '/dashboard/fleet/vehicles',
@@ -11,8 +11,50 @@ const STEP_LINKS: Record<string, string> = {
   notification: '/dashboard/settings',
 };
 
+const INDUSTRY_OPTIONS = [
+  { value: 'courier', label: 'Courier & Parcels', icon: '\u{1F4E6}', desc: 'Packages, documents, envelopes' },
+  { value: 'restaurant', label: 'Restaurant', icon: '\u{1F37D}\uFE0F', desc: 'Food delivery, catering' },
+  { value: 'florist', label: 'Florist', icon: '\u{1F490}', desc: 'Bouquets, arrangements, gifts' },
+  { value: 'pharmacy', label: 'Pharmacy', icon: '\u{1F48A}', desc: 'Prescriptions, medical supplies' },
+  { value: 'cannabis', label: 'Cannabis', icon: '\u{1F33F}', desc: 'Compliant cannabis delivery' },
+  { value: 'grocery', label: 'Grocery', icon: '\u{1F6D2}', desc: 'Produce, staples, frozen goods' },
+  { value: 'furniture', label: 'Furniture', icon: '\u{1F6CB}\uFE0F', desc: 'Large items, white-glove service' },
+  { value: 'other', label: 'Other', icon: '\u{1F4CB}', desc: 'General delivery operations' },
+] as const;
+
+function IndustryPicker({ onSelect, loading: isLoading }: { onSelect: (v: string) => void; loading: boolean }) {
+  const [hovered, setHovered] = useState<string | null>(null);
+
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+      gap: 8, opacity: isLoading ? 0.6 : 1, pointerEvents: isLoading ? 'none' : 'auto',
+    }}>
+      {INDUSTRY_OPTIONS.map(opt => (
+        <button
+          key={opt.value}
+          onClick={() => onSelect(opt.value)}
+          onMouseEnter={() => setHovered(opt.value)}
+          onMouseLeave={() => setHovered(null)}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            gap: 4, padding: '14px 8px', borderRadius: 10,
+            background: hovered === opt.value ? alpha(C.accent, 0.1) : C.bg2,
+            border: `1px solid ${hovered === opt.value ? C.accent : C.muted}`,
+            cursor: 'pointer', transition: 'all 0.15s ease',
+          }}
+        >
+          <span style={{ fontSize: 24, lineHeight: 1 }}>{opt.icon}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, fontFamily: F.body, color: C.text }}>{opt.label}</span>
+          <span style={{ fontSize: 11, color: C.dim, fontFamily: F.body, textAlign: 'center', lineHeight: 1.3 }}>{opt.desc}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function OnboardingWizard() {
-  const { status, loading, fetchStatus, completeOnboarding, skipOnboarding, skipStep } = useOnboardingStore();
+  const { status, loading, industryLoading, fetchStatus, completeOnboarding, skipOnboarding, skipStep, setIndustry } = useOnboardingStore();
   const navigate = useNavigate();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -65,7 +107,7 @@ export function OnboardingWizard() {
         {status.steps.map((step) => (
           <div key={step.key}>
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 12,
+              display: 'flex', alignItems: step.key === 'industry' && !step.completed ? 'flex-start' : 'center', gap: 12,
               padding: '10px 14px', borderRadius: step.skipReason && !step.completed ? '8px 8px 0 0' : 8,
               background: C.bg3,
             }}>
@@ -75,22 +117,31 @@ export function OnboardingWizard() {
                 background: step.completed ? (step.skipped ? C.yellow : C.green) : C.muted,
                 color: step.completed ? '#000' : C.dim,
                 fontSize: 12, fontWeight: 600, flexShrink: 0,
+                marginTop: step.key === 'industry' && !step.completed ? 2 : 0,
               }}>
                 {step.completed ? (step.skipped ? '\u2192' : '\u2713') : '\u00B7'}
               </span>
-              <span style={{
-                flex: 1, fontSize: 14,
-                color: step.completed ? C.dim : C.text,
-                textDecoration: step.completed && !step.skipped ? 'line-through' : 'none',
-              }}>
-                {step.label}
-                {step.skipped && (
-                  <span style={{ fontSize: 11, color: C.dim, marginLeft: 8, fontStyle: 'italic' }}>
-                    (skipped)
-                  </span>
+              <div style={{ flex: 1 }}>
+                <span style={{
+                  fontSize: 14,
+                  color: step.completed ? C.dim : C.text,
+                  textDecoration: step.completed && !step.skipped ? 'line-through' : 'none',
+                }}>
+                  {step.label}
+                  {step.skipped && (
+                    <span style={{ fontSize: 11, color: C.dim, marginLeft: 8, fontStyle: 'italic' }}>
+                      (skipped)
+                    </span>
+                  )}
+                </span>
+                {/* Inline industry picker */}
+                {step.key === 'industry' && !step.completed && (
+                  <div style={{ marginTop: 12 }}>
+                    <IndustryPicker onSelect={setIndustry} loading={industryLoading} />
+                  </div>
                 )}
-              </span>
-              {!step.completed && (
+              </div>
+              {!step.completed && step.key !== 'industry' && (
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   {step.skippable && (
                     <button
