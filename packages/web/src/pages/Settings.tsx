@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { OrganizationTab } from '../components/settings/OrganizationTab.js';
 import { TeamTab } from '../components/settings/TeamTab.js';
 import { ApiKeysTab } from '../components/settings/ApiKeysTab.js';
@@ -9,9 +9,11 @@ import { BillingTab } from '../components/settings/BillingTab.js';
 import { IntegrationsTab } from '../components/settings/IntegrationsTab.js';
 import { PrivacyTab } from '../components/settings/PrivacyTab.js';
 import { HealthDashboard } from '../components/settings/HealthDashboard.js';
+import { CannabisTab } from '../components/settings/CannabisTab.js';
+import { useSettingsStore } from '../stores/settings.js';
 import { C, F } from '../theme.js';
 
-const tabs = [
+const BASE_TABS = [
   { id: 'organization', label: 'Organization' },
   { id: 'team', label: 'Team' },
   { id: 'billing', label: 'Billing' },
@@ -23,11 +25,22 @@ const tabs = [
   { id: 'health', label: 'Health' },
 ] as const;
 
-type TabId = (typeof tabs)[number]['id'];
+type TabId = (typeof BASE_TABS)[number]['id'] | 'cannabis';
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('organization');
   const [showLog, setShowLog] = useState(false);
+  const { orgSettings } = useSettingsStore();
+
+  const tabs = useMemo(() => {
+    const all: Array<{ id: TabId; label: string }> = [...BASE_TABS];
+    if (orgSettings?.industry === 'cannabis') {
+      // Insert cannabis tab after integrations
+      const idx = all.findIndex(t => t.id === 'integrations');
+      all.splice(idx + 1, 0, { id: 'cannabis', label: 'Cannabis Compliance' });
+    }
+    return all;
+  }, [orgSettings?.industry]);
 
   // When viewing the notification log, render it full-screen in the tab area
   if (activeTab === 'notifications' && showLog) {
@@ -87,6 +100,7 @@ export function SettingsPage() {
       {activeTab === 'webhooks' && <WebhooksTab />}
       {activeTab === 'privacy' && <PrivacyTab />}
       {activeTab === 'health' && <HealthDashboard />}
+      {activeTab === 'cannabis' && <CannabisTab />}
     </div>
   );
 }

@@ -2,6 +2,18 @@
 
 ## Session Summaries
 
+### 2026-03-22T01:45 UTC — Cannabis Delivery Vertical Phase 1
+- **ID Verification**: New IDVerification.tsx mobile component (camera capture, DOB picker, age check, name match)
+- **POD Flow Extended**: PODFlow.tsx now conditionally adds id_verification step for cannabis tenants
+- **Delivery Manifests**: New table, service (CRUD + PDF generation), routes (/api/cannabis/*)
+- **Manifest PDF**: Legal-grade PDFKit document with products, tracking tags, recipients, signature lines
+- **Cannabis Settings**: CannabisTab.tsx in web settings (license, state, limits, toggles, manifest prefix)
+- **Industry gating**: requireIndustry('cannabis') middleware gates all cannabis routes
+- **Order hook**: Cannabis tenants auto-get requiresSignature=true, requiresPhoto=true on every order
+- **Auth response**: industry field now included in user response for client-side feature gating
+- **Migration**: 0004_add_cannabis_support.sql (POD ID columns + delivery_manifests table)
+- **21 new tests**, 542 total passing, TypeScript clean
+
 ### 2026-03-21T23:50 UTC — Email-Gated Demo Sessions
 - **Abuse prevention**: Demo sessions now require email address (was zero-auth `{}`)
 - **Backend**: email field in schema with `.transform(toLowerCase)`, disposable domain blocklist (~80 domains), email-based dedup (Redis 7d TTL + DB slow path), replaces IP-based 1hr dedup

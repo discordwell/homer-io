@@ -177,6 +177,7 @@ export async function getMe(userId: string): Promise<UserResponse> {
       createdAt: users.createdAt,
       avatarUrl: users.avatarUrl,
       isDemo: tenants.isDemo,
+      industry: tenants.industry,
     })
     .from(users)
     .innerJoin(tenants, eq(users.tenantId, tenants.id))
@@ -192,6 +193,7 @@ export async function getMe(userId: string): Promise<UserResponse> {
     createdAt: user.createdAt.toISOString(),
     avatarUrl: user.avatarUrl || null,
     isDemo: user.isDemo,
+    industry: user.industry ?? null,
   };
 }
 
@@ -279,9 +281,9 @@ export async function generateAuthResponse(
     expiresAt,
   });
 
-  // Look up tenant isDemo flag
+  // Look up tenant flags
   const [tenant] = await db
-    .select({ isDemo: tenants.isDemo })
+    .select({ isDemo: tenants.isDemo, industry: tenants.industry })
     .from(tenants)
     .where(eq(tenants.id, user.tenantId))
     .limit(1);
@@ -298,6 +300,7 @@ export async function generateAuthResponse(
       createdAt: user.createdAt.toISOString(),
       avatarUrl: user.avatarUrl || null,
       isDemo: tenant?.isDemo ?? false,
+      industry: tenant?.industry ?? null,
     },
   };
 }

@@ -2,12 +2,28 @@ import { eq, and, sql, ilike, gte, lte, desc, asc, inArray } from 'drizzle-orm';
 import type { CreateOrderInput, UpdateOrderStatusInput, PaginationInput } from '@homer-io/shared';
 import { resolveCsvAliases } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
+import { tenants } from '../../lib/db/schema/tenants.js';
 import { orders, orderStatusEnum } from '../../lib/db/schema/orders.js';
 import { routes } from '../../lib/db/schema/routes.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
 
 export async function createOrder(tenantId: string, input: CreateOrderInput) {
+  // Cannabis industry: auto-enforce compliance defaults
+  let requiresSignature = input.requiresSignature;
+  let requiresPhoto = input.requiresPhoto;
+  let serviceDurationMinutes = input.serviceDurationMinutes;
+
+  const [tenant] = await db.select({ industry: tenants.industry, settings: tenants.settings })
+    .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+
+  if (tenant?.industry === 'cannabis') {
+    const cannabis = (tenant.settings as Record<string, unknown>)?.cannabis as Record<string, unknown> | undefined;
+    if (cannabis?.requireSignature !== false) requiresSignature = true;
+    if (cannabis?.requirePhoto !== false) requiresPhoto = true;
+    if (!serviceDurationMinutes) serviceDurationMinutes = 5;
+  }
+
   const [order] = await db
     .insert(orders)
     .values({
@@ -27,12 +43,12 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
       timeWindowStart: input.timeWindow?.start ? new Date(input.timeWindow.start) : undefined,
       timeWindowEnd: input.timeWindow?.end ? new Date(input.timeWindow.end) : undefined,
       notes: input.notes,
-      serviceDurationMinutes: input.serviceDurationMinutes,
+      serviceDurationMinutes,
       orderType: input.orderType,
       barcodes: input.barcodes,
       customFields: input.customFields,
-      requiresSignature: input.requiresSignature,
-      requiresPhoto: input.requiresPhoto,
+      requiresSignature,
+      requiresPhoto,
     })
     .returning();
   logActivity({ tenantId, action: 'order_created', entityType: 'order', entityId: order.id });

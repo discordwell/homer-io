@@ -7,6 +7,14 @@ export const createPodSchema = z.object({
   recipientNameSigned: z.string().max(255).optional(),
   locationLat: z.number().min(-90).max(90).optional(),
   locationLng: z.number().min(-180).max(180).optional(),
+  // ID verification (cannabis compliance)
+  idPhotoUrl: z.string().optional(),
+  idNumber: z.string().max(50).optional(),
+  idDob: z.string().date().optional(),
+  idExpirationDate: z.string().date().optional(),
+  idNameOnId: z.string().max(255).optional(),
+  idVerifiedAt: z.string().datetime().optional(),
+  ageVerified: z.boolean().optional(),
 });
 export type CreatePodInput = z.infer<typeof createPodSchema>;
 

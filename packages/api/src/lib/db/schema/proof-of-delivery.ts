@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, numeric, text, jsonb, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, numeric, text, jsonb, index, boolean, date } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { orders } from './orders.js';
 import { routes } from './routes.js';
@@ -16,6 +16,14 @@ export const proofOfDelivery = pgTable('proof_of_delivery', {
   recipientNameSigned: varchar('recipient_name_signed', { length: 255 }),
   locationLat: numeric('location_lat', { precision: 10, scale: 7 }),
   locationLng: numeric('location_lng', { precision: 10, scale: 7 }),
+  // ID verification (cannabis compliance)
+  idPhotoUrl: text('id_photo_url'),
+  idNumber: varchar('id_number', { length: 50 }),
+  idDob: date('id_dob'),
+  idExpirationDate: date('id_expiration_date'),
+  idNameOnId: varchar('id_name_on_id', { length: 255 }),
+  idVerifiedAt: timestamp('id_verified_at', { withTimezone: true }),
+  ageVerified: boolean('age_verified').default(false).notNull(),
   capturedAt: timestamp('captured_at', { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [

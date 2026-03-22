@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import { useDriverStore } from '@/stores/driver';
 import { PhotoCapture, type CapturedPhoto } from './PhotoCapture';
 import { SignaturePad } from './SignaturePad';
+import { IDVerification, type IDVerificationData } from './IDVerification';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { C, Size, Spacing, Radius, alpha, Base } from '@/theme';
 import { hapticSuccess } from '@/services/haptics';
@@ -15,18 +16,24 @@ interface PODFlowProps {
   recipientName: string;
   onComplete: () => void;
   onCancel: () => void;
+  // Cannabis compliance
+  requireIdVerification?: boolean;
+  minimumAge?: number;
 }
 
-type Step = 'photo' | 'signature' | 'notes' | 'confirm';
-const STEPS: Step[] = ['photo', 'signature', 'notes', 'confirm'];
+type Step = 'id_verification' | 'photo' | 'signature' | 'notes' | 'confirm';
+const BASE_STEPS: Step[] = ['photo', 'signature', 'notes', 'confirm'];
+const CANNABIS_STEPS: Step[] = ['id_verification', 'photo', 'signature', 'notes', 'confirm'];
 
-export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel }: PODFlowProps) {
-  const [step, setStep] = useState<Step>('photo');
+export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel, requireIdVerification, minimumAge = 21 }: PODFlowProps) {
+  const STEPS = requireIdVerification ? CANNABIS_STEPS : BASE_STEPS;
+  const [step, setStep] = useState<Step>(STEPS[0]);
   const [photos, setPhotos] = useState<CapturedPhoto[]>([]);
   const [signatureBase64, setSignatureBase64] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [idData, setIdData] = useState<IDVerificationData | null>(null);
 
   const { uploadPodFiles, createPod, completeStop } = useDriverStore();
 
@@ -82,6 +89,17 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
         // GPS not available
       }
 
+      // Upload ID photo if present
+      let idPhotoUrl: string | undefined;
+      if (idData?.idPhoto) {
+        const idUrls = await uploadPodFiles(orderId, [{
+          data: idData.idPhoto.base64,
+          filename: `id-${Date.now()}.jpg`,
+          contentType: 'image/jpeg',
+        }]);
+        idPhotoUrl = idUrls[0];
+      }
+
       // Create POD record
       await createPod(orderId, {
         signatureUrl,
@@ -90,6 +108,16 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
         recipientNameSigned: recipientName,
         locationLat,
         locationLng,
+        // ID verification fields (cannabis compliance)
+        ...(idData ? {
+          idPhotoUrl,
+          idNumber: idData.idNumber,
+          idDob: idData.idDob,
+          idExpirationDate: idData.idExpirationDate,
+          idNameOnId: idData.idNameOnId,
+          idVerifiedAt: new Date().toISOString(),
+          ageVerified: idData.ageVerified,
+        } : {}),
       });
 
       // Complete the stop
@@ -127,6 +155,7 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>
+          {step === 'id_verification' && 'Verify ID'}
           {step === 'photo' && 'Take Photos'}
           {step === 'signature' && 'Get Signature'}
           {step === 'notes' && 'Add Notes'}
@@ -139,6 +168,22 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
 
       {/* Step content */}
       <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+        {step === 'id_verification' && (
+          <View>
+            <Text style={styles.hint}>
+              Verify the customer's government-issued photo ID before completing delivery
+            </Text>
+            <IDVerification
+              recipientName={recipientName}
+              minimumAge={minimumAge}
+              onComplete={(data) => {
+                setIdData(data);
+                goNext();
+              }}
+            />
+          </View>
+        )}
+
         {step === 'photo' && (
           <View>
             <Text style={styles.hint}>
@@ -189,6 +234,15 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
               <Text style={styles.reviewValue}>{recipientName}</Text>
             </View>
 
+            {idData && (
+              <View style={styles.reviewCard}>
+                <Text style={styles.reviewLabel}>ID Verification</Text>
+                <Text style={styles.reviewValue}>
+                  {idData.idNameOnId} — Age {idData.age} ({idData.ageVerified ? 'Verified' : 'FAILED'})
+                </Text>
+              </View>
+            )}
+
             <View style={styles.reviewCard}>
               <Text style={styles.reviewLabel}>Photos</Text>
               <Text style={styles.reviewValue}>
@@ -221,7 +275,7 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
 
       {/* Navigation buttons */}
       <View style={styles.footer}>
-        {stepIndex > 0 && step !== 'signature' && (
+        {stepIndex > 0 && step !== 'signature' && step !== 'id_verification' && (
           <Pressable
             onPress={goBack}
             style={({ pressed }) => [styles.btn, styles.backBtn, pressed && styles.pressed]}
@@ -237,7 +291,7 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
           >
             <Text style={styles.confirmBtnText}>Confirm Delivery</Text>
           </Pressable>
-        ) : step !== 'signature' ? (
+        ) : step !== 'signature' && step !== 'id_verification' ? (
           <Pressable
             onPress={goNext}
             style={({ pressed }) => [styles.btn, styles.nextBtn, pressed && styles.pressed]}

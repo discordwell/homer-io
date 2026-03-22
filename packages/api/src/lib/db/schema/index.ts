@@ -30,3 +30,4 @@ export * from './migration-jobs.js';
 export * from './integration-drivers.js';
 export * from './integration-vehicles.js';
 export * from './device-tokens.js';
+export * from './delivery-manifests.js';
