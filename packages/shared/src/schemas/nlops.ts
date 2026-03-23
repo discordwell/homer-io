@@ -16,6 +16,7 @@ export const sseEventType = z.enum([
   'message',       // Final text response
   'confirmation',  // Mutation needs user approval
   'action_result', // Confirmed action executed
+  'undoable',      // Undo snapshot available for this action
   'error',         // Something went wrong
   'done',          // Stream complete
 ]);
@@ -70,6 +71,13 @@ export const sseErrorEvent = z.object({
   code: z.string().optional(),
 });
 
+export const sseUndoableEvent = z.object({
+  type: z.literal('undoable'),
+  snapshotId: z.string(),
+  toolName: z.string(),
+  summary: z.string(),
+});
+
 export const sseDoneEvent = z.object({
   type: z.literal('done'),
 });
@@ -81,6 +89,7 @@ export const sseEvent = z.discriminatedUnion('type', [
   sseMessageEvent,
   sseConfirmationEvent,
   sseActionResultEvent,
+  sseUndoableEvent,
   sseErrorEvent,
   sseDoneEvent,
 ]);
@@ -111,3 +120,15 @@ export type ChatMessageType = z.infer<typeof chatMessageType>;
 // --- Provider Config ---
 export const nlopsProviderEnum = z.enum(['anthropic', 'openai']);
 export type NLOpsProvider = z.infer<typeof nlopsProviderEnum>;
+
+// --- Voice ---
+export const transcribeResponseSchema = z.object({
+  text: z.string(),
+});
+export type TranscribeResponse = z.infer<typeof transcribeResponseSchema>;
+
+export const ttsRequestSchema = z.object({
+  text: z.string().min(1).max(4096),
+  voice: z.enum(['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer']).optional(),
+});
+export type TTSRequest = z.infer<typeof ttsRequestSchema>;

@@ -63,6 +63,12 @@ export const config = {
     apiKey: process.env.OPENAI_API_KEY || '',
   },
 
+  voice: {
+    whisperModel: process.env.VOICE_WHISPER_MODEL || 'whisper-1',
+    ttsModel: process.env.VOICE_TTS_MODEL || 'tts-1',
+    ttsVoice: (process.env.VOICE_TTS_VOICE || 'onyx') as 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer',
+  },
+
   nlops: {
     provider: (['anthropic', 'openai'].includes(process.env.NLOPS_PROVIDER || '') ? process.env.NLOPS_PROVIDER : 'anthropic') as 'anthropic' | 'openai',
     anthropicModel: process.env.NLOPS_ANTHROPIC_MODEL || 'claude-opus-4-6',

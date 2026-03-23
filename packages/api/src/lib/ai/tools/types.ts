@@ -6,6 +6,8 @@ export interface NLOpsTool {
   inputSchema: Record<string, unknown>; // JSON Schema for Claude tool_use
   riskLevel: ToolRiskLevel;
   requiredRole: NLOpsRole;
+  /** Whether this mutation can be undone via the undo system */
+  undoable?: boolean;
   execute: (input: Record<string, unknown>, ctx: ToolContext) => Promise<unknown>;
   /** For mutations: generate a human-readable preview before execution */
   preview?: (input: Record<string, unknown>, ctx: ToolContext) => Promise<unknown>;

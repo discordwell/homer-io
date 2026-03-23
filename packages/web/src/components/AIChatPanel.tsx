@@ -2,6 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNLOpsStore, type NLOpsMessage, type NLOpsToolActivity, type NLOpsConfirmation } from '../stores/nlops.js';
 import { useDemoStore, type TenantStatus } from '../stores/demo.js';
+import { useVoice } from '../hooks/useVoice.js';
+import { VoiceMicButton } from './VoiceMicButton.js';
+import { UndoDropdown } from './UndoDropdown.js';
 import { C, F, alpha } from '../theme.js';
 
 // --- Tool name → friendly label ---
@@ -31,11 +34,12 @@ const TOOL_LABELS: Record<string, string> = {
 };
 
 export function AIChatPanel() {
-  const { messages, loading, isOpen, showThought, send, confirm, deny, toggle, toggleThought } = useNLOpsStore();
+  const { messages, loading, isOpen, showThought, voiceMode, undoableActions, send, confirm, deny, toggle, toggleThought, toggleVoiceMode, undo } = useNLOpsStore();
   const isDemoMode = useDemoStore((s) => s.isDemoMode);
   const tenantStatus = useDemoStore((s) => s.tenantStatus);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const voice = useVoice();
 
   // In demo mode, disable input until tenant is provisioned
   const demoBlocked = isDemoMode && tenantStatus !== 'ready';
@@ -44,11 +48,32 @@ export function AIChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Auto-TTS: speak the last assistant message when voice mode is on
+  const lastMsg = messages[messages.length - 1];
+  const lastMsgIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (voiceMode && lastMsg?.role === 'assistant' && lastMsg.content && !loading && lastMsg.id !== lastMsgIdRef.current) {
+      lastMsgIdRef.current = lastMsg.id;
+      voice.speak(lastMsg.content);
+    }
+  }, [voiceMode, lastMsg?.id, lastMsg?.content, loading]);
+
   async function handleSend() {
     const msg = input.trim();
     if (!msg || loading) return;
     setInput('');
     await send(msg);
+  }
+
+  async function handleMicClick() {
+    if (voice.isRecording) {
+      const transcript = await voice.stopRecording();
+      if (transcript) {
+        await send(transcript);
+      }
+    } else {
+      voice.startRecording();
+    }
   }
 
   // --- Thought Overlay (full-screen) ---
@@ -117,7 +142,25 @@ export function AIChatPanel() {
               <div style={{ fontFamily: F.display, fontSize: 15, fontWeight: 600, color: C.text }}>HOMER</div>
               <div style={{ fontSize: 11, color: C.dim }}>Operations Assistant</div>
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <UndoDropdown undoableActions={undoableActions} onUndo={undo} />
+              {voice.supported && (
+                <button onClick={toggleVoiceMode} title={voiceMode ? 'Disable auto-speak' : 'Enable auto-speak'} style={{
+                  background: voiceMode ? C.accent : 'none', border: `1px solid ${voiceMode ? C.accent : C.muted}`,
+                  color: voiceMode ? '#000' : C.dim, cursor: 'pointer',
+                  padding: '4px 8px', borderRadius: 4, fontSize: 14,
+                  display: 'flex', alignItems: 'center',
+                }}>
+                  {/* Speaker icon */}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    {voiceMode && <>
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                    </>}
+                  </svg>
+                </button>
+              )}
               <button onClick={toggleThought} title="Toggle thought process" style={{
                 background: showThought ? C.accent : 'none', border: `1px solid ${showThought ? C.accent : C.muted}`,
                 color: showThought ? '#000' : C.dim, cursor: 'pointer',
@@ -195,20 +238,38 @@ export function AIChatPanel() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Voice error */}
+          {voice.error && (
+            <div style={{
+              padding: '6px 12px', fontSize: 12, color: C.orange,
+              borderTop: `1px solid ${C.border}`,
+            }}>
+              {voice.error}
+            </div>
+          )}
+
           {/* Input */}
           <div style={{
             padding: 12, borderTop: `1px solid ${C.muted}`,
-            display: 'flex', gap: 8,
+            display: 'flex', gap: 8, alignItems: 'center',
           }}>
+            {voice.supported && (
+              <VoiceMicButton
+                isRecording={voice.isRecording}
+                isTranscribing={voice.isTranscribing}
+                disabled={demoBlocked || loading}
+                onClick={handleMicClick}
+              />
+            )}
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder={demoBlocked ? 'Setting up...' : 'Tell HOMER what to do...'}
-              disabled={demoBlocked}
+              placeholder={voice.isRecording ? 'Listening...' : demoBlocked ? 'Setting up...' : 'Tell HOMER what to do...'}
+              disabled={demoBlocked || voice.isRecording}
               style={{
                 flex: 1, padding: '10px 14px', borderRadius: 8,
-                background: C.bg, border: `1px solid ${C.muted}`,
+                background: C.bg, border: `1px solid ${voice.isRecording ? '#ff3b30' : C.muted}`,
                 color: C.text, fontSize: 14, outline: 'none', fontFamily: F.body,
                 opacity: demoBlocked ? 0.5 : 1,
               }}

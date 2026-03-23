@@ -569,14 +569,15 @@ Tools are filtered by user role before being sent to the model. The model cannot
 `POST /api/ai/ops` returns a `text/event-stream` with typed events:
 
 ```
-event: thinking     → Agent reasoning text
-event: tool_start   → Tool call initiated (name, input)
-event: tool_result  → Tool call completed (summary, duration)
-event: message      → Final text response
-event: confirmation → Mutation needs user approval (preview data)
+event: thinking      → Agent reasoning text
+event: tool_start    → Tool call initiated (name, input)
+event: tool_result   → Tool call completed (summary, duration)
+event: message       → Final text response
+event: confirmation  → Mutation needs user approval (preview data)
 event: action_result → Confirmed action executed (success/failure)
-event: error        → Something went wrong
-event: done         → Stream complete
+event: undoable      → Undo snapshot available (snapshotId, toolName)
+event: error         → Something went wrong
+event: done          → Stream complete
 ```
 
 ### Frontend: Thought Overlay
@@ -596,16 +597,66 @@ packages/api/src/lib/ai/
 ├── claude.ts           # Legacy text-in/text-out (kept)
 ├── providers.ts        # Multi-model abstraction (Anthropic + OpenAI)
 ├── agent.ts            # Agentic loop engine
+├── undo.ts             # Redis-backed mutation snapshots (15min TTL)
 └── tools/
     ├── types.ts         # Tool interface + result summarizer
     ├── index.ts         # Registry + RBAC filtering
     ├── query.ts         # 9 read-only tools
-    └── mutations.ts     # 10 mutation tools
+    └── mutations.ts     # 10 mutation tools (7 undoable)
+
+packages/api/src/modules/ai/
+├── routes.ts           # /ops, /chat, /transcribe, /tts, /undo
+├── service.ts          # Legacy chat handler
+├── voice.ts            # Whisper STT + OpenAI TTS wrappers
+└── undo-service.ts     # Mutation reversal logic
+
+packages/web/src/
+├── hooks/useVoice.ts           # Audio recording, transcription, TTS playback
+└── components/
+    ├── VoiceMicButton.tsx      # Mic button with recording states
+    └── UndoDropdown.tsx        # Recent undoable actions dropdown
 ```
 
 ### Metering
 
 One "NLOps interaction" = one user message, regardless of internal tool calls. Metered as `aiChatMessages` (50/mo free, $0.02/msg pay-as-you-go). Confirmations don't consume quota.
+
+### Voice Interface
+
+Dispatchers can speak to HOMER instead of typing. Voice is a thin I/O layer over the existing NLOps agent — the agent loop is completely unchanged.
+
+```
+Dispatcher speaks
+  -> MediaRecorder (browser) -> audio blob
+  -> POST /api/ai/transcribe -> OpenAI Whisper -> text
+  -> POST /api/ai/ops (existing, unchanged) -> SSE events
+  -> Final message text -> POST /api/ai/tts -> OpenAI TTS -> audio/mpeg
+  -> Browser plays audio response
+```
+
+**Endpoints:**
+- `POST /api/ai/transcribe` — multipart audio file -> `{ text }` (Whisper STT)
+- `POST /api/ai/tts` — `{ text, voice? }` -> binary `audio/mpeg` (OpenAI TTS, model `tts-1`, default voice `onyx`)
+
+**Frontend:** `useVoice` hook manages MediaRecorder, transcription, and TTS playback. `VoiceMicButton` in the chat input area, speaker toggle in the header. Voice mode auto-speaks AI responses via TTS.
+
+**Config:** `VOICE_WHISPER_MODEL`, `VOICE_TTS_MODEL`, `VOICE_TTS_VOICE` env vars. Always uses OpenAI regardless of `NLOPS_PROVIDER`.
+
+### Undo System
+
+AI mutations can be reversed within 15 minutes via an "oops" button.
+
+**How it works:**
+1. Mutation tools marked `undoable: true` (7 of 10 mutations)
+2. After a confirmed mutation executes, the `preview` data (captured before execution) is saved to Redis as a `MutationSnapshot` with 15-minute TTL
+3. An `undoable` SSE event is emitted to the frontend with the `snapshotId`
+4. The `UndoDropdown` component shows recent undoable actions
+5. `POST /api/ai/undo` reverses the mutation by restoring snapshotted state
+
+**Undoable:** assign_order_to_route, update_order_status, change_driver_status, create_route, reassign_orders, optimize_route, transition_route_status
+**Not undoable:** send_customer_notification (SMS already sent), auto_dispatch (too complex), cancel_route
+
+**Files:** `lib/ai/undo.ts` (Redis snapshots), `modules/ai/undo-service.ts` (reversal logic)
 
 ## Deployment
 

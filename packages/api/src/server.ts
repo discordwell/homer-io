@@ -105,7 +105,7 @@ app.addHook('onSend', async (_request, reply) => {
   reply.header('X-Content-Type-Options', 'nosniff');
   reply.header('X-XSS-Protection', '0');
   reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-  reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  reply.header('Permissions-Policy', 'camera=(), microphone=(self), geolocation=()');
   if (config.nodeEnv === 'production') {
     reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
@@ -136,9 +136,9 @@ await app.register(async (api) => {
   await api.register(orderRoutes, { prefix: '/orders' });
   await api.register(routeRoutes, { prefix: '/routes' });
   await api.register(dashboardRoutes, { prefix: '/dashboard' });
-  // AI endpoints — tighter rate limit (5/min)
+  // AI endpoints — tighter rate limit (20/min to accommodate voice: transcribe + ops + tts per interaction)
   await api.register(async (aiScope) => {
-    await aiScope.register(rateLimit, { max: 5, timeWindow: '1 minute' });
+    await aiScope.register(rateLimit, { max: 20, timeWindow: '1 minute' });
     await aiScope.register(aiRoutes);
   }, { prefix: '/ai' });
   // Tracking endpoints — 60/min for driver location POST

@@ -3,6 +3,7 @@ import { config } from '../../config.js';
 import { cacheGet, cacheSet, cacheDelete } from '../cache.js';
 import { getProvider, toProviderTools, type ProviderMessage, type ProviderContentBlock } from './providers.js';
 import { getToolsForRole, getTool, summarizeResult, type ToolContext } from './tools/index.js';
+import { saveMutationSnapshot } from './undo.js';
 import type { SSEEvent } from '@homer-io/shared';
 
 // Max size for serialized tool results to prevent context blowup (finding #8)
@@ -129,8 +130,26 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
     try {
       const result = await tool.execute(pending.input, toolCtx);
       const duration = Date.now() - start;
-      yield { type: 'tool_result', toolCallId: pending.toolCallId, name: pending.toolName, summary: summarizeResult(pending.toolName, result), durationMs: duration };
-      yield { type: 'action_result', actionId: pending.actionId, success: true, summary: summarizeResult(pending.toolName, result) };
+      const resultSummary = summarizeResult(pending.toolName, result);
+      yield { type: 'tool_result', toolCallId: pending.toolCallId, name: pending.toolName, summary: resultSummary, durationMs: duration };
+      yield { type: 'action_result', actionId: pending.actionId, success: true, summary: resultSummary };
+
+      // Save undo snapshot for undoable mutations
+      if (tool.undoable && pending.preview) {
+        try {
+          const snapshot = await saveMutationSnapshot({
+            tenantId: params.tenantId,
+            userId: params.userId,
+            toolName: pending.toolName,
+            toolInput: pending.input,
+            beforeState: pending.preview,
+            summary: resultSummary,
+          });
+          yield { type: 'undoable', snapshotId: snapshot.snapshotId, toolName: pending.toolName, summary: resultSummary } as SSEEvent;
+        } catch {
+          // Non-fatal: undo snapshot save failure shouldn't break the flow
+        }
+      }
 
       // (finding #2) Check for client disconnect before making another LLM call
       if (isAborted(params.signal)) return;

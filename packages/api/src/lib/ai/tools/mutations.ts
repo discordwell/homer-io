@@ -8,6 +8,7 @@ import type { NLOpsTool, ToolContext } from './types.js';
 export const assignOrderToRoute: NLOpsTool = {
   name: 'assign_order_to_route',
   description: 'Assign one or more orders to an existing route. Orders must be in "received" status.',
+  undoable: true,
   inputSchema: {
     type: 'object',
     properties: {
@@ -44,6 +45,7 @@ export const assignOrderToRoute: NLOpsTool = {
 export const updateOrderStatus: NLOpsTool = {
   name: 'update_order_status',
   description: 'Update the status of an order. Valid transitions: received→assigned, assigned→in_transit, in_transit→delivered/failed.',
+  undoable: true,
   inputSchema: {
     type: 'object',
     properties: {
@@ -77,6 +79,7 @@ export const updateOrderStatus: NLOpsTool = {
 export const changeDriverStatus: NLOpsTool = {
   name: 'change_driver_status',
   description: 'Set a driver\'s availability status: available, on_break, or offline.',
+  undoable: true,
   inputSchema: {
     type: 'object',
     properties: {
@@ -106,6 +109,7 @@ export const changeDriverStatus: NLOpsTool = {
 export const createRoute: NLOpsTool = {
   name: 'create_route',
   description: 'Create a new delivery route, optionally assigning a driver, vehicle, and orders.',
+  undoable: true,
   inputSchema: {
     type: 'object',
     properties: {
@@ -141,6 +145,7 @@ export const createRoute: NLOpsTool = {
 export const reassignOrders: NLOpsTool = {
   name: 'reassign_orders',
   description: 'Move orders from one route/driver to another. This unassigns orders from the source and creates or assigns them to a target route. Use this when a driver calls in sick or needs load balancing.',
+  undoable: true,
   inputSchema: {
     type: 'object',
     properties: {
@@ -329,6 +334,7 @@ export const cancelRoute: NLOpsTool = {
 export const transitionRoute: NLOpsTool = {
   name: 'transition_route_status',
   description: 'Change a route\'s status. Valid transitions: draft→planned, planned→in_progress, in_progress→completed. Use cancel_route for cancellation.',
+  undoable: true,
   inputSchema: {
     type: 'object',
     properties: {

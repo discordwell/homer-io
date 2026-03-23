@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useAuthStore } from './auth.js';
+import { api } from '../api/client.js';
 import type { SSEEvent } from '@homer-io/shared';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -23,6 +24,13 @@ export interface NLOpsConfirmation {
   preview: unknown;
 }
 
+export interface UndoableAction {
+  snapshotId: string;
+  toolName: string;
+  summary: string;
+  timestamp: number;
+}
+
 export interface NLOpsMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -42,6 +50,8 @@ interface NLOpsState {
   isOpen: boolean;
   showThought: boolean; // Full-screen thought overlay toggle
   abortController: AbortController | null; // (finding #13) cancel in-flight requests
+  voiceMode: boolean; // Auto-TTS responses
+  undoableActions: UndoableAction[];
 
   send: (message: string) => Promise<void>;
   confirm: (actionId: string) => Promise<void>;
@@ -49,6 +59,8 @@ interface NLOpsState {
   toggle: () => void;
   setOpen: (open: boolean) => void;
   toggleThought: () => void;
+  toggleVoiceMode: () => void;
+  undo: (snapshotId: string) => Promise<void>;
   clear: () => void;
 }
 
@@ -62,6 +74,8 @@ export const useNLOpsStore = create<NLOpsState>()((set, get) => ({
   isOpen: false,
   showThought: false,
   abortController: null,
+  voiceMode: false,
+  undoableActions: [],
 
   send: async (message: string) => {
     // (finding #13) Abort any in-flight request before starting a new one
@@ -106,9 +120,20 @@ export const useNLOpsStore = create<NLOpsState>()((set, get) => ({
   toggle: () => set((s) => ({ isOpen: !s.isOpen })),
   setOpen: (open: boolean) => set({ isOpen: open }),
   toggleThought: () => set((s) => ({ showThought: !s.showThought })),
+  toggleVoiceMode: () => set((s) => ({ voiceMode: !s.voiceMode })),
+  undo: async (snapshotId: string) => {
+    try {
+      await api.post('/ai/undo', { snapshotId });
+      set((s) => ({
+        undoableActions: s.undoableActions.filter((a) => a.snapshotId !== snapshotId),
+      }));
+    } catch {
+      // Error handled by the dropdown
+    }
+  },
   clear: () => {
     get().abortController?.abort();
-    set({ messages: [], history: [], abortController: null });
+    set({ messages: [], history: [], abortController: null, undoableActions: [] });
   },
 }));
 
@@ -264,6 +289,15 @@ function handleSSEEvent(
           actionResult: { actionId: event.actionId, success: event.success, summary: event.summary },
           timestamp: Date.now(),
         }],
+      }));
+      break;
+
+    case 'undoable':
+      set((s) => ({
+        undoableActions: [
+          { snapshotId: event.snapshotId, toolName: event.toolName, summary: event.summary, timestamp: Date.now() },
+          ...s.undoableActions,
+        ].slice(0, 20),
       }));
       break;
 

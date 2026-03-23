@@ -2,6 +2,16 @@
 
 ## Session Summaries
 
+### 2026-03-22T15:30 UTC — Voice-First Dispatcher Interface + Undo System
+- **Voice endpoints**: POST /api/ai/transcribe (Whisper STT) + POST /api/ai/tts (OpenAI TTS) — thin wrappers, agent loop unchanged
+- **Undo system**: Redis-backed mutation snapshots (15min TTL), 6 of 10 mutations undoable, SSE `undoable` event, /api/ai/undo endpoint
+- **Frontend**: useVoice hook (MediaRecorder + transcription + TTS playback), VoiceMicButton (pulsing red), UndoDropdown, speaker toggle in header
+- **Security**: snapshotId UUID validation, TTS schema validation, media stream cleanup, Permissions-Policy microphone=(self)
+- **Config**: VOICE_WHISPER_MODEL, VOICE_TTS_MODEL, VOICE_TTS_VOICE env vars
+- **Rate limit**: AI endpoints bumped to 20/min (was 5) to accommodate voice interactions (3 requests per voice command)
+- @fastify/multipart added for audio upload, scoped to AI routes only
+- 17 new tests, 58 total nlops+voice passing
+
 ### 2026-03-22T14:00 UTC — Wet Test + UI Fixes
 - **Deploy fix**: `/opt/homer-io/site` was stale copy, symlinked to `packages/web/dist` for automatic freshness
 - **Vertical landing cards**: increased width (380→440px), font size (12.5→13.5px), padding, description length (80→120 chars)

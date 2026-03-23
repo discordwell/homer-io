@@ -1,11 +1,15 @@
 import { FastifyInstance } from 'fastify';
-import { aiChatRequestSchema, nlopsRequestSchema } from '@homer-io/shared';
+import multipart from '@fastify/multipart';
+import { aiChatRequestSchema, nlopsRequestSchema, ttsRequestSchema } from '@homer-io/shared';
 import { authenticate, checkIsDemo } from '../../plugins/auth.js';
 import { handleAiChat } from './service.js';
 import { runAgentLoop } from '../../lib/ai/agent.js';
 import { recordMeteredUsage } from '../billing/service.js';
 import { cacheIncr, cacheDecr } from '../../lib/cache.js';
 import { isAIConfigured } from '../../lib/ai/providers.js';
+import { transcribeAudio, synthesizeSpeech, isVoiceConfigured, validateAudioMimeType, validateAudioSize } from './voice.js';
+import { getRecentSnapshots } from '../../lib/ai/undo.js';
+import { undoMutation } from './undo-service.js';
 
 const AI_NOT_CONFIGURED_MESSAGE =
   'AI Copilot is not available. An AI provider API key (ANTHROPIC_API_KEY or OPENAI_API_KEY) must be configured on the server. Contact your administrator.';
@@ -40,6 +44,7 @@ async function releaseTenantConcurrency(tenantId: string): Promise<void> {
 }
 
 export async function aiRoutes(app: FastifyInstance) {
+  await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
   app.addHook('preHandler', authenticate);
 
   // Legacy plain-text chat (kept for backward compat)
@@ -146,5 +151,93 @@ export async function aiRoutes(app: FastifyInstance) {
     await releaseTenantConcurrency(request.user.tenantId);
     raw.end();
     return reply;
+  });
+
+  // --- Voice endpoints ---
+
+  // POST /transcribe — audio file -> text via Whisper
+  app.post('/transcribe', async (request, reply) => {
+    if (!isVoiceConfigured()) {
+      reply.status(503);
+      return { error: 'Voice features require OPENAI_API_KEY to be configured' };
+    }
+
+    const data = await request.file();
+    if (!data) {
+      reply.status(400);
+      return { error: 'No audio file provided. Send multipart form with an "audio" field.' };
+    }
+
+    if (!validateAudioMimeType(data.mimetype)) {
+      reply.status(400);
+      return { error: `Unsupported audio format: ${data.mimetype}. Supported: webm, mp4, mp3, wav, ogg, m4a.` };
+    }
+
+    const buffer = await data.toBuffer();
+    if (!validateAudioSize(buffer.length)) {
+      reply.status(400);
+      return { error: 'Audio file is empty or exceeds 10 MB limit.' };
+    }
+
+    const text = await transcribeAudio(buffer, data.mimetype);
+    return { text };
+  });
+
+  // POST /tts — text -> audio/mpeg via OpenAI TTS
+  app.post('/tts', async (request, reply) => {
+    if (!isVoiceConfigured()) {
+      reply.status(503);
+      return { error: 'Voice features require OPENAI_API_KEY to be configured' };
+    }
+
+    const parsed = ttsRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      reply.status(400);
+      return { error: parsed.error.errors.map((e) => e.message).join('; ') };
+    }
+    const { text, voice } = parsed.data;
+
+    const audioBuffer = await synthesizeSpeech(text, voice);
+    reply.header('Content-Type', 'audio/mpeg');
+    reply.header('Content-Length', audioBuffer.length);
+    return reply.send(audioBuffer);
+  });
+
+  // --- Undo endpoints ---
+
+  // GET /undo/recent — list recent undoable actions
+  app.get('/undo/recent', async (request) => {
+    const snapshots = await getRecentSnapshots(request.user.tenantId);
+    return {
+      items: snapshots.map((s) => ({
+        snapshotId: s.snapshotId,
+        toolName: s.toolName,
+        summary: s.summary,
+        timestamp: s.timestamp,
+      })),
+    };
+  });
+
+  // POST /undo — undo a specific mutation
+  app.post('/undo', async (request, reply) => {
+    const body = request.body as { snapshotId?: string };
+    if (!body?.snapshotId || typeof body.snapshotId !== 'string') {
+      reply.status(400);
+      return { error: 'Request body must include a "snapshotId" field.' };
+    }
+    // [C1] Validate snapshotId is a UUID to prevent cache key injection
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(body.snapshotId)) {
+      reply.status(400);
+      return { error: 'Invalid snapshotId format.' };
+    }
+
+    const result = await undoMutation(request.user.tenantId, request.user.id, body.snapshotId);
+    if (!result.success) {
+      reply.status(400);
+      return { error: result.error };
+    }
+
+    return result;
   });
 }
