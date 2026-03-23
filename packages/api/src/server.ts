@@ -49,6 +49,7 @@ import { groceryRoutes } from './modules/grocery/routes.js';
 import { furnitureRoutes } from './modules/furniture/routes.js';
 
 const app = Fastify({
+  trustProxy: true,
   logger: {
     level: config.nodeEnv === 'production' ? 'info' : 'debug',
     transport: config.nodeEnv !== 'production' ? {
@@ -98,6 +99,18 @@ await app.register(jwt, { secret: config.jwt.secret });
 await app.register(sensible);
 await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
 
+// Security headers
+app.addHook('onSend', async (_request, reply) => {
+  reply.header('X-Frame-Options', 'DENY');
+  reply.header('X-Content-Type-Options', 'nosniff');
+  reply.header('X-XSS-Protection', '0');
+  reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (config.nodeEnv === 'production') {
+    reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+});
+
 // Swagger / OpenAPI docs
 await registerSwagger(app);
 
@@ -105,7 +118,6 @@ await registerSwagger(app);
 app.get('/health', async () => ({
   status: 'ok',
   timestamp: new Date().toISOString(),
-  version: '0.1.0',
 }));
 
 // Stripe webhook — must be registered at root level (outside /api) with raw body parsing

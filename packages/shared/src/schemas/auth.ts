@@ -1,9 +1,16 @@
 import { z } from 'zod';
 import { ROLES } from '../types/roles.js';
 
+/** Shared password strength rule: 8+ chars, must include uppercase, lowercase, and digit */
+export const passwordSchema = z.string().min(8).max(128)
+  .refine(
+    (pw) => /[a-z]/.test(pw) && /[A-Z]/.test(pw) && /[0-9]/.test(pw),
+    { message: 'Password must include uppercase, lowercase, and a number' },
+  );
+
 export const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8).max(128),
+  password: passwordSchema,
   name: z.string().min(1).max(255),
   orgName: z.string().min(1).max(255),
 });

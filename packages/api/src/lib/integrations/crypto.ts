@@ -12,9 +12,10 @@ function deriveKey(key: string): Buffer {
 export function encrypt(plaintext: string, key?: string): string {
   const encKey = key || config.integrations.encryptionKey;
   if (!encKey) {
-    if (config.nodeEnv !== 'production') {
-      console.warn('[integrations] No encryption key configured — credentials will be stored with a fallback dev key');
+    if (config.nodeEnv === 'production') {
+      throw new Error('INTEGRATION_ENCRYPTION_KEY is required in production');
     }
+    console.warn('[integrations] No encryption key configured — using fallback dev key');
   }
   const derivedKey = deriveKey(encKey || 'homer-dev-encryption-key-do-not-use-in-prod');
   const iv = randomBytes(12);
@@ -30,6 +31,9 @@ export function encrypt(plaintext: string, key?: string): string {
  */
 export function decrypt(encrypted: string, key?: string): string {
   const encKey = key || config.integrations.encryptionKey;
+  if (!encKey && config.nodeEnv === 'production') {
+    throw new Error('INTEGRATION_ENCRYPTION_KEY is required in production');
+  }
   const derivedKey = deriveKey(encKey || 'homer-dev-encryption-key-do-not-use-in-prod');
   const [ivB64, authTagB64, ciphertextB64] = encrypted.split(':');
   if (!ivB64 || !authTagB64 || !ciphertextB64) {

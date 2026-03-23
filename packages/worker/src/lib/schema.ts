@@ -278,6 +278,7 @@ export const migrationJobs = pgTable('migration_jobs', {
 // Integration drivers (migration tracking)
 export const integrationDrivers = pgTable('integration_drivers', {
   id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
   migrationJobId: uuid('migration_job_id').notNull(),
   driverId: uuid('driver_id'),
   externalDriverId: varchar('external_driver_id', { length: 255 }).notNull(),

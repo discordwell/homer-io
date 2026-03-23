@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { passwordSchema } from './auth.js';
 
 export const requestPasswordResetSchema = z.object({
   email: z.string().email(),
@@ -7,7 +8,7 @@ export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchem
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),
-  newPassword: z.string().min(8).max(128),
+  newPassword: passwordSchema,
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 

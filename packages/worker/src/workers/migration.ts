@@ -26,6 +26,7 @@ const integrationSyncStatusEnum = pgEnum('integration_sync_status', ['pending', 
 
 const integrationDrivers = pgTable('integration_drivers', {
   id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
   migrationJobId: uuid('migration_job_id').notNull(),
   driverId: uuid('driver_id'),
   externalDriverId: varchar('external_driver_id', { length: 255 }).notNull(),
@@ -520,7 +521,7 @@ async function processApiDrivers(
           tenantId, name: ext.name, email: ext.email || undefined, phone: ext.phone || undefined, externalId: `${platform}_${ext.externalId}`,
         }).returning();
         await db.insert(integrationDrivers).values({
-          migrationJobId, driverId: newDriver.id, externalDriverId: ext.externalId, platform, rawData: ext.rawData, syncStatus: 'synced',
+          tenantId, migrationJobId, driverId: newDriver.id, externalDriverId: ext.externalId, platform, rawData: ext.rawData, syncStatus: 'synced',
         }).onConflictDoNothing();
         progress.drivers.imported++;
       } catch (err) {
@@ -756,6 +757,7 @@ export async function processMigration(job: Job<MigrationJobData>) {
               }).returning();
 
               await db.insert(integrationDrivers).values({
+                tenantId,
                 migrationJobId,
                 driverId: newDriver.id,
                 externalDriverId: extId || newDriver.id,

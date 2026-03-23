@@ -239,7 +239,7 @@ export async function getTrends(tenantId: string, range: '7d' | '30d' | '90d'): 
   const result = await db.execute(sql`
     WITH date_series AS (
       SELECT generate_series(
-        date_trunc('day', NOW() - INTERVAL '${sql.raw(String(days))} days'),
+        date_trunc('day', NOW() - make_interval(days => ${days})),
         date_trunc('day', NOW()),
         '1 day'::interval
       )::date AS day
@@ -349,7 +349,7 @@ export async function getEnhancedOverview(tenantId: string, range: '7d' | '30d' 
   const dailyActiveDrivers = await db.execute(sql`
     WITH date_series AS (
       SELECT generate_series(
-        date_trunc('day', NOW() - INTERVAL '${sql.raw(String(days))} days'),
+        date_trunc('day', NOW() - make_interval(days => ${days})),
         date_trunc('day', NOW()),
         '1 day'::interval
       )::date AS day
@@ -402,7 +402,7 @@ export async function getEnhancedTrends(tenantId: string, range: '7d' | '30d' | 
   const result = await db.execute(sql`
     WITH date_series AS (
       SELECT generate_series(
-        date_trunc('day', NOW() - INTERVAL '${sql.raw(String(days))} days'),
+        date_trunc('day', NOW() - make_interval(days => ${days})),
         date_trunc('day', NOW()),
         '1 day'::interval
       )::date AS day
@@ -672,7 +672,7 @@ export async function getDeliveryOutcomes(tenantId: string, range: '7d' | '30d' 
   const statusResult = await db.execute(sql`
     WITH date_series AS (
       SELECT generate_series(
-        date_trunc('day', NOW() - INTERVAL '${sql.raw(String(days))} days'),
+        date_trunc('day', NOW() - make_interval(days => ${days})),
         date_trunc('day', NOW()),
         '1 day'::interval
       )::date AS day
@@ -750,7 +750,7 @@ export async function getEnhancedDriverPerformance(tenantId: string, range: '7d'
   const sparklineResult = await db.execute(sql`
     WITH date_series AS (
       SELECT generate_series(
-        date_trunc('day', NOW() - INTERVAL '${sql.raw(String(days))} days'),
+        date_trunc('day', NOW() - make_interval(days => ${days})),
         date_trunc('day', NOW()),
         '1 day'::interval
       )::date AS day

@@ -258,6 +258,8 @@ export async function resetPassword(app: FastifyInstance, token: string, newPass
       .where(eq(users.id, stored.userId));
     await tx.update(passwordResetTokens).set({ usedAt: new Date() })
       .where(eq(passwordResetTokens.id, stored.id));
+    // Invalidate all refresh tokens — forces re-login on all devices
+    await tx.delete(refreshTokens).where(eq(refreshTokens.userId, stored.userId));
   });
   return { success: true };
 }

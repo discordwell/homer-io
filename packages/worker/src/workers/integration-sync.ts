@@ -29,6 +29,7 @@ const integrationConnections = pgTable('integration_connections', {
 
 const integrationOrders = pgTable('integration_orders', {
   id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
   connectionId: uuid('connection_id').notNull(),
   orderId: uuid('order_id'),
   externalOrderId: varchar('external_order_id', { length: 255 }).notNull(),
@@ -310,6 +311,7 @@ export async function processIntegrationSync(job: Job<IntegrationSyncJobData>) {
         }).returning();
 
         await db.insert(integrationOrders).values({
+          tenantId,
           connectionId,
           orderId: newOrder.id,
           externalOrderId: ext.externalId,
@@ -322,6 +324,7 @@ export async function processIntegrationSync(job: Job<IntegrationSyncJobData>) {
       } catch (err) {
         try {
           await db.insert(integrationOrders).values({
+            tenantId,
             connectionId,
             externalOrderId: ext.externalId,
             platform: conn.platform,

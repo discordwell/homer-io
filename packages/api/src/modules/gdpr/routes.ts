@@ -11,12 +11,12 @@ export async function gdprRoutes(app: FastifyInstance) {
     reply.code(201).send(result);
   });
 
-  app.get('/export/:id', async (request) => {
+  app.get('/export/:id', { preHandler: [requireRole('admin')] }, async (request) => {
     const { id } = request.params as { id: string };
     return getExportStatus(request.user.tenantId, id);
   });
 
-  app.get('/exports', async (request) => {
+  app.get('/exports', { preHandler: [requireRole('admin')] }, async (request) => {
     const query = paginationSchema.parse(request.query);
     return listExportRequests(request.user.tenantId, query);
   });
@@ -27,7 +27,7 @@ export async function gdprRoutes(app: FastifyInstance) {
     reply.send(result);
   });
 
-  app.post('/delete-account/confirm', async (request) => {
+  app.post('/delete-account/confirm', { preHandler: [requireRole('owner')] }, async (request) => {
     const body = dataDeletionConfirmSchema.parse(request.body);
     return confirmDeletion(request.user.tenantId, body.token);
   });
@@ -36,7 +36,7 @@ export async function gdprRoutes(app: FastifyInstance) {
     return cancelDeletion(request.user.tenantId);
   });
 
-  app.get('/deletion-requests', async (request) => {
+  app.get('/deletion-requests', { preHandler: [requireRole('admin')] }, async (request) => {
     const query = paginationSchema.parse(request.query);
     return listDeletionRequests(request.user.tenantId, query);
   });

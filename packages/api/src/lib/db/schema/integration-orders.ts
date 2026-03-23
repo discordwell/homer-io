@@ -1,4 +1,5 @@
 import { pgTable, uuid, varchar, timestamp, jsonb, pgEnum, uniqueIndex } from 'drizzle-orm/pg-core';
+import { tenants } from './tenants.js';
 import { integrationConnections } from './integration-connections.js';
 import { orders } from './orders.js';
 
@@ -8,6 +9,7 @@ export const integrationSyncStatusEnum = pgEnum('integration_sync_status', [
 
 export const integrationOrders = pgTable('integration_orders', {
   id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }).notNull(),
   connectionId: uuid('connection_id').references(() => integrationConnections.id, { onDelete: 'cascade' }).notNull(),
   orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
   externalOrderId: varchar('external_order_id', { length: 255 }).notNull(),

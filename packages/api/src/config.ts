@@ -97,7 +97,7 @@ export const config = {
   },
 
   integrations: {
-    encryptionKey: process.env.INTEGRATION_ENCRYPTION_KEY || '',
+    encryptionKey: isProduction ? requireEnv('INTEGRATION_ENCRYPTION_KEY') : (process.env.INTEGRATION_ENCRYPTION_KEY || ''),
   },
 
   app: {

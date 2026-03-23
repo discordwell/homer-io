@@ -102,7 +102,7 @@ export async function createConnection(
   const apiBaseUrl = config.nodeEnv === 'production'
     ? 'https://api.homer.io'
     : config.cors.origin[0];
-  const webhookCallbackUrl = `${apiBaseUrl}/api/integrations/webhook/${input.platform}/${created.id}?secret=${webhookSecret}`;
+  const webhookCallbackUrl = `${apiBaseUrl}/api/integrations/webhook/${input.platform}/${created.id}`;
   let webhookIds: string[] = [];
   try {
     webhookIds = await connector.registerWebhooks(input.storeUrl, input.credentials, webhookCallbackUrl);
@@ -301,6 +301,7 @@ export async function syncOrders(tenantId: string, connectionId: string, since?:
 
         // Record the integration order mapping
         await db.insert(integrationOrders).values({
+          tenantId: conn.tenantId,
           connectionId,
           orderId: newOrder.id,
           externalOrderId: extOrder.externalId,
@@ -314,6 +315,7 @@ export async function syncOrders(tenantId: string, connectionId: string, since?:
         // Record the failed integration order
         try {
           await db.insert(integrationOrders).values({
+            tenantId: conn.tenantId,
             connectionId,
             externalOrderId: extOrder.externalId,
             platform: conn.platform,
@@ -361,7 +363,6 @@ export async function processInboundWebhook(
   platform: string,
   body: Record<string, unknown>,
   signature: string | null,
-  querySecret: string | null,
 ) {
   const [conn] = await db
     .select()
@@ -374,11 +375,6 @@ export async function processInboundWebhook(
 
   if (!conn) {
     throw new HttpError(404, 'Integration connection not found');
-  }
-
-  // Verify per-connection webhook secret (query param ?secret=...)
-  if (conn.webhookSecret && querySecret !== conn.webhookSecret) {
-    throw new HttpError(401, 'Invalid webhook secret');
   }
 
   const credentials = JSON.parse(decrypt(conn.credentials as string));
@@ -489,6 +485,7 @@ export async function processInboundWebhook(
       .returning();
 
     await db.insert(integrationOrders).values({
+      tenantId: conn.tenantId,
       connectionId,
       orderId: newOrder.id,
       externalOrderId: externalId,
@@ -510,6 +507,7 @@ export async function processInboundWebhook(
     // Record the failed import attempt
     try {
       await db.insert(integrationOrders).values({
+        tenantId: conn.tenantId,
         connectionId,
         externalOrderId: externalId,
         platform: conn.platform,

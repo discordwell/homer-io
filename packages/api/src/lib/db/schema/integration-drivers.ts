@@ -1,10 +1,12 @@
 import { pgTable, uuid, varchar, timestamp, jsonb, uniqueIndex } from 'drizzle-orm/pg-core';
+import { tenants } from './tenants.js';
 import { migrationJobs } from './migration-jobs.js';
 import { drivers } from './drivers.js';
 import { integrationSyncStatusEnum } from './integration-orders.js';
 
 export const integrationDrivers = pgTable('integration_drivers', {
   id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }).notNull(),
   migrationJobId: uuid('migration_job_id').references(() => migrationJobs.id, { onDelete: 'cascade' }).notNull(),
   driverId: uuid('driver_id').references(() => drivers.id, { onDelete: 'set null' }),
   externalDriverId: varchar('external_driver_id', { length: 255 }).notNull(),
