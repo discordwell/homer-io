@@ -7,6 +7,7 @@ import { registerDispatchCommands } from './commands/dispatch.js';
 import { registerDriverCommands } from './commands/drivers.js';
 import { registerAnalyticsCommands } from './commands/analytics.js';
 import { registerSettingsCommands } from './commands/settings.js';
+import { registerMcpCommands } from './commands/mcp.js';
 
 const program = new Command();
 program
@@ -21,5 +22,6 @@ registerDispatchCommands(program);
 registerDriverCommands(program);
 registerAnalyticsCommands(program);
 registerSettingsCommands(program);
+registerMcpCommands(program);
 
 program.parse();

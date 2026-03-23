@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "homer": {
+      "command": "node",
+      "args": ["packages/cli/dist/mcp/server.js"]
+    }
+  }
+}
