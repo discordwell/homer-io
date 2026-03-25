@@ -8,6 +8,10 @@ function requireEnv(name: string): string {
   return val || '';
 }
 
+function trimTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, '');
+}
+
 export const config = {
   port: Number(process.env.PORT) || 3000,
   host: process.env.HOST || '0.0.0.0',
@@ -107,6 +111,6 @@ export const config = {
   },
 
   app: {
-    frontendUrl: process.env.APP_FRONTEND_URL || 'http://localhost:3001',
+    frontendUrl: trimTrailingSlash(process.env.APP_FRONTEND_URL || 'http://localhost:3001'),
   },
 } as const;

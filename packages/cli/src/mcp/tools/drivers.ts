@@ -1,22 +1,23 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { safeGetApi, textResult, errorResult } from '../util.js';
+import { safeGetApi, textResult, errorResult, registerTool } from '../util.js';
 
 export function registerDriverTools(server: McpServer): void {
-  server.tool(
+  registerTool(
+    server,
     'homer_drivers_list',
     'List fleet drivers with optional status filter',
     {
       status: z.string().optional().describe('Filter by status (e.g. available, busy, offline)'),
     },
-    async ({ status }) => {
+    async (args) => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);
       const { api } = result;
 
       try {
         const params = new URLSearchParams();
-        if (status) params.set('status', status);
+        if (args.status) params.set('status', args.status);
         const qs = params.toString();
         const path = `/api/fleet/drivers${qs ? '?' + qs : ''}`;
 
@@ -30,10 +31,11 @@ export function registerDriverTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  registerTool(
+    server,
     'homer_drivers_available',
     'List drivers currently available for delivery assignments',
-    {},
+    undefined,
     async () => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);

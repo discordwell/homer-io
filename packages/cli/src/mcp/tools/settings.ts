@@ -1,11 +1,12 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { safeGetApi, textResult, errorResult } from '../util.js';
+import { safeGetApi, textResult, errorResult, registerTool } from '../util.js';
 
 export function registerSettingsTools(server: McpServer): void {
-  server.tool(
+  registerTool(
+    server,
     'homer_settings_get',
     'Get organization settings including name, timezone, address, and configuration',
-    {},
+    undefined,
     async () => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);
@@ -20,10 +21,11 @@ export function registerSettingsTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  registerTool(
+    server,
     'homer_settings_industry',
     'Get the organization industry type and list of enabled features',
-    {},
+    undefined,
     async () => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);

@@ -869,6 +869,26 @@ html { scroll-behavior: smooth; }
   50% { transform: translateX(-50%) translateY(8px); opacity: 1; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .hero-scroll,
+  .hero-eyebrow::before,
+  .chat-head .dot,
+  .proof-strip .live-dot,
+  .c-msg,
+  .c-typing,
+  .c-typing i {
+    animation: none !important;
+  }
+}
+
 /* ---- Scroll reveal ---- */
 
 .reveal {

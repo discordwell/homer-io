@@ -1,12 +1,13 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { safeGetApi, textResult, errorResult } from '../util.js';
+import { safeGetApi, textResult, errorResult, registerTool } from '../util.js';
 
 export function registerAnalyticsTools(server: McpServer): void {
-  server.tool(
+  registerTool(
+    server,
     'homer_analytics_dashboard',
     'Get dashboard KPIs: orders today, active routes, delivery rate, and other key metrics',
-    {},
+    undefined,
     async () => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);
@@ -21,19 +22,20 @@ export function registerAnalyticsTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  registerTool(
+    server,
     'homer_analytics_overview',
     'Get analytics overview for a time period with trends and breakdowns',
     {
       period: z.string().optional().describe('Time period: 7d, 30d, or 90d (default 7d)'),
     },
-    async ({ period }) => {
+    async (args) => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);
       const { api } = result;
 
       try {
-        const p = period || '7d';
+        const p = args.period || '7d';
         const data = await api.get<Record<string, unknown>>(
           `/api/analytics/overview?period=${encodeURIComponent(p)}`,
         );

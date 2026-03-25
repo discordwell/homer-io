@@ -6,6 +6,7 @@ import { users } from '../../lib/db/schema/users.js';
 import { drivers } from '../../lib/db/schema/drivers.js';
 import { tenants } from '../../lib/db/schema/tenants.js';
 import { logActivity } from '../../lib/activity.js';
+import { config } from '../../config.js';
 
 const DEFAULT_EXPIRY_DAYS = 7;
 
@@ -44,7 +45,7 @@ export async function createDriverInvite(
 
   return {
     token,
-    url: `https://app.homer.io/join/${token}`,
+    url: `${config.app.frontendUrl}/join/${token}`,
     expiresAt: expiresAt.toISOString(),
   };
 }

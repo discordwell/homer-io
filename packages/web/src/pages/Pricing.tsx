@@ -33,7 +33,7 @@ function Nav() {
     <nav className={`hp-nav ${scrolled ? 'scrolled' : ''}`}>
       <Link to="/" className="hp-nav-logo">HOMER<span>.</span></Link>
       <ul className="hp-nav-links">
-        <li><Link to="/#features">Features</Link></li>
+        <li><a href="/#features">Features</a></li>
         <li><Link to="/pricing">Pricing</Link></li>
         <li><Link to="/login">Log in</Link></li>
       </ul>
@@ -49,7 +49,7 @@ function Footer() {
     <footer className="hp-footer">
       <span className="hp-footer-logo">HOMER.</span>
       <ul className="hp-footer-links">
-        <li><Link to="/#features">Features</Link></li>
+        <li><a href="/#features">Features</a></li>
         <li><Link to="/pricing">Pricing</Link></li>
         <li><Link to="/login">Log in</Link></li>
       </ul>

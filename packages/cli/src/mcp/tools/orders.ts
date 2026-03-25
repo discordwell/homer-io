@@ -1,24 +1,25 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { safeGetApi, textResult, errorResult } from '../util.js';
+import { safeGetApi, textResult, errorResult, registerTool } from '../util.js';
 
 export function registerOrderTools(server: McpServer): void {
-  server.tool(
+  registerTool(
+    server,
     'homer_orders_list',
     'List delivery orders with optional status filter',
     {
       status: z.string().optional().describe('Filter by status (e.g. pending, assigned, in_transit, delivered, cancelled)'),
-      limit: z.number().optional().describe('Max results to return (default 50)'),
+      limit: z.string().optional().describe('Max results to return (default "50")'),
     },
-    async ({ status, limit }) => {
+    async (args) => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);
       const { api } = result;
 
       try {
         const params = new URLSearchParams();
-        if (status) params.set('status', status);
-        if (limit) params.set('limit', String(limit));
+        if (args.status) params.set('status', args.status);
+        if (args.limit) params.set('limit', args.limit);
         const qs = params.toString();
         const path = `/api/orders${qs ? '?' + qs : ''}`;
 
@@ -32,7 +33,8 @@ export function registerOrderTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  registerTool(
+    server,
     'homer_orders_create',
     'Create a new delivery order',
     {
@@ -46,23 +48,23 @@ export function registerOrderTools(server: McpServer): void {
       giftMessage: z.string().optional().describe('Gift message to include'),
       senderName: z.string().optional().describe('Sender name'),
     },
-    async ({ recipientName, street, city, state, zip, phone, notes, giftMessage, senderName }) => {
+    async (args) => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);
       const { api } = result;
 
       try {
         const body: Record<string, unknown> = {
-          recipientName,
-          street,
-          city,
-          state,
-          zip,
+          recipientName: args.recipientName,
+          street: args.street,
+          city: args.city,
+          state: args.state,
+          zip: args.zip,
         };
-        if (phone) body.phone = phone;
-        if (notes) body.notes = notes;
-        if (giftMessage) body.giftMessage = giftMessage;
-        if (senderName) body.senderName = senderName;
+        if (args.phone) body.phone = args.phone;
+        if (args.notes) body.notes = args.notes;
+        if (args.giftMessage) body.giftMessage = args.giftMessage;
+        if (args.senderName) body.senderName = args.senderName;
 
         const order = await api.post<Record<string, unknown>>('/api/orders', body);
         return textResult(order);
@@ -72,40 +74,42 @@ export function registerOrderTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  registerTool(
+    server,
     'homer_orders_count',
     'Count orders, optionally filtered by status',
     {
       status: z.string().optional().describe('Filter by status (e.g. pending, assigned, delivered)'),
     },
-    async ({ status }) => {
+    async (args) => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);
       const { api } = result;
 
       try {
         const params = new URLSearchParams();
-        if (status) params.set('status', status);
+        if (args.status) params.set('status', args.status);
         const qs = params.toString();
         const path = `/api/orders${qs ? '?' + qs : ''}`;
 
         const data = await api.get<Record<string, unknown>[] | { orders: Record<string, unknown>[] }>(path);
         const list = Array.isArray(data) ? data : (data as { orders: Record<string, unknown>[] }).orders || [];
 
-        return textResult({ status: status || 'all', count: list.length });
+        return textResult({ status: args.status || 'all', count: list.length });
       } catch (err) {
         return errorResult(`Failed to count orders: ${err instanceof Error ? err.message : String(err)}`);
       }
     },
   );
 
-  server.tool(
+  registerTool(
+    server,
     'homer_orders_import_csv',
     'Import orders from CSV content. Pass the CSV data as a string.',
     {
       csvContent: z.string().describe('CSV content with headers: recipientName, street, city, state, zip, phone, notes, giftMessage'),
     },
-    async ({ csvContent }) => {
+    async (args) => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);
       const { api } = result;
@@ -113,7 +117,7 @@ export function registerOrderTools(server: McpServer): void {
       try {
         const importResult = await api.post<Record<string, unknown>>(
           '/api/orders/import/csv',
-          csvContent,
+          args.csvContent,
           'text/csv',
         );
         return textResult(importResult);

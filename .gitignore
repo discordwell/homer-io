@@ -37,3 +37,6 @@ dist-ssr
 # MinIO data
 minio-data/
 scripts/reboot-ovh2.sh
+
+# Audit artifacts
+.audit/

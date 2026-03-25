@@ -74,15 +74,29 @@ export function DemoEmailGate() {
           HOMER<span style={{ color: C.accent }}>.</span>
         </div>
 
-        <p style={{
-          color: C.dim,
-          fontSize: 15,
-          textAlign: 'center',
-          margin: 0,
-          lineHeight: 1.5,
-        }}>
-          Enter your email to start the demo
-        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'center' }}>
+          <h1 style={{
+            color: C.text,
+            fontSize: 28,
+            fontFamily: F.display,
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+            lineHeight: 1.1,
+            margin: 0,
+          }}>
+            Explore the live demo
+          </h1>
+
+          <p style={{
+            color: C.dim,
+            fontSize: 15,
+            textAlign: 'center',
+            margin: 0,
+            lineHeight: 1.5,
+          }}>
+            Enter your email to spin up a temporary HOMER workspace with real interactions.
+          </p>
+        </div>
 
         {/* Email input */}
         <input

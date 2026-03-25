@@ -37,10 +37,22 @@ import { VerticalLanding } from './components/landing-v2/VerticalLanding.js';
 import { VERTICAL_CONTENT } from './components/landing-v2/vertical-content.js';
 import { PricingPage } from './pages/Pricing.js';
 import { C, F } from './theme.js';
+import { MessagesPage } from './pages/Messages.js';
+import { hasMinRole, type Role } from '@homer-io/shared';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({
+  children,
+  requiredRole,
+}: {
+  children: React.ReactNode;
+  requiredRole?: Role;
+}) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (requiredRole && (!user || !hasMinRole(user.role, requiredRole))) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return <>{children}</>;
 }
 
@@ -78,6 +90,7 @@ export function App() {
           <Route path="routes/new" element={<RouteBuilderPage />} />
           <Route path="routes/:id" element={<RouteDetailPage />} />
           <Route path="dispatch" element={<DispatchPage />} />
+          <Route path="messages" element={<MessagesPage />} />
           <Route path="live" element={<LiveMapPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="migrate" element={<MigrationPage />} />
@@ -85,7 +98,7 @@ export function App() {
         </Route>
         {/* Driver PWA routes */}
         <Route path="/driver" element={
-          <ProtectedRoute><DriverLayout /></ProtectedRoute>
+          <ProtectedRoute requiredRole="driver"><DriverLayout /></ProtectedRoute>
         }>
           <Route index element={<DriverRoutePage />} />
           <Route path="stop/:routeId/:orderId" element={<DriverStopDetailPage />} />

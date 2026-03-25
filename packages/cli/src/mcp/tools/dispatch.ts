@@ -1,22 +1,23 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { safeGetApi, textResult, errorResult } from '../util.js';
+import { safeGetApi, textResult, errorResult, registerTool } from '../util.js';
 
 export function registerDispatchTools(server: McpServer): void {
-  server.tool(
+  registerTool(
+    server,
     'homer_dispatch_auto',
-    'Run auto-dispatch to assign pending orders to routes and drivers. Use confirm=false for a preview, confirm=true to execute.',
+    'Run auto-dispatch to assign pending orders to routes and drivers. Use confirm="true" to execute, "false" for a dry-run preview.',
     {
-      confirm: z.boolean().describe('Set to true to execute dispatch; false for a dry-run preview'),
+      confirm: z.string().describe('Set to "true" to execute dispatch; "false" for a dry-run preview'),
     },
-    async ({ confirm }) => {
+    async (args) => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);
       const { api } = result;
 
       try {
         const body: Record<string, unknown> = {};
-        if (confirm) body.confirm = true;
+        if (args.confirm === 'true') body.confirm = true;
 
         const dispatchResult = await api.post<Record<string, unknown>>('/api/dispatch/auto-dispatch', body);
         return textResult(dispatchResult);
@@ -26,10 +27,11 @@ export function registerDispatchTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  registerTool(
+    server,
     'homer_dispatch_status',
     'Get current dispatch status including unassigned order count and active route count',
-    {},
+    undefined,
     async () => {
       const result = safeGetApi();
       if ('error' in result) return errorResult(result.error);

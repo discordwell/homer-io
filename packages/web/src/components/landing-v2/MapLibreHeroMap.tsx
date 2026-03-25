@@ -8,15 +8,23 @@ interface MapLibreHeroMapProps {
   lat: number;
   lng: number;
   onReady: () => void;
+  onError: () => void;
 }
 
-export default function MapLibreHeroMap({ lat, lng, onReady }: MapLibreHeroMapProps) {
+function toError(error: unknown) {
+  if (error instanceof Error) return error;
+  return new Error(typeof error === 'string' ? error : 'Unknown map error');
+}
+
+export default function MapLibreHeroMap({ lat, lng, onReady, onError }: MapLibreHeroMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const animatorRef = useRef<DriverAnimator | null>(null);
   const onReadyRef = useRef(onReady);
+  const onErrorRef = useRef(onError);
   const readyFired = useRef(false);
   onReadyRef.current = onReady;
+  onErrorRef.current = onError;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -28,25 +36,53 @@ export default function MapLibreHeroMap({ lat, lng, onReady }: MapLibreHeroMapPr
       return;
     }
 
-    const map = new maplibregl.Map({
-      container,
-      style: buildHeroStyle(apiKey),
-      center: [lng, lat],
-      zoom: 10,
-      interactive: false,
-      attributionControl: false,
-      fadeDuration: 0,
-    });
+    const handleFatalError = (error: unknown) => {
+      if (readyFired.current) return;
+      const normalizedError = toError(error);
+      console.warn('[HeroMap] Disabling MapLibre and falling back to SVG:', normalizedError.message);
+      onErrorRef.current();
+    };
+
+    const handleContextCreationError = (event: Event) => {
+      if ('preventDefault' in event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+      }
+
+      const detail = event as Event & { message?: string; statusMessage?: string };
+      handleFatalError(detail.statusMessage || detail.message || 'Failed to initialize WebGL');
+    };
+
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container,
+        style: buildHeroStyle(apiKey),
+        center: [lng, lat],
+        zoom: 10,
+        interactive: false,
+        attributionControl: false,
+        fadeDuration: 0,
+      });
+    } catch (error) {
+      handleFatalError(error);
+      return;
+    }
 
     mapRef.current = map;
+    container.addEventListener('webglcontextcreationerror', handleContextCreationError);
 
     const handleReady = () => {
       if (readyFired.current) return;
       readyFired.current = true;
 
-      const animator = new DriverAnimator(map, container);
-      animatorRef.current = animator;
-      animator.start();
+      try {
+        const animator = new DriverAnimator(map, container);
+        animatorRef.current = animator;
+        animator.start();
+      } catch (error) {
+        handleFatalError(error);
+        return;
+      }
 
       onReadyRef.current();
     };
@@ -62,16 +98,24 @@ export default function MapLibreHeroMap({ lat, lng, onReady }: MapLibreHeroMapPr
     // Fallback: if neither event fires within 2.5s, show map anyway
     const fallbackTimer = setTimeout(handleReady, 2500);
 
-    map.on('error', (e) => {
-      console.warn('[HeroMap] MapLibre error:', e.error?.message || e);
-    });
+    const handleMapError = (event: { error?: Error }) => {
+      if (!readyFired.current) {
+        handleFatalError(event.error || 'Map failed during initialization');
+        return;
+      }
+
+      console.warn('[HeroMap] MapLibre error:', event.error?.message || event);
+    };
+    map.on('error', handleMapError);
 
     return () => {
       clearTimeout(fallbackTimer);
       map.off('load', handleReady);
+      map.off('error', handleMapError);
       // 'styledata' was registered with once() so it auto-removes after firing,
       // but if it hasn't fired yet we should clean it up too.
       map.off('styledata', handleReady);
+      container.removeEventListener('webglcontextcreationerror', handleContextCreationError);
       animatorRef.current?.destroy();
       animatorRef.current = null;
       map.remove();

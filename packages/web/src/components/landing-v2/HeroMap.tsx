@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useCallback } from 'react';
+import { lazy, Suspense, useState, useCallback, useEffect } from 'react';
 import { BayAreaMap } from './BayAreaMap.js';
 import type { HeroGeoResult } from './useHeroGeolocation.js';
 import './heroMap.css';
@@ -10,6 +10,33 @@ const BAY_AREA = { lat: 37.56, lng: -122.15 };
 
 const hasApiKey = !!import.meta.env.VITE_MAPTILER_KEY;
 
+function supportsMapWebGL() {
+  if (typeof document === 'undefined') return false;
+
+  const canvas = document.createElement('canvas');
+  let contextCreationFailed = false;
+  const handleContextCreationError = (event: Event) => {
+    contextCreationFailed = true;
+    if ('preventDefault' in event && typeof event.preventDefault === 'function') {
+      event.preventDefault();
+    }
+  };
+
+  canvas.addEventListener('webglcontextcreationerror', handleContextCreationError, { once: true });
+
+  try {
+    const context =
+      canvas.getContext('webgl2')
+      || canvas.getContext('webgl')
+      || canvas.getContext('experimental-webgl');
+    return Boolean(context) && !contextCreationFailed;
+  } catch {
+    return false;
+  } finally {
+    canvas.removeEventListener('webglcontextcreationerror', handleContextCreationError);
+  }
+}
+
 interface HeroMapProps {
   geo: HeroGeoResult;
 }
@@ -17,8 +44,22 @@ interface HeroMapProps {
 export function HeroMap({ geo }: HeroMapProps) {
   const { lat, lng, status } = geo;
   const [mapReady, setMapReady] = useState(false);
+  const [mapEnabled, setMapEnabled] = useState(() => hasApiKey && supportsMapWebGL());
 
   const onReady = useCallback(() => setMapReady(true), []);
+  const onError = useCallback(() => {
+    setMapReady(false);
+    setMapEnabled(false);
+  }, []);
+
+  useEffect(() => {
+    if (!hasApiKey) {
+      setMapEnabled(false);
+      return;
+    }
+
+    setMapEnabled(supportsMapWebGL());
+  }, []);
 
   // Determine map center: user location if granted, Bay Area otherwise
   const settled = status !== 'pending';
@@ -33,10 +74,10 @@ export function HeroMap({ geo }: HeroMapProps) {
       </div>
 
       {/* MapLibre — loads once geolocation resolves (granted or denied) */}
-      {hasApiKey && settled && (
+      {hasApiKey && settled && mapEnabled && (
         <div className="hero-map-gl">
           <Suspense fallback={null}>
-            <MapLibreHeroMap lat={centerLat} lng={centerLng} onReady={onReady} />
+            <MapLibreHeroMap lat={centerLat} lng={centerLng} onReady={onReady} onError={onError} />
           </Suspense>
         </div>
       )}

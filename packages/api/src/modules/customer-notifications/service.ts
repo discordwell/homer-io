@@ -13,6 +13,8 @@ const customerNotificationQueue = new Queue('customer-notifications', {
   connection: { url: config.redis.url },
 });
 
+const trackingUrl = (orderId: string) => `${config.app.frontendUrl}/track/${orderId}`;
+
 export async function listTemplates(tenantId: string) {
   return db
     .select()
@@ -106,7 +108,7 @@ export async function sendTestNotification(tenantId: string, templateId: string)
     recipientName: 'Jane Doe',
     driverName: 'John Smith',
     eta: '2:30 PM',
-    trackingUrl: 'https://track.homer.io/demo-abc123',
+    trackingUrl: trackingUrl('demo-abc123'),
     orderRef: 'ORD-00042',
   };
 
@@ -249,7 +251,7 @@ export async function enqueueCustomerNotification(
       senderName: order.senderName || '',
       driverName: 'Your Driver',
       eta: etaText,
-      trackingUrl: `https://track.homer.io/${orderId}`,
+      trackingUrl: trackingUrl(orderId),
       orderRef: order.externalId || orderId.slice(0, 8),
       giftMessage: order.giftMessage || '',
       deliveryPhotoUrl,

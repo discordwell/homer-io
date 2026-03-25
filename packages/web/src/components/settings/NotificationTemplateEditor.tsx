@@ -30,16 +30,19 @@ const templateVariables = [
   { key: '{{deliveryPhotoUrl}}', label: 'Delivery Photo URL' },
 ];
 
-const sampleData: Record<string, string> = {
-  '{{recipientName}}': 'Jane Doe',
-  '{{senderName}}': 'Sarah Johnson',
-  '{{driverName}}': 'John Smith',
-  '{{eta}}': '2:30 PM',
-  '{{trackingUrl}}': 'https://track.homer.io/abc123',
-  '{{orderRef}}': 'ORD-00042',
-  '{{giftMessage}}': 'Happy Birthday! Love, Sarah',
-  '{{deliveryPhotoUrl}}': 'https://homer.io/photos/delivery-123.jpg',
-};
+function buildSampleData(): Record<string, string> {
+  const origin = typeof window === 'undefined' ? 'https://homer.discordwell.com' : window.location.origin;
+  return {
+    '{{recipientName}}': 'Jane Doe',
+    '{{senderName}}': 'Sarah Johnson',
+    '{{driverName}}': 'John Smith',
+    '{{eta}}': '2:30 PM',
+    '{{trackingUrl}}': `${origin}/track/abc123`,
+    '{{orderRef}}': 'ORD-00042',
+    '{{giftMessage}}': 'Happy Birthday! Love, Sarah',
+    '{{deliveryPhotoUrl}}': `${origin}/photos/delivery-123.jpg`,
+  };
+}
 
 const recipientTypeOptions = [
   { value: 'recipient', label: 'Recipient (person receiving delivery)' },
@@ -84,7 +87,7 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
 
   const preview = useMemo(() => {
     let text = bodyTemplate;
-    for (const [key, value] of Object.entries(sampleData)) {
+    for (const [key, value] of Object.entries(buildSampleData())) {
       text = text.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
     }
     return text;
@@ -92,7 +95,7 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
 
   const subjectPreview = useMemo(() => {
     let text = subject;
-    for (const [key, value] of Object.entries(sampleData)) {
+    for (const [key, value] of Object.entries(buildSampleData())) {
       text = text.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
     }
     return text;
