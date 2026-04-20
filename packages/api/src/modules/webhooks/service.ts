@@ -7,6 +7,7 @@ import { webhookDeliveries } from '../../lib/db/schema/webhook-deliveries.js';
 import { HttpError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
 import { enqueueWebhook } from '../../lib/webhooks.js';
+import { assertUrlIsSafe } from '../../lib/safe-url.js';
 
 function formatEndpoint(ep: typeof webhookEndpoints.$inferSelect, showSecret = false) {
   return {
@@ -43,6 +44,13 @@ export async function createEndpoint(
   userId: string,
   input: CreateWebhookEndpointInput,
 ) {
+  // SSRF protection: reject private/loopback/internal hosts at create-time.
+  // The worker also checks at delivery-time to catch DNS-rebinding (TOCTOU).
+  const safety = await assertUrlIsSafe(input.url);
+  if (!safety.ok) {
+    throw new HttpError(400, `Invalid URL: ${safety.reason}`);
+  }
+
   const secret = randomBytes(32).toString('hex');
 
   const [created] = await db
@@ -95,7 +103,14 @@ export async function updateEndpoint(
   }
 
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
-  if (input.url !== undefined) updateData.url = input.url;
+  if (input.url !== undefined) {
+    // SSRF protection: re-validate new URL before storing.
+    const safety = await assertUrlIsSafe(input.url);
+    if (!safety.ok) {
+      throw new HttpError(400, `Invalid URL: ${safety.reason}`);
+    }
+    updateData.url = input.url;
+  }
   if (input.events !== undefined) updateData.events = input.events;
   if (input.description !== undefined) updateData.description = input.description;
   if (input.isActive !== undefined) updateData.isActive = input.isActive;

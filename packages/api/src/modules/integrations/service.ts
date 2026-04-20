@@ -9,6 +9,7 @@ import { HttpError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
 import { encrypt, decrypt, getConnector, getAvailablePlatforms as getPlatforms } from '../../lib/integrations/index.js';
 import { config } from '../../config.js';
+import { assertUrlIsSafe, checkPlatformHost } from '../../lib/safe-url.js';
 
 // ─── Formatting ──────────────────────────────────────────────────────────────
 
@@ -70,6 +71,19 @@ export async function createConnection(
   userId: string,
   input: { platform: IntegrationPlatform; storeUrl: string; credentials: Record<string, string>; autoImport: boolean },
 ) {
+  // SSRF / credential-exfiltration protection: the storeUrl is used verbatim
+  // to build the request URL that receives the user's API credentials. Reject
+  // any URL that could target internal infrastructure, and (where the platform
+  // has a canonical host) require the URL to match it.
+  const hostPolicyError = checkPlatformHost(input.platform, input.storeUrl);
+  if (hostPolicyError) {
+    throw new HttpError(400, `Invalid URL: ${hostPolicyError}`);
+  }
+  const safety = await assertUrlIsSafe(input.storeUrl);
+  if (!safety.ok) {
+    throw new HttpError(400, `Invalid URL: ${safety.reason}`);
+  }
+
   const connector = getConnector(input.platform);
 
   // Validate credentials before saving

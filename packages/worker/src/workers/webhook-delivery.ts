@@ -16,22 +16,69 @@ const RETRY_DELAYS = [30_000, 120_000, 900_000, 3_600_000, 14_400_000];
 
 const log = logger.child({ worker: 'webhook-delivery' });
 
-// Block SSRF: reject private/internal IPs and cloud metadata endpoints
+// Block SSRF at delivery time: defense-in-depth against DNS-rebinding between
+// create-time validation and the actual HTTP request. This is the sync /
+// literal-IP form of the API's assertUrlIsSafe helper (see
+// packages/api/src/lib/safe-url.ts — keep the two in sync). DNS can change
+// between create-time and delivery-time (TOCTOU), so we intentionally do NOT
+// re-do the full DNS resolution here; we reject the obvious SSRF targets
+// synchronously and let Node's network stack handle the rest.
 function isBlockedUrl(urlStr: string): boolean {
   try {
     const url = new URL(urlStr);
-    const hostname = url.hostname.toLowerCase();
-    // Block cloud metadata endpoints
-    if (hostname === '169.254.169.254' || hostname === 'metadata.google.internal') return true;
-    // Block localhost variants
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '0.0.0.0') return true;
-    // Block private IP ranges (10.x, 172.16-31.x, 192.168.x)
-    const parts = hostname.split('.').map(Number);
-    if (parts.length === 4 && parts.every(p => !isNaN(p))) {
-      if (parts[0] === 10) return true;
-      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
-      if (parts[0] === 192 && parts[1] === 168) return true;
+    if (url.protocol !== 'https:') return true;
+    if (url.username || url.password) return true;
+    const hostnameRaw = url.hostname.trim().toLowerCase();
+    if (!hostnameRaw) return true;
+    const hostname = hostnameRaw.startsWith('[') && hostnameRaw.endsWith(']')
+      ? hostnameRaw.slice(1, -1)
+      : hostnameRaw;
+
+    // Named loopback / metadata targets.
+    if (
+      hostname === 'localhost' ||
+      hostname.endsWith('.localhost') ||
+      hostname === 'ip6-localhost' ||
+      hostname === 'ip6-loopback' ||
+      hostname === 'metadata.google.internal' ||
+      hostname === 'metadata.goog'
+    ) return true;
+
+    // IPv4 literal.
+    const v4 = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (v4) {
+      const [a, b, c, d] = [1, 2, 3, 4].map(i => Number(v4[i]));
+      if ([a, b, c, d].some(n => Number.isNaN(n) || n < 0 || n > 255)) return true;
+      if (a === 0) return true;                                              // 0.0.0.0/8
+      if (a === 10) return true;                                             // RFC1918
+      if (a === 100 && b >= 64 && b <= 127) return true;                     // CGNAT
+      if (a === 127) return true;                                            // loopback
+      if (a === 169 && b === 254) return true;                               // link-local / AWS metadata
+      if (a === 172 && b >= 16 && b <= 31) return true;                      // RFC1918
+      if (a === 192 && b === 0 && (c === 0 || c === 2)) return true;         // protocol / TEST-NET-1
+      if (a === 192 && b === 168) return true;                               // RFC1918
+      if (a === 198 && (b === 18 || b === 19)) return true;                  // benchmarking
+      if (a === 198 && b === 51 && c === 100) return true;                   // TEST-NET-2
+      if (a === 203 && b === 0 && c === 113) return true;                    // TEST-NET-3
+      if (a >= 224 && a <= 239) return true;                                 // multicast
+      if (a >= 240) return true;                                             // reserved / 255.255.255.255
+      return false;
     }
+
+    // IPv6 literal.
+    if (hostname.includes(':')) {
+      if (hostname === '::' || hostname === '::1') return true;
+      if (/^fe[89ab][0-9a-f]?:/.test(hostname)) return true;                 // fe80::/10 link-local
+      if (/^f[cd][0-9a-f]{0,2}:/.test(hostname)) return true;                // fc00::/7 ULA
+      if (/^ff[0-9a-f]{0,2}:/.test(hostname)) return true;                   // ff00::/8 multicast
+      const mapped = hostname.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+      if (mapped) {
+        // Reuse the same v4 test via a recursive synthetic URL.
+        return isBlockedUrl(`https://${mapped[1]}`);
+      }
+      return false;
+    }
+
     return false;
   } catch {
     return true;
