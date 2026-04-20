@@ -4,98 +4,24 @@ import { createHash, createDecipheriv } from 'crypto';
 import { db } from '../lib/db.js';
 import { logger } from '../lib/logger.js';
 import { resolveCsvAliases } from '@homer-io/shared';
-import { pgTable, uuid, varchar, timestamp, jsonb, numeric, integer, text, uniqueIndex, pgEnum } from 'drizzle-orm/pg-core';
+import {
+  migrationJobs,
+  integrationDrivers,
+  integrationVehicles,
+  orders,
+  drivers,
+  vehicles,
+} from '../lib/schema.js';
 
-// ─── Local schema definitions (mirrors API schemas for worker context) ───────
-
-const migrationJobs = pgTable('migration_jobs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull(),
-  sourcePlatform: varchar('source_platform', { length: 50 }).notNull(),
-  status: varchar('status', { length: 20 }).default('pending').notNull(),
-  config: jsonb('config').default({}).notNull(),
-  progress: jsonb('progress').default({}).notNull(),
-  startedAt: timestamp('started_at', { withTimezone: true }),
-  completedAt: timestamp('completed_at', { withTimezone: true }),
-  errorLog: jsonb('error_log').default([]),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-const integrationSyncStatusEnum = pgEnum('integration_sync_status', ['pending', 'synced', 'failed', 'skipped']);
-
-const integrationDrivers = pgTable('integration_drivers', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull(),
-  migrationJobId: uuid('migration_job_id').notNull(),
-  driverId: uuid('driver_id'),
-  externalDriverId: varchar('external_driver_id', { length: 255 }).notNull(),
-  platform: varchar('platform', { length: 50 }).notNull(),
-  rawData: jsonb('raw_data').default({}).notNull(),
-  syncStatus: integrationSyncStatusEnum('sync_status').default('pending').notNull(),
-  syncError: varchar('sync_error', { length: 1000 }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  uniqueIndex('uq_integration_driver_dedup').on(table.migrationJobId, table.externalDriverId),
-]);
-
-const integrationVehicles = pgTable('integration_vehicles', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  migrationJobId: uuid('migration_job_id').notNull(),
-  vehicleId: uuid('vehicle_id'),
-  externalVehicleId: varchar('external_vehicle_id', { length: 255 }).notNull(),
-  platform: varchar('platform', { length: 50 }).notNull(),
-  rawData: jsonb('raw_data').default({}).notNull(),
-  syncStatus: integrationSyncStatusEnum('sync_status').default('pending').notNull(),
-  syncError: varchar('sync_error', { length: 1000 }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  uniqueIndex('uq_integration_vehicle_dedup').on(table.migrationJobId, table.externalVehicleId),
-]);
-
-const orders = pgTable('orders', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull(),
-  externalId: varchar('external_id', { length: 255 }),
-  status: varchar('status', { length: 20 }).default('received').notNull(),
-  recipientName: varchar('recipient_name', { length: 255 }).notNull(),
-  recipientPhone: varchar('recipient_phone', { length: 20 }),
-  recipientEmail: varchar('recipient_email', { length: 255 }),
-  deliveryAddress: jsonb('delivery_address').notNull(),
-  deliveryLat: numeric('delivery_lat', { precision: 10, scale: 7 }),
-  deliveryLng: numeric('delivery_lng', { precision: 10, scale: 7 }),
-  packageCount: integer('package_count').default(1).notNull(),
-  weight: numeric('weight', { precision: 10, scale: 2 }),
-  volume: numeric('volume', { precision: 10, scale: 2 }),
-  serviceDurationMinutes: integer('service_duration_minutes'),
-  barcodes: jsonb('barcodes').default([]).notNull(),
-  notes: text('notes'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-const drivers = pgTable('drivers', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull(),
-  name: varchar('name', { length: 255 }).notNull(),
-  email: varchar('email', { length: 255 }),
-  phone: varchar('phone', { length: 20 }),
-  externalId: varchar('external_id', { length: 255 }),
-  status: varchar('status', { length: 20 }).default('offline').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-const vehicles = pgTable('vehicles', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull(),
-  name: varchar('name', { length: 255 }).notNull(),
-  type: varchar('type', { length: 20 }).default('van').notNull(),
-  licensePlate: varchar('license_plate', { length: 20 }),
-  externalId: varchar('external_id', { length: 255 }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+// Canonical vehicle types — mirrors the `vehicle_type` pgEnum in the API schema.
+// Any value outside this set gets normalized to 'van' before insert.
+const VEHICLE_TYPES = ['car', 'van', 'truck', 'bike', 'motorcycle', 'cargo_bike'] as const;
+type VehicleType = (typeof VEHICLE_TYPES)[number];
+function normalizeVehicleType(raw: string | null | undefined): VehicleType {
+  if (!raw) return 'van';
+  const lower = raw.toLowerCase().replace(/[\s-]+/g, '_');
+  return (VEHICLE_TYPES as readonly string[]).includes(lower) ? (lower as VehicleType) : 'van';
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -572,7 +498,7 @@ async function processApiVehicles(
         const prefixedId = `${platform}_${ext.externalId}`;
         if (existingExtIds.has(prefixedId)) { progress.vehicles.imported++; continue; }
         const [newVehicle] = await db.insert(vehicles).values({
-          tenantId, name: ext.name, type: ext.type || 'van', licensePlate: ext.licensePlate || undefined, externalId: `${platform}_${ext.externalId}`,
+          tenantId, name: ext.name, type: normalizeVehicleType(ext.type), licensePlate: ext.licensePlate || undefined, externalId: `${platform}_${ext.externalId}`,
         }).returning();
         await db.insert(integrationVehicles).values({
           migrationJobId, vehicleId: newVehicle.id, externalVehicleId: ext.externalId, platform, rawData: ext.rawData, syncStatus: 'synced',
@@ -810,7 +736,7 @@ export async function processMigration(job: Job<MigrationJobData>) {
           for (const row of batch) {
             try {
               const extId = row.external_id || row.vehicle_id || row.id || '';
-              const vehicleType = row.type || row.vehicle_type || 'van';
+              const vehicleType = normalizeVehicleType(row.type || row.vehicle_type);
               const [newVehicle] = await db.insert(vehicles).values({
                 tenantId,
                 name: row.name || row.vehicle_name || 'Unknown Vehicle',

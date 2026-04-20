@@ -3,60 +3,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import { createHash, createDecipheriv } from 'crypto';
 import { db } from '../lib/db.js';
 import { logger } from '../lib/logger.js';
-
-// Minimal schema definitions for worker (mirrors API schema)
-import { pgTable, uuid, varchar, timestamp, boolean, integer, jsonb, pgEnum, uniqueIndex, numeric, text } from 'drizzle-orm/pg-core';
-
-const integrationPlatformEnum = pgEnum('integration_platform', ['shopify', 'woocommerce']);
-const syncStatusEnum = pgEnum('sync_status', ['idle', 'syncing', 'error']);
-const integrationSyncStatusEnum = pgEnum('integration_sync_status', ['pending', 'synced', 'failed', 'skipped']);
-
-const integrationConnections = pgTable('integration_connections', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull(),
-  platform: integrationPlatformEnum('platform').notNull(),
-  storeUrl: varchar('store_url', { length: 500 }).notNull(),
-  credentials: jsonb('credentials').notNull(),
-  webhookIds: jsonb('webhook_ids').default([]).notNull(),
-  autoImport: boolean('auto_import').default(true).notNull(),
-  syncStatus: syncStatusEnum('sync_status').default('idle').notNull(),
-  lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
-  lastSyncError: varchar('last_sync_error', { length: 1000 }),
-  orderCount: integer('order_count').default(0).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-const integrationOrders = pgTable('integration_orders', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull(),
-  connectionId: uuid('connection_id').notNull(),
-  orderId: uuid('order_id'),
-  externalOrderId: varchar('external_order_id', { length: 255 }).notNull(),
-  platform: varchar('platform', { length: 50 }).notNull(),
-  rawData: jsonb('raw_data').default({}).notNull(),
-  syncStatus: integrationSyncStatusEnum('sync_status').default('pending').notNull(),
-  syncError: varchar('sync_error', { length: 1000 }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-const orders = pgTable('orders', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull(),
-  externalId: varchar('external_id', { length: 255 }),
-  status: varchar('status', { length: 20 }).default('received').notNull(),
-  recipientName: varchar('recipient_name', { length: 255 }).notNull(),
-  recipientPhone: varchar('recipient_phone', { length: 20 }),
-  recipientEmail: varchar('recipient_email', { length: 255 }),
-  deliveryAddress: jsonb('delivery_address').notNull(),
-  deliveryLat: numeric('delivery_lat', { precision: 10, scale: 7 }),
-  deliveryLng: numeric('delivery_lng', { precision: 10, scale: 7 }),
-  packageCount: integer('package_count').default(1).notNull(),
-  weight: numeric('weight', { precision: 10, scale: 2 }),
-  notes: text('notes'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+import { integrationConnections, integrationOrders, orders } from '../lib/schema.js';
 
 // ─── Crypto helpers (duplicated from API to avoid cross-package import) ──────
 

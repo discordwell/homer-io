@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./db/schema": {
+      "types": "./src/lib/db/schema/index.ts",
+      "import": "./dist/lib/db/schema/index.js",
+      "default": "./dist/lib/db/schema/index.js"
+    }
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",

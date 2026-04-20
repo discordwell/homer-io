@@ -1,40 +1,8 @@
 import type { Job } from 'bullmq';
 import { eq, sql, and, gte } from 'drizzle-orm';
 import { db } from '../lib/db.js';
-import { orders, routes, drivers } from '../lib/schema.js';
+import { orders, routes, drivers, subscriptions, usageRecords } from '../lib/schema.js';
 import { logger } from '../lib/logger.js';
-
-// Minimal subscription/usage tables for worker context
-import { pgTable, uuid, varchar, timestamp, integer, boolean, pgEnum } from 'drizzle-orm/pg-core';
-
-const subscriptionPlanEnum = pgEnum('subscription_plan', [
-  'free', 'standard', 'growth', 'scale', 'enterprise',
-]);
-
-const subscriptionStatusEnum = pgEnum('subscription_status', [
-  'trialing', 'active', 'past_due', 'canceled', 'unpaid',
-]);
-
-const subscriptions = pgTable('subscriptions', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull().unique(),
-  plan: subscriptionPlanEnum('plan').default('free').notNull(),
-  status: subscriptionStatusEnum('status').default('trialing').notNull(),
-  payAsYouGoEnabled: boolean('pay_as_you_go_enabled').default(false).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-const usageRecords = pgTable('usage_records', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull(),
-  period: varchar('period', { length: 7 }).notNull(),
-  driverCount: integer('driver_count').default(0).notNull(),
-  orderCount: integer('order_count').default(0).notNull(),
-  routeCount: integer('route_count').default(0).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
 
 interface BillingUsageJobData {
   tenantId: string;
