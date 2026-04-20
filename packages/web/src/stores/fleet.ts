@@ -135,6 +135,8 @@ export const useFleetStore = create<FleetState>()((set, get) => ({
     await get().fetchDrivers(get().driverPage);
   },
 
-  setDriverStatusFilter: (status) => set({ driverStatusFilter: status }),
-  setDriverSearch: (search) => set({ driverSearch: search }),
+  // Filter setters reset driver pagination to page 1 so the next fetch doesn't
+  // request a now-out-of-range page (which would render an empty table).
+  setDriverStatusFilter: (status) => set({ driverStatusFilter: status, driverPage: 1 }),
+  setDriverSearch: (search) => set({ driverSearch: search, driverPage: 1 }),
 }));

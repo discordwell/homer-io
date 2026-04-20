@@ -107,5 +107,7 @@ export const useRoutesStore = create<RoutesState>()((set, get) => ({
     return { message: result.message, optimized: result.optimized };
   },
 
-  setStatusFilter: (status) => set({ statusFilter: status }),
+  // Filter setter resets pagination to page 1 so the next fetch doesn't
+  // request a now-out-of-range page (which would render an empty table).
+  setStatusFilter: (status) => set({ statusFilter: status, page: 1 }),
 }));

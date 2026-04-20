@@ -1,3 +1,4 @@
+import { authResponseSchema } from '@homer-io/shared';
 import { useAuthStore } from '../stores/auth.js';
 
 export class BillingError extends Error {
@@ -9,7 +10,62 @@ export class BillingError extends Error {
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+/**
+ * Module-level mutex for refresh requests. Multiple concurrent 401s must
+ * share a single refresh attempt rather than each firing their own. The
+ * promise resolves to the fresh access token on success or `null` on
+ * failure (which means the user has been logged out).
+ */
+let pendingRefresh: Promise<string | null> | null = null;
+
+async function performRefresh(refreshToken: string): Promise<string | null> {
+  const { setAuth, logout } = useAuthStore.getState();
+  try {
+    const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!refreshRes.ok) {
+      logout();
+      return null;
+    }
+    let body: unknown;
+    try {
+      body = await refreshRes.json();
+    } catch {
+      logout();
+      return null;
+    }
+    const parsed = authResponseSchema.safeParse(body);
+    if (!parsed.success) {
+      logout();
+      return null;
+    }
+    setAuth(parsed.data);
+    return parsed.data.accessToken;
+  } catch {
+    logout();
+    return null;
+  }
+}
+
+function refreshAccessToken(refreshToken: string): Promise<string | null> {
+  if (!pendingRefresh) {
+    pendingRefresh = performRefresh(refreshToken).finally(() => {
+      pendingRefresh = null;
+    });
+  }
+  return pendingRefresh;
+}
+
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  // Internal guard: once true, a 401 response will NOT trigger another
+  // refresh attempt for this request. Prevents infinite refresh loops.
+  alreadyRetried = false,
+): Promise<T> {
   const { accessToken } = useAuthStore.getState();
 
   const headers: Record<string, string> = {
@@ -24,26 +80,22 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
   if (res.status === 401) {
-    // Try refresh
-    const { refreshToken, setAuth, logout } = useAuthStore.getState();
-    if (refreshToken) {
-      const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
-      });
-      if (refreshRes.ok) {
-        const data = await refreshRes.json();
-        setAuth(data);
-        // Retry original request
-        headers['Authorization'] = `Bearer ${data.accessToken}`;
-        const retryRes = await fetch(`${API_BASE}${path}`, { ...options, headers });
-        if (!retryRes.ok) throw new Error(await retryRes.text());
-        return retryRes.json();
-      }
-      logout();
+    if (alreadyRetried) {
+      // Refreshed token still got 401 — do not refresh again, bail out.
+      useAuthStore.getState().logout();
+      throw new Error('Unauthorized');
     }
-    throw new Error('Unauthorized');
+    const { refreshToken } = useAuthStore.getState();
+    if (!refreshToken) {
+      throw new Error('Unauthorized');
+    }
+    const newAccessToken = await refreshAccessToken(refreshToken);
+    if (!newAccessToken) {
+      // performRefresh already logged out the user
+      throw new Error('Unauthorized');
+    }
+    // Retry the original request exactly once with the fresh token.
+    return request<T>(path, options, true);
   }
 
   if (res.status === 402) {

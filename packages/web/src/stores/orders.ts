@@ -94,8 +94,10 @@ export const useOrdersStore = create<OrdersState>()((set, get) => ({
     await get().fetchOrders(1);
   },
 
-  setStatusFilter: (status) => set({ statusFilter: status }),
-  setSearch: (search) => set({ search }),
-  setDateFrom: (date) => set({ dateFrom: date }),
-  setDateTo: (date) => set({ dateTo: date }),
+  // Filter setters reset pagination to page 1 so the next fetch doesn't
+  // request a now-out-of-range page (which would render an empty table).
+  setStatusFilter: (status) => set({ statusFilter: status, page: 1 }),
+  setSearch: (search) => set({ search, page: 1 }),
+  setDateFrom: (date) => set({ dateFrom: date, page: 1 }),
+  setDateTo: (date) => set({ dateTo: date, page: 1 }),
 }));

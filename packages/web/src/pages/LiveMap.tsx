@@ -84,19 +84,29 @@ export default function LiveMap() {
   // Track driver progress for the map visualization
   const [driverProgress, setDriverProgress] = useState<Map<string, number>>(new Map());
 
-  // Fetch initial driver locations on mount
+  // Track mount state so async work from the demo loop can bail out if the
+  // component has already unmounted (prevents setState-after-unmount warnings
+  // and wasted re-renders).
+  const isMountedRef = useRef(true);
   useEffect(() => {
-    fetchDriverLocations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
-  // Subscribe to real-time updates when socket connects
+  // Fetch initial driver locations on mount. Zustand action references are
+  // stable, so including it as a dep is safe and satisfies rule-of-hooks.
+  useEffect(() => {
+    fetchDriverLocations();
+  }, [fetchDriverLocations]);
+
+  // Subscribe to real-time updates when socket connects.
   useEffect(() => {
     if (!socket) return;
     subscribeToUpdates(socket);
     return () => { unsubscribe(socket); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socket]);
+  }, [socket, subscribeToUpdates, unsubscribe]);
 
   // Demo mode: route-following simulation
   const simStateRef = useRef<Map<string, SimState>>(new Map());
@@ -132,7 +142,13 @@ export default function LiveMap() {
       seedInitialEvents();
     }
 
-    const interval = setInterval(() => {
+    // Capture interval handle so the cleanup below can cancel it even if the
+    // effect re-runs (e.g. isDemo toggles) or the component unmounts mid-tick.
+    const interval: ReturnType<typeof setInterval> = setInterval(() => {
+      // Guard: if React unmounted the component between scheduling and now,
+      // skip the tick entirely rather than writing to the store / state.
+      if (!isMountedRef.current) return;
+
       tickRef.current++;
       const store = useTrackingStore.getState();
       const updated = new Map(store.driverLocations);
@@ -214,13 +230,18 @@ export default function LiveMap() {
         });
       }
 
-      if (changed) {
+      // Re-check the mount flag before committing writes — an unmount could
+      // have happened while we were computing the tick synchronously (e.g.
+      // during a parent re-render triggered by a store subscription).
+      if (changed && isMountedRef.current) {
         useTrackingStore.setState({ driverLocations: updated });
         setDriverProgress(progressMap);
       }
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+    };
   }, [isDemo]);
 
   const driverCount = driverLocations.size;
