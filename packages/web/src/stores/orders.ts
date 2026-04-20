@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api } from '../api/client.js';
+import { api, BillingError } from '../api/client.js';
 import { guardDemoWrite } from './demo.js';
 
 interface Order {
@@ -34,6 +34,7 @@ interface OrdersState {
   totalPages: number;
   total: number;
   loading: boolean;
+  error: string | null;
   statusFilter: string;
   search: string;
   dateFrom: string;
@@ -55,13 +56,14 @@ export const useOrdersStore = create<OrdersState>()((set, get) => ({
   totalPages: 1,
   total: 0,
   loading: false,
+  error: null,
   statusFilter: '',
   search: '',
   dateFrom: '',
   dateTo: '',
 
   fetchOrders: async (page = 1) => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const { statusFilter, search, dateFrom, dateTo } = get();
       const params = new URLSearchParams({ page: String(page), limit: '20' });
@@ -70,7 +72,15 @@ export const useOrdersStore = create<OrdersState>()((set, get) => ({
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (dateTo) params.set('dateTo', dateTo);
       const res = await api.get<PaginatedResponse<Order>>(`/orders?${params}`);
-      set({ orders: res.items, page: res.page, totalPages: res.totalPages, total: res.total });
+      set({ orders: res.items, page: res.page, totalPages: res.totalPages, total: res.total, error: null });
+    } catch (err) {
+      set({
+        orders: [],
+        page: 1,
+        totalPages: 1,
+        total: 0,
+        error: err instanceof BillingError ? null : (err instanceof Error ? err.message : 'Failed to load orders'),
+      });
     } finally {
       set({ loading: false });
     }

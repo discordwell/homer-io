@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode, type CSSProperties } from 'react';
+import { useState, useEffect, type ReactNode, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import type { VerticalContent } from './vertical-content.js';
 import './home.css';
@@ -12,18 +12,7 @@ import './home.css';
 /* ---- Scroll reveal (same as HomePage) ---- */
 
 function Reveal({ children, className = '' }: { children: ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { el.classList.add('visible'); obs.disconnect(); } },
-      { threshold: 0.12 },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return <div ref={ref} className={`reveal ${className}`}>{children}</div>;
+  return <div className={`reveal visible ${className}`}>{children}</div>;
 }
 
 /* ---- Nav ---- */
@@ -206,7 +195,7 @@ function PainPointsSection({ content }: { content: VerticalContent }) {
       <Reveal>
         <div style={{ textAlign: 'center', marginBottom: 64 }}>
           <span className="hp-eyebrow">Sound familiar?</span>
-          <h2 className="hp-h2">Problems you already know</h2>
+          <h2 className="hp-h2">Where {content.industry.toLowerCase()} delivery breaks down</h2>
         </div>
       </Reveal>
       <Reveal>
@@ -452,7 +441,7 @@ function PricingSection({ content }: { content: VerticalContent }) {
         <Reveal>
           <div className="pricing-heading">
             <span className="hp-eyebrow">Pricing</span>
-            <h2 className="hp-h2">Unlimited drivers. Pay per order.</h2>
+            <h2 className="hp-h2">Pricing for {content.industry.toLowerCase()} peaks, not seat counts</h2>
             <p className="hp-body">
               Every feature at every tier. No per-seat charges. No feature gates. Just volume.
             </p>
@@ -520,7 +509,7 @@ function FinalCTA({ content }: { content: VerticalContent }) {
   return (
     <div className="final-cta">
       <Reveal>
-        <h2 className="hp-h2">Start dispatching in 5&nbsp;minutes</h2>
+        <h2 className="hp-h2">Launch {content.industry.toLowerCase()} delivery this week</h2>
         <p className="hp-body">
           Free forever up to 100 orders/month. No credit card. Up and running today.
         </p>

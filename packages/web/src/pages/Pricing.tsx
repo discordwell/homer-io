@@ -1,22 +1,11 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import '../components/landing-v2/home.css';
 
 /* ---- Scroll reveal (same as landing) ---- */
 
 function Reveal({ children, className = '' }: { children: ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { el.classList.add('visible'); obs.disconnect(); } },
-      { threshold: 0.12 },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return <div ref={ref} className={`reveal ${className}`}>{children}</div>;
+  return <div className={`reveal visible ${className}`}>{children}</div>;
 }
 
 /* ---- Nav (reused from landing) ---- */
@@ -242,7 +231,8 @@ export function PricingPage() {
 
       {/* Header */}
       <section style={{
-        paddingTop: 140, paddingBottom: 80,
+        paddingTop: 'clamp(104px, 18vw, 140px)',
+        paddingBottom: 'clamp(56px, 10vw, 80px)',
         textAlign: 'center',
         background: 'linear-gradient(180deg, #06090F 0%, #0A1018 100%)',
       }}>

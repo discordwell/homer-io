@@ -7,7 +7,9 @@ export function ResetPasswordPage() {
   const token = searchParams.get('token') || '';
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() => (
+    token ? '' : 'Missing reset token. Please use the link from your email.'
+  ));
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 

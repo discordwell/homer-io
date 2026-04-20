@@ -64,6 +64,18 @@ export function parseTrustProxy(raw: string | undefined): false | string[] {
   return parts;
 }
 
+function splitList(value: string | undefined): string[] {
+  return (value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+const frontendUrl = trimTrailingSlash(process.env.APP_FRONTEND_URL || 'http://localhost:3001');
+const apiUrl = trimTrailingSlash(process.env.APP_API_URL || frontendUrl);
+const corsOrigins = splitList(process.env.CORS_ORIGIN);
+
+
 export const config = {
   port: Number(process.env.PORT) || 3000,
   host: process.env.HOST || '0.0.0.0',
@@ -95,10 +107,9 @@ export const config = {
   },
 
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',') || (isProduction
-      ? ['https://app.homer.io', 'https://homer.discordwell.com']
-      : ['http://localhost:3001']
-    ),
+    origin: corsOrigins.length > 0
+      ? corsOrigins
+      : (isProduction ? [frontendUrl] : ['http://localhost:3001']),
   },
 
   minio: {
@@ -176,6 +187,7 @@ export const config = {
   },
 
   app: {
-    frontendUrl: trimTrailingSlash(process.env.APP_FRONTEND_URL || 'http://localhost:3001'),
+    frontendUrl,
+    apiUrl,
   },
 } as const;

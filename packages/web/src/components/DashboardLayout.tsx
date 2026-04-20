@@ -4,7 +4,6 @@ import { Sidebar } from './Sidebar.js';
 import { AIChatPanel } from './AIChatPanel.js';
 import { NotificationCenter } from './NotificationCenter.js';
 import { SubscriptionBanner } from './SubscriptionBanner.js';
-import { OnboardingWizard } from './OnboardingWizard.js';
 import { BillingBlockedModal } from './BillingBlockedModal.js';
 import { useAuthStore } from '../stores/auth.js';
 import { C, alpha } from '../theme.js';
@@ -128,7 +127,6 @@ export function DashboardLayout() {
       >
         <SubscriptionBanner />
         <main style={{ flex: 1, padding: `20px var(--page-pad) var(--page-pad)`, overflow: 'auto' }}>
-          <OnboardingWizard />
           <Outlet />
         </main>
       </div>

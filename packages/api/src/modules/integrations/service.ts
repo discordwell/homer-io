@@ -113,9 +113,7 @@ export async function createConnection(
     .returning();
 
   // Register webhooks — use API base URL (not frontend CORS origin)
-  const apiBaseUrl = config.nodeEnv === 'production'
-    ? 'https://api.homer.io'
-    : config.cors.origin[0];
+  const apiBaseUrl = config.app.apiUrl;
   const webhookCallbackUrl = `${apiBaseUrl}/api/integrations/webhook/${input.platform}/${created.id}`;
   let webhookIds: string[] = [];
   try {

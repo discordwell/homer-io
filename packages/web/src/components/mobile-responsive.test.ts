@@ -85,8 +85,9 @@ describe('Mobile Responsive: Landing page CSS', () => {
     expect(homeCss).toContain('@media (max-width: 640px)');
   });
 
-  it('hides nav links on mobile', () => {
-    expect(homeCss).toContain('.hp-nav-links { display: none; }');
+  it('keeps a compact nav on mobile instead of hiding everything', () => {
+    expect(homeCss).toContain('.hp-nav-links');
+    expect(homeCss).toContain('li:nth-child(-n+2)');
   });
 
   it('stacks hero buttons vertically on mobile', () => {

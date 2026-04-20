@@ -8,6 +8,7 @@ import { Badge } from '../components/Badge.js';
 import { EmptyState } from '../components/EmptyState.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
 import { IntelligenceWidget } from '../components/IntelligenceWidget.js';
+import { OnboardingWizard } from '../components/OnboardingWizard.js';
 import { C, F, alpha } from '../theme.js';
 
 const statusColors: Record<string, string> = {
@@ -142,13 +143,18 @@ export function DashboardPage() {
   const showQuickActions = industry
     && INDUSTRY_QUICK_ACTIONS[industry]
     && (stats ? stats.ordersToday < 5 : true);
+  const summaryLine = stats && stats.ordersToday > 0
+    ? `${stats.ordersToday} orders moving through today's dispatch window.`
+    : 'Set up the essentials, then start routing live work.';
 
   return (
-    <div>
+    <div style={{ maxWidth: 1380, margin: '0 auto' }}>
       <h2 style={{ fontFamily: F.display, fontSize: 24, marginBottom: 8 }}>
         Welcome back, {user?.name?.split(' ')[0]}
       </h2>
-      <p style={{ color: C.dim, marginBottom: 32 }}>Your logistics command center</p>
+      <p style={{ color: C.dim, marginBottom: 20 }}>{summaryLine}</p>
+
+      <OnboardingWizard />
 
       {error && (
         <div style={{

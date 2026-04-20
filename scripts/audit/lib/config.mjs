@@ -23,12 +23,16 @@ export const FILES = {
   envExample: path.join(ROOT_DIR, '.env.example'),
 };
 
+function readAuditSurface(name, fallback = '') {
+  return (process.env[name] || fallback).trim();
+}
+
 export const LIVE_SURFACES = {
-  apex: 'https://homer.io',
-  publicSite: 'https://homer.discordwell.com',
-  app: 'https://app.homer.io',
-  apiHealth: 'https://api.homer.io/health',
-  track: 'https://track.homer.io',
+  apex: readAuditSurface('AUDIT_LIVE_APEX', 'https://homer.io'),
+  publicSite: readAuditSurface('AUDIT_LIVE_PUBLIC_SITE', 'https://homer.discordwell.com'),
+  app: readAuditSurface('AUDIT_LIVE_APP'),
+  apiHealth: readAuditSurface('AUDIT_LIVE_API_HEALTH'),
+  track: readAuditSurface('AUDIT_LIVE_TRACK', 'https://track.homer.io'),
 };
 
 export const PASS_QUOTAS = {

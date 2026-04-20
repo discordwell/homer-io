@@ -40,6 +40,8 @@ export const useBillingStore = create<BillingState>()((set, get) => ({
     try {
       const sub = await api.get<SubscriptionResponse>('/billing/subscription');
       set({ subscription: sub });
+    } catch {
+      set({ subscription: null });
     } finally {
       set({ loading: false });
     }

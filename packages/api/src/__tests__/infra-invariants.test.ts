@@ -108,7 +108,13 @@ describe('Finding H16: CI has lint/typecheck/audit', () => {
 describe('Finding H17: deploy uses migrate:run, not push --force', () => {
   it('deploy workflow does not invoke drizzle-kit push', () => {
     const yml = readText('.github/workflows/deploy.yml');
-    expect(yml).not.toMatch(/drizzle-kit\s+push/);
+    // Strip comment lines so historical references in commentary don't
+    // false-positive. We only care about executable lines.
+    const executable = yml
+      .split('\n')
+      .filter((line) => !/^\s*#/.test(line))
+      .join('\n');
+    expect(executable).not.toMatch(/drizzle-kit\s+push/);
   });
 
   it('deploy workflow invokes db:migrate:run', () => {

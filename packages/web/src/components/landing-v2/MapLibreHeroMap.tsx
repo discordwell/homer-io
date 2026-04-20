@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import type maplibregl from 'maplibre-gl';
 import { buildHeroStyle } from './maplibreStyle.js';
 import { DriverAnimator } from './driverAnimator.js';
+import { loadMapLibre } from './loadMapLibre.js';
 
 interface MapLibreHeroMapProps {
   lat: number;
@@ -52,74 +52,94 @@ export default function MapLibreHeroMap({ lat, lng, onReady, onError }: MapLibre
       handleFatalError(detail.statusMessage || detail.message || 'Failed to initialize WebGL');
     };
 
-    let map: maplibregl.Map;
-    try {
-      map = new maplibregl.Map({
-        container,
-        style: buildHeroStyle(apiKey),
-        center: [lng, lat],
-        zoom: 10,
-        interactive: false,
-        attributionControl: false,
-        fadeDuration: 0,
+    let cleanupMap: (() => void) | null = null;
+    let cancelled = false;
+
+    loadMapLibre()
+      .then((maplibre) => {
+        if (cancelled || mapRef.current) return;
+
+        let map: maplibregl.Map;
+        try {
+          map = new maplibre.Map({
+            container,
+            style: buildHeroStyle(apiKey),
+            center: [lng, lat],
+            zoom: 10,
+            interactive: false,
+            attributionControl: false,
+            fadeDuration: 0,
+          });
+        } catch (error) {
+          handleFatalError(error);
+          return;
+        }
+
+        mapRef.current = map;
+        container.addEventListener('webglcontextcreationerror', handleContextCreationError);
+
+        const handleReady = () => {
+          if (readyFired.current) return;
+          readyFired.current = true;
+
+          try {
+            const animator = new DriverAnimator(map, container);
+            animatorRef.current = animator;
+            animator.start();
+          } catch (error) {
+            handleFatalError(error);
+            return;
+          }
+
+          onReadyRef.current();
+        };
+
+        // 'styledata' fires as soon as the style document is parsed — much earlier
+        // than 'load' which waits for every tile/sprite/glyph to finish. This lets
+        // us crossfade to the MapLibre canvas while tiles are still streaming in,
+        // avoiding the long blank-map gap.
+        map.once('styledata', handleReady);
+        // Keep 'load' as a belt-and-suspenders fallback in case 'styledata' is
+        // somehow skipped (shouldn't happen, but defensive).
+        map.on('load', handleReady);
+        // Fallback: if neither event fires within 2.5s, show map anyway
+        const fallbackTimer = setTimeout(handleReady, 2500);
+
+        const handleMapError = (event: { error?: Error }) => {
+          if (!readyFired.current) {
+            handleFatalError(event.error || 'Map failed during initialization');
+            return;
+          }
+
+          console.warn('[HeroMap] MapLibre error:', event.error?.message || event);
+        };
+        map.on('error', handleMapError);
+
+        cleanupMap = () => {
+          clearTimeout(fallbackTimer);
+          map.off('load', handleReady);
+          map.off('error', handleMapError);
+          map.off('styledata', handleReady);
+          container.removeEventListener('webglcontextcreationerror', handleContextCreationError);
+          animatorRef.current?.destroy();
+          animatorRef.current = null;
+          map.remove();
+          mapRef.current = null;
+        };
+
+        if (cancelled) {
+          cleanupMap();
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          handleFatalError(error);
+        }
       });
-    } catch (error) {
-      handleFatalError(error);
-      return;
-    }
-
-    mapRef.current = map;
-    container.addEventListener('webglcontextcreationerror', handleContextCreationError);
-
-    const handleReady = () => {
-      if (readyFired.current) return;
-      readyFired.current = true;
-
-      try {
-        const animator = new DriverAnimator(map, container);
-        animatorRef.current = animator;
-        animator.start();
-      } catch (error) {
-        handleFatalError(error);
-        return;
-      }
-
-      onReadyRef.current();
-    };
-
-    // 'styledata' fires as soon as the style document is parsed — much earlier
-    // than 'load' which waits for every tile/sprite/glyph to finish. This lets
-    // us crossfade to the MapLibre canvas while tiles are still streaming in,
-    // avoiding the long blank-map gap.
-    map.once('styledata', handleReady);
-    // Keep 'load' as a belt-and-suspenders fallback in case 'styledata' is
-    // somehow skipped (shouldn't happen, but defensive).
-    map.on('load', handleReady);
-    // Fallback: if neither event fires within 2.5s, show map anyway
-    const fallbackTimer = setTimeout(handleReady, 2500);
-
-    const handleMapError = (event: { error?: Error }) => {
-      if (!readyFired.current) {
-        handleFatalError(event.error || 'Map failed during initialization');
-        return;
-      }
-
-      console.warn('[HeroMap] MapLibre error:', event.error?.message || event);
-    };
-    map.on('error', handleMapError);
 
     return () => {
-      clearTimeout(fallbackTimer);
-      map.off('load', handleReady);
-      map.off('error', handleMapError);
-      // 'styledata' was registered with once() so it auto-removes after firing,
-      // but if it hasn't fired yet we should clean it up too.
-      map.off('styledata', handleReady);
-      container.removeEventListener('webglcontextcreationerror', handleContextCreationError);
-      animatorRef.current?.destroy();
-      animatorRef.current = null;
-      map.remove();
-      mapRef.current = null;
+      cancelled = true;
+      cleanupMap?.();
     };
   }, [lat, lng]);
 

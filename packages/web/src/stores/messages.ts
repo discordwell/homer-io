@@ -58,8 +58,12 @@ export const useMessagesStore = create<MessagesState>()((set) => ({
   },
 
   fetchUnreadCount: async () => {
-    const result = await api.get<{ count: number }>('/messages/unread-count');
-    set({ unreadCount: result.count });
+    try {
+      const result = await api.get<{ count: number }>('/messages/unread-count');
+      set({ unreadCount: result.count });
+    } catch {
+      set({ unreadCount: 0 });
+    }
   },
 
   addMessage: (message) => {

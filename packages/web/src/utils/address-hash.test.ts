@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { hashAddressBrowser } from './address-hash.js';
-import { hashAddress } from '@homer-io/shared';
+import { hashAddress } from '@homer-io/shared/address';
 
 describe('hashAddressBrowser', () => {
   it('produces same hash as server-side hashAddress for a simple address', async () => {

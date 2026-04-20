@@ -7,8 +7,8 @@
 html { scroll-behavior: smooth; }
 
 .hp {
-  /* Override body font to Satoshi for landing page (dashboard uses Inter) */
-  --fb: 'Satoshi', sans-serif;
+  /* Override body font to Space Grotesk for landing page (dashboard uses Inter) */
+  --fb: 'Space Grotesk', sans-serif;
 
   background: var(--bg);
   color: var(--t1);
@@ -133,11 +133,11 @@ html { scroll-behavior: smooth; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 64px;
+  gap: clamp(32px, 6vw, 64px);
   width: 100%;
   max-width: 1320px;
   margin: 0 auto;
-  padding: 100px 48px 60px;
+  padding: clamp(92px, 14vw, 100px) clamp(18px, 4vw, 48px) 60px;
 }
 
 .hero-text {
@@ -168,7 +168,7 @@ html { scroll-behavior: smooth; }
 }
 
 .hero-h1 {
-  font-size: clamp(48px, 6vw, 82px);
+  font-size: clamp(40px, 9vw, 82px);
   font-weight: 800;
   color: var(--t1);
   margin-bottom: 24px;
@@ -180,7 +180,7 @@ html { scroll-behavior: smooth; }
 }
 
 .hero-sub {
-  font-size: 18px;
+  font-size: clamp(16px, 2vw, 18px);
   color: var(--t2);
   line-height: 1.7;
   margin-bottom: 40px;
@@ -255,7 +255,7 @@ html { scroll-behavior: smooth; }
 /* ---- Chat Preview ---- */
 
 .chat-preview {
-  width: 420px;
+  width: min(420px, 100%);
   min-height: 380px;
   flex-shrink: 0;
   background: rgba(12,18,32,0.82);
@@ -356,7 +356,7 @@ html { scroll-behavior: smooth; }
 /* ---- Proof / Status strip ---- */
 
 .proof-strip {
-  padding: 20px 48px;
+  padding: 20px clamp(18px, 4vw, 48px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -391,12 +391,12 @@ html { scroll-behavior: smooth; }
 /* ---- Sections ---- */
 
 .hp-section {
-  padding: 120px 48px;
+  padding: clamp(80px, 10vw, 120px) clamp(18px, 4vw, 48px);
   max-width: 1320px;
   margin: 0 auto;
 }
 
-.hp-section-full { padding: 120px 48px; }
+.hp-section-full { padding: clamp(80px, 10vw, 120px) clamp(18px, 4vw, 48px); }
 
 .hp-eyebrow {
   font-family: var(--fm);
@@ -924,8 +924,29 @@ html { scroll-behavior: smooth; }
 }
 
 @media (max-width: 640px) {
-  .hp-nav { padding: 0 16px; }
-  .hp-nav-links { display: none; }
+  .hp-nav {
+    padding: 0 18px;
+    gap: 12px;
+  }
+
+  .hp-nav-links {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+  }
+
+  .hp-nav-links li:nth-child(-n+2) {
+    display: none;
+  }
+
+  .hp-nav-links a {
+    font-size: 13px;
+  }
+
+  .hp-nav-cta {
+    padding: 10px 16px;
+    border-radius: 12px;
+  }
 
   .hero {
     min-height: calc(100vh - 64px);

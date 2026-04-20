@@ -6,15 +6,15 @@ describe('NLOps tool input validation', () => {
   if (!searchTool) throw new Error('search_orders tool missing from registry');
 
   it('accepts valid input and returns precisely typed value', () => {
-    const result = validateToolInput(searchTool, { query: 'marcus' });
+    const result = validateToolInput(searchTool, { search: 'marcus' });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value).toMatchObject({ query: 'marcus' });
+      expect(result.value).toMatchObject({ search: 'marcus' });
     }
   });
 
   it('rejects wrong-type input with structured error (no throw)', () => {
-    const result = validateToolInput(searchTool, { query: 12345 });
+    const result = validateToolInput(searchTool, { search: 12345 });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.error).toBe('invalid_input');
@@ -24,7 +24,7 @@ describe('NLOps tool input validation', () => {
 
   it('rejects oversized input past MAX_TOOL_INPUT_BYTES', () => {
     const huge = 'x'.repeat(MAX_TOOL_INPUT_BYTES + 100);
-    const result = validateToolInput(searchTool, { query: huge });
+    const result = validateToolInput(searchTool, { search: huge });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.error).toBe('input_too_large');

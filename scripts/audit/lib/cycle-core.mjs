@@ -40,7 +40,7 @@ async function probeLiveSurfaces() {
     { name: 'apex', url: LIVE_SURFACES.apex },
     { name: 'app', url: LIVE_SURFACES.app },
     { name: 'apiHealth', url: LIVE_SURFACES.apiHealth },
-  ];
+  ].filter((target) => target.url);
 
   const probes = [];
   for (const target of targets) {
@@ -187,13 +187,13 @@ function deriveLiveSurfaceIssues(probes) {
     }));
   }
 
-  if (!appProbe?.ok) {
+  if (appProbe && !appProbe.ok) {
     issues.push(createIssue({
       severity: 'P1',
       class: 'deployment',
-      title: 'Configured app.homer.io surface is not reachable from the audit environment',
-      summary: 'The repo emits app.homer.io links and Caddy config references the domain, but the probe could not establish a healthy response from that surface.',
-      recommendation: 'Fix the app domain deployment or stop emitting app.homer.io links until the surface is verifiably healthy.',
+      title: 'Configured app surface is not reachable from the audit environment',
+      summary: `The configured app surface (${appProbe.url}) did not produce a healthy response from the audit environment.`,
+      recommendation: 'Fix the configured app deployment or clear AUDIT_LIVE_APP until that surface is verifiably healthy.',
       evidence: [{
         source: appProbe?.url || LIVE_SURFACES.app,
         detail: appProbe?.error || `status ${appProbe?.status}`,
@@ -201,13 +201,13 @@ function deriveLiveSurfaceIssues(probes) {
     }));
   }
 
-  if (!apiProbe?.ok) {
+  if (apiProbe && !apiProbe.ok) {
     issues.push(createIssue({
       severity: 'P1',
       class: 'deployment',
-      title: 'Configured api.homer.io health surface is not reachable from the audit environment',
-      summary: 'The repo references api.homer.io as the production API hostname, but the health probe failed from the audit environment.',
-      recommendation: 'Fix the API domain deployment or make the emitted production API base URL configurable and verifiable.',
+      title: 'Configured API health surface is not reachable from the audit environment',
+      summary: `The configured API health surface (${apiProbe.url}) did not produce a healthy response from the audit environment.`,
+      recommendation: 'Fix the configured API deployment or clear AUDIT_LIVE_API_HEALTH until that surface is verifiably healthy.',
       evidence: [{
         source: apiProbe?.url || LIVE_SURFACES.apiHealth,
         detail: apiProbe?.error || `status ${apiProbe?.status}`,

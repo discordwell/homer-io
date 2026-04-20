@@ -32,5 +32,5 @@ export * from './schemas/cannabis.js';
 export * from './schemas/pharmacy.js';
 export * from './schemas/features.js';
 export * from './types/roles.js';
-export * from './utils/address.js';
+export type { AddressComponents, NormalizedAddress, FailureCategory } from './utils/address.js';
 export * from './utils/geo.js';

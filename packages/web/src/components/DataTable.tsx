@@ -2,7 +2,7 @@ import { C, F } from '../theme.js';
 
 export interface Column<T> {
   key: string;
-  header: string;
+  header: React.ReactNode;
   render?: (item: T) => React.ReactNode;
   width?: string | number;
 }
@@ -16,10 +16,12 @@ interface DataTableProps<T> {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function DataTable<T extends Record<string, any>>({ columns, data, onRowClick, pagination }: DataTableProps<T>) {
+  const minWidth = Math.max(columns.reduce((sum, column) => sum + getColumnMinWidth(column), 0), 520);
+
   return (
     <div>
       <div className="data-table-wrap" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: F.body, fontSize: 14, minWidth: columns.length > 4 ? 600 : undefined }}>
+        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', fontFamily: F.body, fontSize: 14, minWidth }}>
           <thead>
             <tr>
               {columns.map(col => (
@@ -43,7 +45,7 @@ export function DataTable<T extends Record<string, any>>({ columns, data, onRowC
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 {columns.map(col => (
-                  <td key={col.key} style={{ padding: '10px 12px', color: C.text, whiteSpace: col.width ? 'nowrap' : undefined }}>
+                  <td key={col.key} style={{ padding: '10px 12px', color: C.text, whiteSpace: col.width ? 'nowrap' : undefined, verticalAlign: 'top' }}>
                     {col.render ? col.render(item) : String(item[col.key] ?? '')}
                   </td>
                 ))}
@@ -65,6 +67,26 @@ export function DataTable<T extends Record<string, any>>({ columns, data, onRowC
       )}
     </div>
   );
+}
+
+function getColumnMinWidth<T extends Record<string, any>>(column: Column<T>): number {
+  if (typeof column.width === 'number') return column.width;
+  if (typeof column.width === 'string') {
+    const parsed = Number.parseInt(column.width, 10);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+
+  const headerText = typeof column.header === 'string'
+    ? column.header.toLowerCase()
+    : '';
+
+  if (column.key === 'select' || column.key === 'actions') return 52;
+  if (column.key.includes('address') || headerText.includes('address')) return 180;
+  if (column.key.includes('name') || headerText.includes('recipient') || headerText.includes('route')) return 160;
+  if (headerText.includes('status') || headerText.includes('priority') || headerText.includes('progress')) return 120;
+  if (headerText.includes('created') || headerText.includes('date')) return 110;
+
+  return 96;
 }
 
 function pgBtnStyle(disabled: boolean): React.CSSProperties {

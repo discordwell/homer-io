@@ -81,6 +81,19 @@ function mergeIssues(issues) {
   return [...merged.values()];
 }
 
+function isLocalBaseUrl(url) {
+  return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i.test(url);
+}
+
+function filterConsoleErrors(errors, pageConfig) {
+  if (!isLocalBaseUrl(baseUrl) || pageConfig.kind !== 'auth') return errors;
+
+  return errors.filter((message) => (
+    !message.includes('[GSI_LOGGER]: The given origin is not allowed for the given client ID.')
+    && !message.includes('Failed to load resource: the server responded with a status of 403 ()')
+  ));
+}
+
 async function attachPageInstrumentation(page) {
   const consoleErrors = [];
   const pageErrors = [];
@@ -113,6 +126,84 @@ async function waitForAppContent(page) {
   } catch {
     return false;
   }
+}
+
+async function waitForAnyVisible(locators, timeout = 6500) {
+  const deadline = Date.now() + timeout;
+
+  while (Date.now() < deadline) {
+    for (const locator of locators) {
+      if ((await locator.count()) === 0) continue;
+      if (await locator.first().isVisible().catch(() => false)) {
+        await locator.first().waitFor({ state: 'visible', timeout: 250 }).catch(() => {});
+        return true;
+      }
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+
+  return false;
+}
+
+function getReadinessLocators(page, pageConfig) {
+  switch (pageConfig.slug) {
+    case 'home':
+      return [
+        page.getByRole('link', { name: /see how it works|try the demo/i }),
+        page.getByRole('link', { name: /start free/i }),
+      ];
+    case 'pricing':
+      return [
+        page.getByRole('link', { name: /^features$/i }),
+        page.getByRole('heading', { name: /simple, transparent pricing/i }),
+      ];
+    case 'login':
+      return [
+        page.getByLabel(/^email$/i),
+        page.getByRole('button', { name: /sign in/i }),
+      ];
+    case 'register':
+      return [
+        page.getByLabel(/your name/i),
+        page.getByRole('button', { name: /create account/i }),
+      ];
+    case 'forgot-password':
+      return [
+        page.getByLabel(/^email$/i),
+        page.getByRole('button', { name: /send reset link/i }),
+      ];
+    case 'reset-password':
+      return [
+        page.getByLabel(/new password/i),
+        page.locator('.error-box'),
+      ];
+    case 'verify-email':
+      return [
+        page.locator('.error-box'),
+        page.getByRole('link', { name: /back to sign in/i }),
+      ];
+    case 'demo':
+      return [
+        page.getByPlaceholder(/you@company\.com/i),
+        page.getByRole('button', { name: /start demo/i }),
+      ];
+    default:
+      return [
+        page.getByRole('heading').first(),
+        page.locator('main').first(),
+      ];
+  }
+}
+
+async function waitForRouteReady(page, pageConfig, timeout = 6500) {
+  const ready = await waitForAnyVisible(getReadinessLocators(page, pageConfig), timeout);
+
+  if (ready) {
+    await page.waitForTimeout(120);
+  }
+
+  return ready;
 }
 
 async function getMountSnapshot(page) {
@@ -200,6 +291,7 @@ async function runHomeChecks(context) {
   try {
     await page.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded' });
     await waitForAppContent(page);
+    await waitForRouteReady(page, { slug: 'home', kind: 'marketing' });
 
     const issues = [];
     const demoLink = page.getByRole('link', { name: /see how it works|try the demo/i }).first();
@@ -226,6 +318,7 @@ async function runPricingChecks(context) {
   try {
     await page.goto(`${baseUrl}/pricing`, { waitUntil: 'domcontentloaded' });
     await waitForAppContent(page);
+    await waitForRouteReady(page, { slug: 'pricing', kind: 'marketing' });
 
     const issues = [];
     const featuresLink = page.getByRole('link', { name: /^features$/i }).first();
@@ -253,6 +346,7 @@ async function runDemoChecks(context) {
   try {
     await page.goto(`${baseUrl}/demo`, { waitUntil: 'domcontentloaded' });
     await waitForAppContent(page);
+    await waitForRouteReady(page, { slug: 'demo', kind: 'demo' });
 
     const issues = [];
     const email = page.getByPlaceholder(/you@company.com/i);
@@ -285,6 +379,7 @@ async function runLoginChecks(context) {
   try {
     await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded' });
     await waitForAppContent(page);
+    await waitForRouteReady(page, { slug: 'login', kind: 'auth' });
 
     const issues = [];
     const email = page.getByLabel(/^email$/i);
@@ -313,6 +408,7 @@ async function runRegisterChecks(context) {
   try {
     await page.goto(`${baseUrl}/register`, { waitUntil: 'domcontentloaded' });
     await waitForAppContent(page);
+    await waitForRouteReady(page, { slug: 'register', kind: 'auth' });
 
     const issues = [];
     const requiredLabels = [/your name/i, /organization name/i, /^email$/i, /^password$/i];
@@ -340,6 +436,7 @@ async function runForgotPasswordChecks(context) {
   try {
     await page.goto(`${baseUrl}/forgot-password`, { waitUntil: 'domcontentloaded' });
     await waitForAppContent(page);
+    await waitForRouteReady(page, { slug: 'forgot-password', kind: 'auth' });
 
     const issues = [];
     if ((await page.getByLabel(/^email$/i).count()) === 0) {
@@ -363,6 +460,7 @@ async function runResetPasswordChecks(context) {
   try {
     await page.goto(`${baseUrl}/reset-password`, { waitUntil: 'domcontentloaded' });
     await waitForAppContent(page);
+    await waitForRouteReady(page, { slug: 'reset-password', kind: 'auth' });
 
     const issues = [];
     if ((await page.getByLabel(/new password/i).count()) === 0 || (await page.getByLabel(/confirm password/i).count()) === 0) {
@@ -388,6 +486,7 @@ async function runVerifyEmailChecks(context) {
   try {
     await page.goto(`${baseUrl}/verify-email`, { waitUntil: 'domcontentloaded' });
     await waitForAppContent(page);
+    await waitForRouteReady(page, { slug: 'verify-email', kind: 'auth' });
 
     const issues = [];
     const errorBox = page.locator('.error-box');
@@ -577,6 +676,7 @@ for (const viewport of viewports) {
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded' });
       const mounted = await waitForAppContent(page);
+      await waitForRouteReady(page, pageConfig);
       const initialMount = await getMountSnapshot(page);
 
       const initialScreenshotPath = path.join(screenshotsDir, `${pageConfig.slug}-${viewport.name}-top.png`);
@@ -618,10 +718,12 @@ for (const viewport of viewports) {
         evidence: unique([...current.evidence, `${pageConfig.slug}/${viewport.name}`]),
       })));
 
-      if (instrumentation.consoleErrors.length > 0) {
+      const consoleErrors = filterConsoleErrors(instrumentation.consoleErrors, pageConfig);
+
+      if (consoleErrors.length > 0) {
         issues.push(issue('P2', `${pageConfig.slug} emitted console errors on ${viewport.name}`, 'The page logged console errors during a clean navigation.', [
           `${pageConfig.slug}/${viewport.name}`,
-          ...instrumentation.consoleErrors.slice(0, 3),
+          ...consoleErrors.slice(0, 3),
         ]));
       }
 
@@ -657,7 +759,7 @@ for (const viewport of viewports) {
           initial: initialMount,
           settled: settledMount,
         },
-        consoleErrors: instrumentation.consoleErrors,
+        consoleErrors,
         pageErrors: instrumentation.pageErrors,
         requestFailures: instrumentation.requestFailures,
       });

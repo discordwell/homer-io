@@ -1,55 +1,64 @@
+import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/auth.js';
-import { LoginPage } from './pages/Login.js';
-import { RegisterPage } from './pages/Register.js';
-import { ForgotPasswordPage } from './pages/ForgotPassword.js';
-import { ResetPasswordPage } from './pages/ResetPassword.js';
-import { VerifyEmailPage } from './pages/VerifyEmail.js';
-import { OrgChoicePage } from './pages/OrgChoice.js';
-import { DashboardPage } from './pages/Dashboard.js';
-import { VehiclesPage } from './pages/Vehicles.js';
-import { DriversPage } from './pages/Drivers.js';
-import { OrdersPage } from './pages/Orders.js';
-import { RoutesPage } from './pages/Routes.js';
-import { RouteBuilderPage } from './pages/RouteBuilder.js';
-import { RouteDetailPage } from './pages/RouteDetail.js';
-import LiveMapPage from './pages/LiveMap.js';
-import { AnalyticsPage } from './pages/Analytics.js';
-import { SettingsPage } from './pages/Settings.js';
-import { DispatchPage } from './pages/Dispatch.js';
-import { PublicTrackingPage } from './pages/PublicTracking.js';
-import { DashboardLayout } from './components/DashboardLayout.js';
-import { DriverLayout } from './components/DriverLayout.js';
-import { DriverRoutePage } from './pages/driver/DriverRoute.js';
-import { DriverStopDetailPage } from './pages/driver/DriverStopDetail.js';
-import { DriverMapPage } from './pages/driver/DriverMap.js';
-import { DriverProfilePage } from './pages/driver/DriverProfile.js';
-import { MigrationPage } from './pages/Migration.js';
-import { LandingPage } from './pages/Landing.js';
-import { DemoDashboardLayout } from './components/DemoDashboardLayout.js';
-import { DemoDashboardPage } from './pages/DemoDashboard.js';
-import { DemoOrdersPage } from './pages/DemoOrders.js';
-import { DemoRoutesPage } from './pages/DemoRoutes.js';
-import { DemoVehiclesPage, DemoDriversPage } from './pages/DemoFleet.js';
-import { DemoAnalyticsPage } from './pages/DemoAnalytics.js';
-import { VerticalLanding } from './components/landing-v2/VerticalLanding.js';
+import { LoadingSpinner } from './components/LoadingSpinner.js';
 import { VERTICAL_CONTENT } from './components/landing-v2/vertical-content.js';
-import { PricingPage } from './pages/Pricing.js';
 import { C, F } from './theme.js';
-import { MessagesPage } from './pages/Messages.js';
 import { hasMinRole, type Role } from '@homer-io/shared';
+
+const LandingPage = lazy(() => import('./pages/Landing.js').then((module) => ({ default: module.LandingPage })));
+const LoginPage = lazy(() => import('./pages/Login.js').then((module) => ({ default: module.LoginPage })));
+const RegisterPage = lazy(() => import('./pages/Register.js').then((module) => ({ default: module.RegisterPage })));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword.js').then((module) => ({ default: module.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPassword.js').then((module) => ({ default: module.ResetPasswordPage })));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmail.js').then((module) => ({ default: module.VerifyEmailPage })));
+const OrgChoicePage = lazy(() => import('./pages/OrgChoice.js').then((module) => ({ default: module.OrgChoicePage })));
+const DashboardLayout = lazy(() => import('./components/DashboardLayout.js').then((module) => ({ default: module.DashboardLayout })));
+const DashboardPage = lazy(() => import('./pages/Dashboard.js').then((module) => ({ default: module.DashboardPage })));
+const VehiclesPage = lazy(() => import('./pages/Vehicles.js').then((module) => ({ default: module.VehiclesPage })));
+const DriversPage = lazy(() => import('./pages/Drivers.js').then((module) => ({ default: module.DriversPage })));
+const OrdersPage = lazy(() => import('./pages/Orders.js').then((module) => ({ default: module.OrdersPage })));
+const RoutesPage = lazy(() => import('./pages/Routes.js').then((module) => ({ default: module.RoutesPage })));
+const RouteBuilderPage = lazy(() => import('./pages/RouteBuilder.js').then((module) => ({ default: module.RouteBuilderPage })));
+const RouteDetailPage = lazy(() => import('./pages/RouteDetail.js').then((module) => ({ default: module.RouteDetailPage })));
+const LiveMapPage = lazy(() => import('./pages/LiveMap.js'));
+const AnalyticsPage = lazy(() => import('./pages/Analytics.js').then((module) => ({ default: module.AnalyticsPage })));
+const SettingsPage = lazy(() => import('./pages/Settings.js').then((module) => ({ default: module.SettingsPage })));
+const DispatchPage = lazy(() => import('./pages/Dispatch.js').then((module) => ({ default: module.DispatchPage })));
+const PublicTrackingPage = lazy(() => import('./pages/PublicTracking.js').then((module) => ({ default: module.PublicTrackingPage })));
+const DriverLayout = lazy(() => import('./components/DriverLayout.js').then((module) => ({ default: module.DriverLayout })));
+const DriverRoutePage = lazy(() => import('./pages/driver/DriverRoute.js').then((module) => ({ default: module.DriverRoutePage })));
+const DriverStopDetailPage = lazy(() => import('./pages/driver/DriverStopDetail.js').then((module) => ({ default: module.DriverStopDetailPage })));
+const DriverMapPage = lazy(() => import('./pages/driver/DriverMap.js').then((module) => ({ default: module.DriverMapPage })));
+const DriverProfilePage = lazy(() => import('./pages/driver/DriverProfile.js').then((module) => ({ default: module.DriverProfilePage })));
+const MigrationPage = lazy(() => import('./pages/Migration.js').then((module) => ({ default: module.MigrationPage })));
+const DemoDashboardLayout = lazy(() => import('./components/DemoDashboardLayout.js').then((module) => ({ default: module.DemoDashboardLayout })));
+const DemoDashboardPage = lazy(() => import('./pages/DemoDashboard.js').then((module) => ({ default: module.DemoDashboardPage })));
+const DemoOrdersPage = lazy(() => import('./pages/DemoOrders.js').then((module) => ({ default: module.DemoOrdersPage })));
+const DemoRoutesPage = lazy(() => import('./pages/DemoRoutes.js').then((module) => ({ default: module.DemoRoutesPage })));
+const DemoVehiclesPage = lazy(() => import('./pages/DemoFleet.js').then((module) => ({ default: module.DemoVehiclesPage })));
+const DemoDriversPage = lazy(() => import('./pages/DemoFleet.js').then((module) => ({ default: module.DemoDriversPage })));
+const DemoAnalyticsPage = lazy(() => import('./pages/DemoAnalytics.js').then((module) => ({ default: module.DemoAnalyticsPage })));
+const VerticalLanding = lazy(() => import('./components/landing-v2/VerticalLanding.js').then((module) => ({ default: module.VerticalLanding })));
+const PricingPage = lazy(() => import('./pages/Pricing.js').then((module) => ({ default: module.PricingPage })));
+const MessagesPage = lazy(() => import('./pages/Messages.js').then((module) => ({ default: module.MessagesPage })));
 
 function ProtectedRoute({
   children,
   requiredRole,
+  exactRole,
 }: {
   children: React.ReactNode;
   requiredRole?: Role;
+  exactRole?: Role;
 }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (exactRole && (!user || user.role !== exactRole)) {
+    return <Navigate to="/dashboard" replace />;
+  }
   if (requiredRole && (!user || !hasMinRole(user.role, requiredRole))) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -61,6 +70,14 @@ function CatchAllRedirect() {
   return <Navigate to={isAuthenticated ? '/dashboard' : '/'} replace />;
 }
 
+function RouteFallback() {
+  return (
+    <div style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <LoadingSpinner size={36} />
+    </div>
+  );
+}
+
 export function App() {
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
@@ -70,6 +87,7 @@ export function App() {
       color: C.text,
       fontFamily: F.body,
     }}>
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -98,7 +116,7 @@ export function App() {
         </Route>
         {/* Driver PWA routes */}
         <Route path="/driver" element={
-          <ProtectedRoute requiredRole="driver"><DriverLayout /></ProtectedRoute>
+          <ProtectedRoute exactRole="driver"><DriverLayout /></ProtectedRoute>
         }>
           <Route index element={<DriverRoutePage />} />
           <Route path="stop/:routeId/:orderId" element={<DriverStopDetailPage />} />
@@ -125,6 +143,7 @@ export function App() {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="*" element={<CatchAllRedirect />} />
       </Routes>
+      </Suspense>
     </div>
     </GoogleOAuthProvider>
   );

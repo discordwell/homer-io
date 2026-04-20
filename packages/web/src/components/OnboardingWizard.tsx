@@ -37,7 +37,7 @@ function IndustryPicker({ onSelect, loading: isLoading }: { onSelect: (v: string
 
   return (
     <div style={{
-      display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+      display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))',
       gap: 8, opacity: isLoading ? 0.6 : 1, pointerEvents: isLoading ? 'none' : 'auto',
     }}>
       {INDUSTRY_OPTIONS.map(opt => (
@@ -64,11 +64,48 @@ function IndustryPicker({ onSelect, loading: isLoading }: { onSelect: (v: string
   );
 }
 
+function useIsCompact(breakpoint = 720) {
+  const [isCompact, setIsCompact] = useState(
+    typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false,
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const handler = (event: MediaQueryListEvent) => setIsCompact(event.matches);
+    setIsCompact(mql.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, [breakpoint]);
+
+  return isCompact;
+}
+
+function getStepHint(stepKey: string) {
+  switch (stepKey) {
+    case 'industry':
+      return 'Choose the operating mode that matches your delivery business.';
+    case 'vehicle':
+      return 'Add the vehicles dispatch will plan around.';
+    case 'driver':
+      return 'Invite the drivers who will actually run these stops.';
+    case 'order':
+      return 'Bring in real demand before creating the first route.';
+    case 'route':
+      return 'Turn today’s orders into a dispatchable route.';
+    case 'notification':
+      return 'Decide how customers hear from you when drivers move.';
+    default:
+      return '';
+  }
+}
+
 export function OnboardingWizard() {
   const { status, loading, industryLoading, sampleDataLoading, fetchStatus, completeOnboarding, skipOnboarding, skipStep, setIndustry, loadSampleData } = useOnboardingStore();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const [sampleDataResult, setSampleDataResult] = useState<string | null>(null);
+  const isCompact = useIsCompact();
+  const isCompressed = useIsCompact(1080);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchStatus(); }, []);
@@ -83,6 +120,13 @@ export function OnboardingWizard() {
   const subtitle = industry && INDUSTRY_SUBTITLES[industry]
     ? INDUSTRY_SUBTITLES[industry]
     : 'Complete these steps to get started';
+  const progressLabel = allDone
+    ? 'Setup complete'
+    : `${progress} of ${status.steps.length} steps complete`;
+  const title = allDone ? 'You are ready to dispatch' : 'Setup roadmap';
+  const detail = allDone
+    ? 'Your workspace has the basics in place. You can start dispatching real work now.'
+    : (industrySet ? subtitle : 'Choose your industry and finish the remaining setup steps.');
 
   const handleLoadSampleData = async () => {
     try {
@@ -97,31 +141,47 @@ export function OnboardingWizard() {
 
   return (
     <div style={{
-      background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
-      padding: 24, margin: '0 0 24px',
+      background: `linear-gradient(180deg, ${alpha(C.surface, 0.94)} 0%, ${alpha(C.bg3, 0.98)} 100%)`,
+      borderRadius: 16,
+      border: `1px solid ${alpha(C.muted, 0.35)}`,
+      boxShadow: '0 18px 42px rgba(0, 0, 0, 0.24)',
+      padding: isCompact ? 18 : 22,
+      margin: '0 0 20px',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div>
-          <h3 style={{ fontFamily: F.display, fontSize: 18, marginBottom: 4 }}>
-            {allDone ? 'All set! You\'re ready to go' : 'Welcome to HOMER.io'}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: isCompact ? 'flex-start' : 'center',
+        flexWrap: 'wrap',
+        gap: 14,
+        marginBottom: 14,
+      }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{
+            fontFamily: F.mono,
+            fontSize: 11,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: C.accent,
+            marginBottom: 8,
+          }}>
+            {progressLabel}
+          </div>
+          <h3 style={{ fontFamily: F.display, fontSize: 20, marginBottom: 6 }}>
+            {title}
           </h3>
-          <p style={{ color: C.dim, fontSize: 13 }}>
-            {allDone
-              ? 'Your setup is complete.'
-              : industrySet
-                ? `${subtitle} (${progress}/${status.steps.length})`
-                : `Complete these steps to get started (${progress}/${status.steps.length})`
-            }
+          <p style={{ color: C.dim, fontSize: 13, lineHeight: 1.6, maxWidth: 580 }}>
+            {detail}
           </p>
         </div>
         <button
           onClick={allDone ? completeOnboarding : skipOnboarding}
           style={{
-            padding: '8px 16px', borderRadius: 8,
+            padding: '8px 16px', borderRadius: 999,
             background: allDone ? C.accent : 'transparent',
-            border: allDone ? 'none' : `1px solid ${C.muted}`,
-            color: allDone ? '#fff' : C.dim,
-            cursor: 'pointer', fontFamily: F.body, fontSize: 13, fontWeight: allDone ? 600 : 400,
+            border: allDone ? 'none' : `1px solid ${alpha(C.muted, 0.55)}`,
+            color: allDone ? '#000' : C.dim,
+            cursor: 'pointer', fontFamily: F.body, fontSize: 13, fontWeight: allDone ? 700 : 500,
           }}
         >
           {allDone ? 'Finish' : 'Skip setup'}
@@ -129,33 +189,57 @@ export function OnboardingWizard() {
       </div>
 
       {/* Progress bar */}
-      <div style={{ background: C.bg3, borderRadius: 4, height: 6, marginBottom: 16, overflow: 'hidden' }}>
+      <div style={{ background: alpha(C.muted, 0.12), borderRadius: 999, height: 6, marginBottom: 16, overflow: 'hidden' }}>
         <div style={{
           width: `${(progress / status.steps.length) * 100}%`,
-          height: '100%', background: C.accent, borderRadius: 4,
+          height: '100%', background: C.accent, borderRadius: 999,
           transition: 'width 0.3s ease',
         }} />
       </div>
 
       {/* Load sample data — prominent CTA after industry is selected */}
       {industrySet && !sampleDataResult && (
-        <button
-          onClick={handleLoadSampleData}
-          disabled={sampleDataLoading}
-          style={{
-            width: '100%', padding: '14px 20px', marginBottom: 16,
-            borderRadius: 10, border: `1px solid ${C.accent}`,
-            background: alpha(C.accent, 0.08),
-            color: C.accent, cursor: sampleDataLoading ? 'wait' : 'pointer',
-            fontFamily: F.body, fontSize: 14, fontWeight: 600,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            transition: 'all 0.2s ease',
-            opacity: sampleDataLoading ? 0.7 : 1,
-          }}
-        >
-          <span style={{ fontSize: 18 }}>{sampleDataLoading ? '\u23F3' : '\u{1F4E6}'}</span>
-          {sampleDataLoading ? 'Loading sample data\u2026' : 'Load sample data \u2014 see HOMER in action'}
-        </button>
+        <div style={{
+          display: 'flex',
+          flexDirection: isCompact ? 'column' : 'row',
+          alignItems: isCompact ? 'flex-start' : 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: isCompact ? '14px 16px' : '16px 18px',
+          marginBottom: 16,
+          borderRadius: 14,
+          background: `linear-gradient(135deg, ${alpha(C.accent, 0.1)} 0%, ${alpha(C.green, 0.06)} 100%)`,
+          border: `1px solid ${alpha(C.accent, 0.45)}`,
+        }}>
+          <div>
+            <div style={{ fontFamily: F.display, fontSize: 15, color: C.text, marginBottom: 4 }}>
+              Load a realistic workspace
+            </div>
+            <div style={{ color: C.dim, fontSize: 12.5, lineHeight: 1.5, maxWidth: 520 }}>
+              Seed orders, routes, and fleet data so the dashboard feels alive before your real dispatch volume shows up.
+            </div>
+          </div>
+          <button
+            onClick={handleLoadSampleData}
+            disabled={sampleDataLoading}
+            style={{
+              padding: '10px 16px',
+              minHeight: 42,
+              minWidth: isCompact ? '100%' : 0,
+              borderRadius: 999,
+              border: 'none',
+              background: C.accent,
+              color: '#000',
+              cursor: sampleDataLoading ? 'wait' : 'pointer',
+              fontFamily: F.body,
+              fontSize: 13,
+              fontWeight: 700,
+              opacity: sampleDataLoading ? 0.7 : 1,
+            }}
+          >
+            {sampleDataLoading ? 'Loading sample data\u2026' : 'Load sample data'}
+          </button>
+        </div>
       )}
       {sampleDataResult && (
         <div style={{
@@ -170,84 +254,141 @@ export function OnboardingWizard() {
       )}
 
       {/* Steps */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {status.steps.map((step) => (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isCompact ? '1fr' : (isCompressed ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))'),
+        gap: 8,
+        alignItems: 'start',
+      }}>
+        {status.steps.map((step, index) => {
+          const actions = !step.completed && step.key !== 'industry' ? (
+            <div style={{
+              display: 'flex',
+              gap: 8,
+              flexDirection: isCompact ? 'column' : 'row',
+              alignItems: 'stretch',
+              justifyContent: 'flex-end',
+              marginLeft: isCompact ? 36 : 0,
+              width: isCompact ? 'calc(100% - 36px)' : 'auto',
+            }}>
+              <button
+                onClick={() => navigate(STEP_LINKS[step.key] || '/dashboard')}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 999,
+                  background: C.accent,
+                  border: 'none',
+                  color: '#000',
+                  cursor: 'pointer',
+                  fontFamily: F.body,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  minHeight: 42,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {isCompact ? `Open ${step.label.toLowerCase()}` : 'Open'}
+              </button>
+              {step.skippable && (
+                <button
+                  onClick={() => skipStep(step.key)}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 999,
+                    background: 'transparent',
+                    border: `1px solid ${alpha(C.muted, 0.55)}`,
+                    color: C.dim,
+                    cursor: 'pointer',
+                    fontFamily: F.body,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    minHeight: 42,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Configure later
+                </button>
+              )}
+            </div>
+          ) : null;
+
+          return (
           <div key={step.key}>
             <div style={{
-              display: 'flex', alignItems: step.key === 'industry' && !step.completed ? 'flex-start' : 'center', gap: 12,
-              padding: '10px 14px', borderRadius: step.skipReason && !step.completed ? '8px 8px 0 0' : 8,
-              background: C.bg3,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              height: '100%',
+              padding: isCompact ? '14px 14px 12px' : '12px 14px',
+              borderRadius: step.skipReason && !step.completed ? '12px 12px 0 0' : 12,
+              background: step.completed ? alpha(C.green, 0.05) : alpha(C.bg3, 0.92),
+              border: `1px solid ${step.completed ? alpha(C.green, 0.18) : alpha(C.muted, 0.22)}`,
             }}>
-              <span style={{
-                width: 22, height: 22, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: step.completed ? (step.skipped ? C.yellow : C.green) : C.muted,
-                color: step.completed ? '#000' : C.dim,
-                fontSize: 12, fontWeight: 600, flexShrink: 0,
-                marginTop: step.key === 'industry' && !step.completed ? 2 : 0,
+              <div style={{
+                display: 'flex',
+                alignItems: step.key === 'industry' && !step.completed ? 'flex-start' : 'center',
+                gap: 12,
               }}>
-                {step.completed ? (step.skipped ? '\u2192' : '\u2713') : '\u00B7'}
-              </span>
-              <div style={{ flex: 1 }}>
                 <span style={{
-                  fontSize: 14,
-                  color: step.completed ? C.dim : C.text,
-                  textDecoration: step.completed && !step.skipped ? 'line-through' : 'none',
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: step.completed ? (step.skipped ? C.yellow : C.green) : alpha(C.muted, 0.35),
+                  color: step.completed ? '#000' : C.dim,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                  marginTop: step.key === 'industry' && !step.completed ? 2 : 0,
                 }}>
-                  {step.label}
-                  {step.skipped && (
-                    <span style={{ fontSize: 11, color: C.dim, marginLeft: 8, fontStyle: 'italic' }}>
-                      (skipped)
-                    </span>
-                  )}
+                  {step.completed ? (step.skipped ? '\u2192' : '\u2713') : index + 1}
                 </span>
-                {/* Inline industry picker */}
-                {step.key === 'industry' && !step.completed && (
-                  <div style={{ marginTop: 12 }}>
-                    <IndustryPicker onSelect={setIndustry} loading={industryLoading} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: step.completed ? C.dim : C.text,
+                    textDecoration: step.completed && !step.skipped ? 'line-through' : 'none',
+                  }}>
+                    {step.label}
+                    {step.skipped && (
+                      <span style={{ fontSize: 11, color: C.dim, marginLeft: 8, fontStyle: 'italic', fontWeight: 400 }}>
+                        (skipped)
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
-              {!step.completed && step.key !== 'industry' && (
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  {step.skippable && (
-                    <button
-                      onClick={() => skipStep(step.key)}
-                      style={{
-                        padding: '4px 12px', borderRadius: 6,
-                        background: 'transparent', border: `1px solid ${C.muted}`,
-                        color: C.dim, cursor: 'pointer', fontFamily: F.body,
-                        fontSize: 12, fontWeight: 400,
-                      }}
-                    >
-                      Configure later
-                    </button>
+                  <div style={{ fontSize: 12, color: C.dim, marginTop: 4, lineHeight: 1.5 }}>
+                    {step.completed
+                      ? (step.skipped ? 'Marked for later. You can revisit it whenever the rest of the workspace is stable.' : 'Done.')
+                      : getStepHint(step.key)}
+                  </div>
+                  {step.key === 'industry' && !step.completed && (
+                    <div style={{ marginTop: 14 }}>
+                      <IndustryPicker onSelect={setIndustry} loading={industryLoading} />
+                    </div>
                   )}
-                  <button
-                    onClick={() => navigate(STEP_LINKS[step.key] || '/dashboard')}
-                    style={{
-                      padding: '4px 12px', borderRadius: 6,
-                      background: C.accent, border: 'none', color: '#000',
-                      cursor: 'pointer', fontFamily: F.body, fontSize: 12, fontWeight: 600,
-                    }}
-                  >
-                    Go
-                  </button>
                 </div>
-              )}
+                {!isCompact && actions}
+              </div>
+              {isCompact && actions}
             </div>
             {/* Show skip reason hint when the step is not completed and has a reason */}
             {step.skipReason && !step.completed && (
               <div style={{
-                padding: '8px 14px', borderRadius: '0 0 8px 8px',
-                background: C.bg3, borderTop: `1px solid ${C.muted}`,
+                padding: '10px 14px',
+                borderRadius: '0 0 12px 12px',
+                background: alpha(C.bg3, 0.94),
+                borderTop: `1px solid ${alpha(C.muted, 0.2)}`,
                 fontSize: 12, color: C.yellow, lineHeight: 1.4,
               }}>
                 {step.skipReason}
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ import { api } from '../api/client.js';
 import { hashAddressBrowser } from '../utils/address-hash.js';
 import { C, F, alpha, primaryBtnStyle, secondaryBtnStyle } from '../theme.js';
 import { useSettingsStore } from '../stores/settings.js';
+import { useAuthStore } from '../stores/auth.js';
 
 interface AddressIntelligence {
   addressHash: string;
@@ -56,18 +57,36 @@ const emptyForm = {
   crewSize: '2', assemblyRequired: false, haulAway: false,
 };
 
+function useIsCondensedOrders(breakpoint = 1100) {
+  const [isCondensed, setIsCondensed] = useState(
+    typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false,
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const handler = (event: MediaQueryListEvent) => setIsCondensed(event.matches);
+    setIsCondensed(mql.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, [breakpoint]);
+
+  return isCondensed;
+}
+
 export function OrdersPage() {
   const {
-    orders, page, totalPages, total, loading, statusFilter, search,
+    orders, page, totalPages, total, loading, error, statusFilter, search,
     fetchOrders, createOrder, deleteOrder, importCsv,
     setStatusFilter, setSearch,
   } = useOrdersStore();
   const { toast } = useToast();
-  const { orgSettings } = useSettingsStore();
-  const isFlorist = orgSettings?.industry === 'florist';
-  const isPharmacy = orgSettings?.industry === 'pharmacy';
-  const isGrocery = orgSettings?.industry === 'grocery';
-  const isFurniture = orgSettings?.industry === 'furniture';
+  const authIndustry = useAuthStore((s) => s.user?.industry ?? null);
+  const { orgSettings, fetchSettings } = useSettingsStore();
+  const tenantIndustry = orgSettings?.industry ?? authIndustry;
+  const isFlorist = tenantIndustry === 'florist';
+  const isPharmacy = tenantIndustry === 'pharmacy';
+  const isGrocery = tenantIndustry === 'grocery';
+  const isFurniture = tenantIndustry === 'furniture';
   const [modalOpen, setModalOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -79,9 +98,15 @@ export function OrdersPage() {
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [intelData, setIntelData] = useState<AddressIntelligence | null>(null);
   const [intelLoading, setIntelLoading] = useState(false);
+  const isCondensedOrders = useIsCondensedOrders();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchOrders(); }, [statusFilter]);
+  useEffect(() => {
+    if (!orgSettings) {
+      void fetchSettings();
+    }
+  }, [fetchSettings, orgSettings]);
   useEffect(() => { setSelectedIds(new Set()); }, [orders]);
 
   const intelRequestRef = React.useRef(0);
@@ -149,7 +174,7 @@ export function OrdersPage() {
     }
   }
 
-  const columns: Column<typeof orders[0]>[] = [
+  const fullColumns: Column<typeof orders[0]>[] = [
     {
       key: 'select', header: (
         <input type="checkbox" checked={orders.length > 0 && selectedIds.size === orders.length}
@@ -180,6 +205,51 @@ export function OrdersPage() {
       ),
     },
   ];
+
+  const condensedColumns: Column<typeof orders[0]>[] = [
+    fullColumns[0],
+    {
+      key: 'delivery',
+      header: 'Delivery',
+      render: (o) => (
+        <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{o.recipientName}</div>
+          <div style={{ fontSize: 12, color: C.dim, lineHeight: 1.45 }}>
+            {o.deliveryAddress.street}
+          </div>
+          <div style={{ fontSize: 12, color: C.dim, lineHeight: 1.45 }}>
+            {o.deliveryAddress.city}, {o.deliveryAddress.state}
+          </div>
+        </div>
+      ),
+      width: 260,
+    },
+    {
+      key: 'shipment',
+      header: 'Shipment',
+      render: (o) => (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <div style={{ fontSize: 12, color: C.dim }}>{o.packageCount} {o.packageCount === 1 ? 'package' : 'packages'}</div>
+          <Badge color={priorityColors[o.priority]}>{o.priority}</Badge>
+        </div>
+      ),
+      width: 136,
+    },
+    {
+      key: 'statusMeta',
+      header: 'Status',
+      render: (o) => (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <Badge color={statusColors[o.status]}>{o.status.replace('_', ' ')}</Badge>
+          <div style={{ fontSize: 12, color: C.dim }}>{new Date(o.createdAt).toLocaleDateString()}</div>
+        </div>
+      ),
+      width: 136,
+    },
+    fullColumns[fullColumns.length - 1],
+  ];
+
+  const columns = isCondensedOrders ? condensedColumns : fullColumns;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -261,6 +331,20 @@ export function OrdersPage() {
         </div>
       </div>
 
+      {error && (
+        <div style={{
+          background: alpha(C.red, 0.1),
+          border: `1px solid ${C.red}`,
+          color: C.red,
+          padding: 12,
+          borderRadius: 8,
+          marginBottom: 16,
+          fontSize: 14,
+        }}>
+          {error}
+        </div>
+      )}
+
       <div className="filter-pills" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <Pill active={!statusFilter} onClick={() => setStatusFilter('')}>All</Pill>
         {['received', 'assigned', 'in_transit', 'delivered', 'failed', 'returned'].map(s => (
@@ -325,7 +409,7 @@ export function OrdersPage() {
             <button onClick={() => { setForm({ ...emptyForm, isGift: isFlorist }); setModalOpen(true); }} style={primaryBtnStyle}>+ Add Order</button>
           </div>} />
       ) : (
-        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16, overflowX: 'auto' }}>
+        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: isCondensedOrders ? 12 : 16, overflowX: 'auto' }}>
           <DataTable columns={columns} data={orders}
             onRowClick={toggleOrderExpand}
             pagination={{ page, totalPages, onPageChange: fetchOrders }} />

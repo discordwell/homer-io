@@ -20,6 +20,7 @@
     "audit:cycle": "node scripts/audit/cycle.mjs",
     "audit:report": "node scripts/audit/report.mjs",
     "audit:browser:public": "node scripts/audit/browser-public.mjs",
+    "audit:browser:seeded": "node scripts/audit/browser-seeded.mjs",
     "audit:test": "node --test scripts/audit/lib/*.test.mjs",
     "db:generate": "npm run db:generate -w @homer-io/api",
     "db:migrate": "npm run db:migrate -w @homer-io/api"

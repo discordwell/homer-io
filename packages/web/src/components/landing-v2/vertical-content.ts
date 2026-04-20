@@ -168,7 +168,7 @@ export const VERTICAL_CONTENT: Record<string, VerticalContent> = {
         icon: '\u23F0',
       },
       {
-        title: 'Route Optimization',
+        title: 'Dense-Stop Route Planning',
         description:
           'Real road-network routing, not crow-flies. Handle 80 deliveries in a day without burning gas or time.',
         icon: '\uD83D\uDDFA\uFE0F',
@@ -340,7 +340,7 @@ export const VERTICAL_CONTENT: Record<string, VerticalContent> = {
         icon: '\uD83D\uDCF1',
       },
       {
-        title: 'Route Optimization',
+        title: 'Dinner-Rush Route Planning',
         description:
           'Real road-network routing with traffic awareness. Handle dinner rush with 3 drivers instead of 5.',
         icon: '\uD83D\uDDFA\uFE0F',
@@ -411,7 +411,7 @@ export const VERTICAL_CONTENT: Record<string, VerticalContent> = {
         icon: '\uD83D\uDCCD',
       },
       {
-        title: 'Route Optimization',
+        title: 'Tight-Window Route Planning',
         description:
           'Routes built for tight delivery windows with realistic service times. Elevator? Walk-up? HOMER factors it in.',
         icon: '\uD83D\uDDFA\uFE0F',

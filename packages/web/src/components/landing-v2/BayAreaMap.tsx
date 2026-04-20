@@ -131,7 +131,7 @@ export function BayAreaMap() {
       </g>
 
       {/* City labels */}
-      <g fontFamily="'Satoshi',sans-serif">
+      <g fontFamily="'Space Grotesk',sans-serif">
         <circle cx="268" cy="258" r="3.5" fill="#94A3B8" opacity="0.6" />
         <text x="245" y="278" textAnchor="middle" fontSize="12" fontWeight="600" fill="#94A3B8" opacity="0.7">
           San Francisco

@@ -1,7 +1,8 @@
 import type { Job } from 'bullmq';
 import { eq, and, sql } from 'drizzle-orm';
 import Anthropic from '@anthropic-ai/sdk';
-import { normalizeAddress, hashAddress, haversineDistance, FAILURE_CATEGORIES } from '@homer-io/shared';
+import { haversineDistance } from '@homer-io/shared';
+import { normalizeAddress, hashAddress, FAILURE_CATEGORIES } from '@homer-io/shared/address';
 import type { AddressComponents, FailureCategory } from '@homer-io/shared';
 import { db } from '../lib/db.js';
 import {
