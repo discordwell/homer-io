@@ -9,6 +9,7 @@ import { orders } from '../../lib/db/schema/orders.js';
 import { config } from '../../config.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { cacheDelete } from '../../lib/cache.js';
+import { logger } from '../../lib/logger.js';
 import { logActivity } from '../../lib/activity.js';
 import { planFeatures, meteredQuotas, meteredRates } from '@homer-io/shared';
 import type { MeteredFeature } from '@homer-io/shared';
@@ -18,7 +19,7 @@ let stripe: Stripe | null = null;
 function getStripe(): Stripe | null {
   if (stripe) return stripe;
   if (!config.stripe.secretKey) {
-    console.warn('[billing] Stripe secret key not configured — running in mock mode');
+    logger.warn('[billing] Stripe secret key not configured — running in mock mode');
     return null;
   }
   stripe = new Stripe(config.stripe.secretKey);

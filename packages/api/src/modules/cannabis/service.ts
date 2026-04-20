@@ -10,6 +10,7 @@ import { routes } from '../../lib/db/schema/routes.js';
 import { drivers } from '../../lib/db/schema/drivers.js';
 import { vehicles } from '../../lib/db/schema/vehicles.js';
 import { logActivity } from '../../lib/activity.js';
+import { logger } from '../../lib/logger.js';
 import { generateManifestPdf } from '../reports/cannabis-manifest.js';
 
 // ---------------------------------------------------------------------------
@@ -188,7 +189,7 @@ export async function createManifest(
     await db.update(deliveryManifests).set({ pdfUrl }).where(eq(deliveryManifests.id, manifest.id));
     manifest.pdfUrl = pdfUrl;
   } catch (err) {
-    console.error('[cannabis] Manifest PDF generation failed:', err);
+    logger.error({ err }, '[cannabis] Manifest PDF generation failed');
   }
 
   if (userId) {

@@ -8,6 +8,7 @@ import { orders } from '../../lib/db/schema/orders.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { config } from '../../config.js';
 import { logActivity } from '../../lib/activity.js';
+import { logger } from '../../lib/logger.js';
 
 const customerNotificationQueue = new Queue('customer-notifications', {
   connection: { url: config.redis.url },
@@ -117,10 +118,10 @@ export async function sendTestNotification(tenantId: string, templateId: string)
     body = body.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
   }
 
-  console.log(`[test-notification] Channel: ${template.channel}`);
-  console.log(`[test-notification] Subject: ${template.subject ?? '(none)'}`);
-  console.log(`[test-notification] Body: ${body}`);
-  console.log(`[test-notification] Test notification logged (no actual send — provider may not be configured)`);
+  logger.info(
+    { channel: template.channel, subject: template.subject ?? null, body },
+    '[test-notification] Rendered test notification (no send — provider may not be configured)',
+  );
 
   return { success: true, message: 'Test sent', renderedBody: body };
 }
@@ -177,7 +178,7 @@ export async function enqueueCustomerNotification(
     );
 
   if (templates.length === 0) {
-    console.log(`[customer-notification] No active templates for trigger "${trigger}"`);
+    logger.debug({ tenantId, trigger }, '[customer-notification] No active templates');
     return;
   }
 
@@ -189,7 +190,7 @@ export async function enqueueCustomerNotification(
     .limit(1);
 
   if (!order) {
-    console.error(`[customer-notification] Order ${orderId} not found`);
+    logger.error({ tenantId, orderId }, '[customer-notification] Order not found');
     return;
   }
 
@@ -236,8 +237,9 @@ export async function enqueueCustomerNotification(
     }
 
     if (targets.length === 0) {
-      console.log(
-        `[customer-notification] No ${template.channel} ${recipientType} for order ${orderId}, skipping template ${template.id}`,
+      logger.debug(
+        { channel: template.channel, recipientType, orderId, templateId: template.id },
+        '[customer-notification] No target contact, skipping template',
       );
       continue;
     }
@@ -270,11 +272,11 @@ export async function enqueueCustomerNotification(
       const feature = template.channel === 'sms' ? 'smsSent' as const : 'emailsSent' as const;
       const meter = await recordMeteredUsage(tenantId, feature);
       if (!meter.allowed) {
-        console.log(`[customer-notification] ${feature} quota exceeded for tenant ${tenantId}, skipping`);
+        logger.info({ tenantId, feature }, '[customer-notification] Quota exceeded, skipping');
         continue;
       }
     } catch (err) {
-      console.error('[customer-notification] Metering failed, sending anyway:', err);
+      logger.error({ err, tenantId }, '[customer-notification] Metering failed, sending anyway');
     }
 
     // Create log entry with status 'queued'
@@ -308,8 +310,9 @@ export async function enqueueCustomerNotification(
       },
     );
 
-    console.log(
-      `[customer-notification] Enqueued ${template.channel} notification for order ${orderId} (trigger: ${trigger}, to: ${recipientType})`,
+    logger.debug(
+      { channel: template.channel, orderId, trigger, recipientType, logId: logEntry.id },
+      '[customer-notification] Enqueued notification',
     );
     } // end for target of targets
   } // end for template of templates

@@ -459,7 +459,11 @@ export const getDeliveryOutcomesT: NLOpsTool<RangeInput> = {
   },
 };
 
-export const queryTools: NLOpsTool[] = [
+// Collection type uses `any` TInput because each tool parameterises TInput on
+// its own zodSchema. The registry wrapper validates before dispatch, so the
+// erasure is safe at the boundary.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const queryTools: NLOpsTool<any>[] = [
   getOperationalSummary,
   searchOrders,
   getOrderDetails,

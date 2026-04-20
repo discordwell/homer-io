@@ -5,6 +5,7 @@ import { drivers } from '../../lib/db/schema/drivers.js';
 import { locationHistory } from '../../lib/db/schema/location-history.js';
 import { routes } from '../../lib/db/schema/routes.js';
 import { broadcastToTenant } from '../../lib/ws/index.js';
+import { logger } from '../../lib/logger.js';
 import { checkGeofences } from '../geofencing/service.js';
 import { recalculateFromDriverPosition } from '../eta/service.js';
 
@@ -74,7 +75,7 @@ export async function updateDriverLocation(
 
   // Fire-and-forget: geofence checks
   checkGeofences(tenantId, driverId, location.lat, location.lng).catch((err) =>
-    console.error('[tracking] Geofence check failed:', err),
+    logger.error({ err, tenantId, driverId }, '[tracking] Geofence check failed'),
   );
 
   // Fire-and-forget: recalculate ETAs for the driver's active route
@@ -102,7 +103,7 @@ export async function updateDriverLocation(
         broadcastToTenant(tenantId, 'route:eta', etas);
       }
     } catch (err) {
-      console.error('[tracking] ETA recalculation failed:', err);
+      logger.error({ err, tenantId, driverId }, '[tracking] ETA recalculation failed');
     }
   })();
 }

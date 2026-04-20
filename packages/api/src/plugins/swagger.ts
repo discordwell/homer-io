@@ -1,8 +1,12 @@
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import { FastifyInstance } from 'fastify';
 
-export async function registerSwagger(app: FastifyInstance) {
+// `any` on the app parameter — swagger registration doesn't depend on the
+// logger's concrete type, and the default FastifyInstance generic fails to
+// unify with the Pino Logger instance we inject via `loggerInstance`.
+// Typed properly downstream since we only invoke app.register(...).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function registerSwagger(app: any) {
   await app.register(swagger, {
     openapi: {
       info: {

@@ -18,7 +18,8 @@ const ROLE_RANK: Record<string, number> = {
 // This is independent of the result cap enforced in `agent.ts` (8KB).
 export const MAX_TOOL_INPUT_BYTES = 50 * 1024; // 50KB
 
-const allTools: NLOpsTool[] = [...queryTools, ...mutationTools];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const allTools: NLOpsTool<any>[] = [...queryTools, ...mutationTools];
 
 /** Get all tools available for a given user role */
 export function getToolsForRole(role: string): NLOpsTool[] {

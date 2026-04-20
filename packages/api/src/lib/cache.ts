@@ -55,7 +55,7 @@ export async function cacheSetNX(
     // ioredis returns 'OK' on successful NX set, null if the key already existed
     return result === 'OK';
   } catch (err) {
-    console.error(`[cache] SETNX error for key "${key}":`, err);
+    logger.error({ err, key }, '[cache] SETNX error');
     // Fail open: do not block callers on transient Redis errors.
     return true;
   }

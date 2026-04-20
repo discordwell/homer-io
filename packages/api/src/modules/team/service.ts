@@ -8,6 +8,7 @@ import { tenants } from '../../lib/db/schema/tenants.js';
 import { HttpError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
 import { sendTransactionalEmail, escapeHtml } from '../../lib/email.js';
+import { logger } from '../../lib/logger.js';
 import { config } from '../../config.js';
 
 export async function inviteUser(
@@ -70,10 +71,10 @@ export async function inviteUser(
            <p>Your temporary password is: <code>${tempPassword}</code></p>
            <p><a href="${config.app.frontendUrl}/login">Sign in here</a></p>
            <p>Please change your password after your first login.</p>`
-        ).catch(err => console.error('[team] invite email failed:', err));
+        ).catch(err => logger.error({ err }, '[team] invite email failed'));
       }
     })
-    .catch(err => console.error('[team] tenant lookup for invite email failed:', err));
+    .catch(err => logger.error({ err }, '[team] tenant lookup for invite email failed'));
 
   return {
     ...user,

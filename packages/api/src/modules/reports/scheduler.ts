@@ -1,5 +1,6 @@
 import { Queue } from 'bullmq';
 import { config } from '../../config.js';
+import { logger } from '../../lib/logger.js';
 
 const connection = { url: config.redis.url };
 
@@ -43,7 +44,7 @@ export async function scheduleReport(tenantId: string, input: ReportScheduleInpu
     },
   );
 
-  console.log(`[reports] Scheduled ${input.type} for tenant ${tenantId} with cron "${input.cron}"`);
+  logger.info({ tenantId, type: input.type, cron: input.cron }, '[reports] Scheduled');
 }
 
 /**
@@ -56,7 +57,7 @@ export async function unscheduleReport(tenantId: string, type: string): Promise<
   for (const job of repeatableJobs) {
     if (job.key === jobKey || job.id === jobKey) {
       await reportQueue.removeRepeatableByKey(job.key);
-      console.log(`[reports] Unscheduled ${type} for tenant ${tenantId}`);
+      logger.info({ tenantId, type }, '[reports] Unscheduled');
     }
   }
 }

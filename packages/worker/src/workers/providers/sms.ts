@@ -1,11 +1,13 @@
 // Twilio REST API via fetch (no SDK)
+import { logger } from '../../lib/logger.js';
+
 export async function sendSms(
   to: string,
   body: string,
   config: { accountSid: string; authToken: string; fromNumber: string },
 ): Promise<{ success: boolean; providerId?: string; error?: string }> {
   if (!config.accountSid || !config.authToken) {
-    console.warn('[sms] No Twilio credentials configured — SMS will not be delivered. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN to enable SMS.');
+    logger.warn('[sms] No Twilio credentials configured — SMS will not be delivered. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN to enable SMS.');
     return { success: false, error: 'Twilio is not configured. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables to enable SMS notifications.' };
   }
 

@@ -7,6 +7,7 @@ import { orders } from '../../lib/db/schema/orders.js';
 import type { IntegrationPlatform } from '@homer-io/shared';
 import { HttpError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
+import { logger } from '../../lib/logger.js';
 import { encrypt, decrypt, getConnector, getAvailablePlatforms as getPlatforms } from '../../lib/integrations/index.js';
 import { config } from '../../config.js';
 import { assertUrlIsSafe, checkPlatformHost } from '../../lib/safe-url.js';
@@ -122,7 +123,7 @@ export async function createConnection(
       .set({ webhookIds })
       .where(eq(integrationConnections.id, created.id));
   } catch (err) {
-    console.warn(`[integrations] Failed to register webhooks for ${input.platform}:`, err);
+    logger.warn({ err, platform: input.platform, connectionId: created.id }, '[integrations] Failed to register webhooks');
   }
 
   await logActivity({

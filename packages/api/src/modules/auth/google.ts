@@ -12,6 +12,7 @@ import { seedDemoOrg } from './demo-seed.js';
 import { createStripeCustomer } from '../billing/service.js';
 import type { GoogleAuthInput, OrgChoiceInput, OrgOption } from '@homer-io/shared';
 import { HttpError } from '../../lib/errors.js';
+import { logger } from '../../lib/logger.js';
 
 const client = new OAuth2Client(config.google.clientId);
 
@@ -180,7 +181,7 @@ export async function googleOrgChoice(app: FastifyInstance, input: OrgChoiceInpu
   });
 
   createStripeCustomer(result.tenant.id, profile.email, orgName)
-    .catch(err => console.error('[google-auth] Stripe customer creation failed:', err));
+    .catch(err => logger.error({ err }, '[google-auth] Stripe customer creation failed'));
 
   if (input.choice === 'demo') {
     await seedDemoOrg(result.tenant.id, { industry: 'courier' });

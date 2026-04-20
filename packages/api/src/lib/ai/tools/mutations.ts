@@ -529,7 +529,11 @@ export const sendCustomerNotification: NLOpsTool<SendCustomerNotificationInput> 
   },
 };
 
-export const mutationTools: NLOpsTool[] = [
+// Collection type uses `any` TInput because each tool parameterises TInput on
+// its own zodSchema. The registry wrapper validates before dispatch, so the
+// erasure is safe at the boundary.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const mutationTools: NLOpsTool<any>[] = [
   assignOrderToRoute,
   updateOrderStatus,
   changeDriverStatus,

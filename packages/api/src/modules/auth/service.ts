@@ -13,6 +13,7 @@ import { emailLinkTokens } from '../../lib/db/schema/email-link-tokens.js';
 import type { JwtPayload } from '../../plugins/auth.js';
 import { createStripeCustomer } from '../billing/service.js';
 import { sendTransactionalEmail } from '../../lib/email.js';
+import { logger } from '../../lib/logger.js';
 import { config } from '../../config.js';
 
 function slugify(name: string): string {
@@ -77,7 +78,7 @@ export async function register(
   try {
     await createStripeCustomer(result.tenant.id, input.email, input.orgName);
   } catch (err) {
-    console.error('[auth] Failed to create Stripe customer during registration:', err);
+    logger.error({ err, userId: result.user.id }, '[auth] Failed to create Stripe customer during registration');
     // Non-fatal — tenant can still use the app; billing can be set up later
   }
 
@@ -86,7 +87,7 @@ export async function register(
     input.email,
     'Verify your HOMER.io email',
     `<h2>Welcome to HOMER.io!</h2><p>Click <a href="${config.app.frontendUrl}/verify-email?token=${verificationToken}">here</a> to verify your email address.</p>`
-  ).catch(err => console.error('[auth] verification email failed:', err));
+  ).catch(err => logger.error({ err }, '[auth] verification email failed'));
 
   return generateAuthResponse(app, result.user);
 }
@@ -228,7 +229,7 @@ export async function resendVerification(email: string): Promise<{ success: bool
       .where(eq(users.id, user.id));
     sendTransactionalEmail(email, 'Verify your HOMER.io email',
       `<h2>Verify your email</h2><p>Click <a href="${config.app.frontendUrl}/verify-email?token=${token}">here</a> to verify.</p>`
-    ).catch(err => console.error('[auth] resend verification failed:', err));
+    ).catch(err => logger.error({ err }, '[auth] resend verification failed'));
   }
   return { success: true }; // Always success to prevent enumeration
 }
@@ -243,7 +244,7 @@ export async function requestPasswordReset(app: FastifyInstance, email: string):
   await db.insert(passwordResetTokens).values({ userId: user.id, tokenHash, expiresAt });
   sendTransactionalEmail(email, 'Reset your HOMER.io password',
     `<h2>Password Reset</h2><p>Click <a href="${config.app.frontendUrl}/reset-password?token=${token}">here</a> to reset your password. This link expires in 1 hour.</p>`
-  ).catch(err => console.error('[auth] password reset email failed:', err));
+  ).catch(err => logger.error({ err }, '[auth] password reset email failed'));
 }
 
 export async function resetPassword(app: FastifyInstance, token: string, newPassword: string): Promise<{ success: boolean }> {

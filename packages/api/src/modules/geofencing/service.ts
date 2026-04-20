@@ -7,6 +7,7 @@ import { haversineDistance } from '../../lib/geo.js';
 import { broadcastToTenant } from '../../lib/ws/index.js';
 import { enqueueCustomerNotification } from '../customer-notifications/service.js';
 import { config } from '../../config.js';
+import { logger } from '../../lib/logger.js';
 
 const GEOFENCE_RADIUS_KM = 0.1; // 100 meters
 const GEOFENCE_TTL_SECONDS = 86400; // 24 hours
@@ -109,8 +110,9 @@ export async function checkGeofences(
       routeId,
     });
 
-    console.log(
-      `[geofencing] Driver ${driverId} within ${Math.round(order.distance * 1000)}m of order ${order.id}`,
+    logger.debug(
+      { driverId, routeId, orderId: order.id, distanceMeters: Math.round(order.distance * 1000) },
+      '[geofencing] Driver approaching order',
     );
   }
 }
