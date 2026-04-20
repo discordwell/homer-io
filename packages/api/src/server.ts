@@ -49,7 +49,10 @@ import { groceryRoutes } from './modules/grocery/routes.js';
 import { furnitureRoutes } from './modules/furniture/routes.js';
 
 const app = Fastify({
-  trustProxy: true,
+  // Restrict proxy trust to prevent X-Forwarded-* spoofing
+  // (GHSA-444r-cwp2-x5xf). Defaults to loopback-only (Caddy → API on same
+  // host); configurable via TRUST_PROXY env var. See packages/api/src/config.ts.
+  trustProxy: config.server.trustProxy,
   logger: {
     level: config.nodeEnv === 'production' ? 'info' : 'debug',
     transport: config.nodeEnv !== 'production' ? {

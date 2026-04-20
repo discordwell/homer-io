@@ -33,10 +33,47 @@ function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '');
 }
 
+/**
+ * Parse TRUST_PROXY env var into a Fastify-compatible trustProxy value.
+ *
+ * Fastify's trustProxy accepts: boolean | string | string[] | number | Function.
+ * We support:
+ * - unset → ['127.0.0.1', '::1'] (loopback-only; correct for same-host reverse proxy like Caddy)
+ * - 'false' / 'none' (case-insensitive) → false (trust no proxy, use socket IP)
+ * - comma-separated IPs/CIDRs → string[]
+ *
+ * SECURITY: Do NOT default to `true` — that trusts every proxy hop and lets
+ * remote clients spoof X-Forwarded-For / X-Forwarded-Proto (GHSA-444r-cwp2-x5xf),
+ * breaking rate limiting, audit logs, and IP allow-lists.
+ */
+export function parseTrustProxy(raw: string | undefined): false | string[] {
+  if (raw === undefined || raw === '') {
+    return ['127.0.0.1', '::1'];
+  }
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === 'false' || normalized === 'none') {
+    return false;
+  }
+  const parts = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  if (parts.length === 0) {
+    return ['127.0.0.1', '::1'];
+  }
+  return parts;
+}
+
 export const config = {
   port: Number(process.env.PORT) || 3000,
   host: process.env.HOST || '0.0.0.0',
   nodeEnv: process.env.NODE_ENV || 'development',
+
+  server: {
+    // See parseTrustProxy for semantics. Defaults to loopback-only for safe
+    // operation behind a same-host reverse proxy (Caddy → API via 127.0.0.1).
+    trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
+  },
 
   database: {
     url: process.env.DATABASE_URL || 'postgresql://homer:homer@localhost:5432/homer',
