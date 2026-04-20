@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { api } from '../api/client.js';
+import { usePollingWithBackoff } from './usePollingWithBackoff.js';
 
 interface RecentOrder {
   id: string;
@@ -31,16 +32,15 @@ export function useDashboard() {
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard');
+      // Rethrow so the polling hook backs off on consecutive failures.
+      throw err;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchStats();
-    const interval = setInterval(fetchStats, 60000);
-    return () => clearInterval(interval);
-  }, [fetchStats]);
+  // Poll every 60s with exponential backoff on failure (60s → 2m → 4m → 5m cap).
+  usePollingWithBackoff(fetchStats, { baseIntervalMs: 60_000 });
 
   return { stats, loading, error, refetch: fetchStats };
 }

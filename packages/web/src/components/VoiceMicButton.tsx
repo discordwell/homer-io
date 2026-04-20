@@ -1,14 +1,9 @@
+import { useEffect } from 'react';
+import { ensureKeyframeStyle } from '../utils/ensureKeyframeStyle.js';
 import { C, F } from '../theme.js';
 
-// Inject pulse animation once
-let pulseInjected = false;
-function ensurePulseStyle() {
-  if (pulseInjected) return;
-  const style = document.createElement('style');
-  style.textContent = '@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(255,59,48,0.5); } 70% { box-shadow: 0 0 0 8px rgba(255,59,48,0); } 100% { box-shadow: 0 0 0 0 rgba(255,59,48,0); } }';
-  document.head.appendChild(style);
-  pulseInjected = true;
-}
+const PULSE_STYLE_ID = 'homer-voice-mic-pulse-keyframes';
+const PULSE_CSS = '@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(255,59,48,0.5); } 70% { box-shadow: 0 0 0 8px rgba(255,59,48,0); } 100% { box-shadow: 0 0 0 0 rgba(255,59,48,0); } }';
 
 interface VoiceMicButtonProps {
   isRecording: boolean;
@@ -18,7 +13,11 @@ interface VoiceMicButtonProps {
 }
 
 export function VoiceMicButton({ isRecording, isTranscribing, disabled, onClick }: VoiceMicButtonProps) {
-  ensurePulseStyle();
+  // Inject the @keyframes rule once per document. Idempotent under HMR/SSR
+  // (the helper looks for an existing style tag by id before appending).
+  useEffect(() => {
+    ensureKeyframeStyle(PULSE_STYLE_ID, PULSE_CSS);
+  }, []);
 
   const label = isTranscribing
     ? 'Transcribing...'

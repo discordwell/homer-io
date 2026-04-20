@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { api } from '../../api/client.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
+import { usePollingWithBackoff } from '../../hooks/usePollingWithBackoff.js';
 import { C, F } from '../../theme.js';
 
 interface HealthStatus {
@@ -34,23 +35,22 @@ export function HealthDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetchHealth() {
+  const fetchHealth = useCallback(async () => {
     try {
       const data = await api.get<HealthStatus>('/admin/health');
       setHealth(data);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load health status');
+      // Rethrow so the polling hook backs off on consecutive failures.
+      throw err;
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    fetchHealth();
-    const interval = setInterval(fetchHealth, 30000);
-    return () => clearInterval(interval);
   }, []);
+
+  // Poll with exponential backoff on error (30s → 60s → 120s → 240s → 300s cap).
+  usePollingWithBackoff(fetchHealth);
 
   if (loading && !health) return <LoadingSpinner />;
 

@@ -1,4 +1,11 @@
 # HOMER.io Caddy Configuration
+#
+# NOTE: The web app sets a Content-Security-Policy via <meta http-equiv> in
+# packages/web/index.html. If you want a stricter edge-enforced CSP, you can
+# add a `header Content-Security-Policy "..."` line to the homer.discordwell.com
+# block below — the response header takes precedence over the meta tag.
+# See packages/web/index.html for the canonical policy and rationale.
+
 # Demo site — preserved at homer.discordwell.com
 homer.discordwell.com {
 	root * /opt/homer-io/site

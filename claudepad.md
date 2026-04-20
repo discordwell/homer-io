@@ -2,6 +2,14 @@
 
 ## Session Summaries
 
+### 2026-04-20T06:30 UTC — Audit-Cycle Medium/Low Fixes
+- **M7 (polling backoff)**: new `usePollingWithBackoff` hook with exponential backoff (30s → 60s → 120s → 240s → 300s cap). Applied to `NotificationCenter`, `HealthDashboard`, and `useDashboard`. Pure `startBackoffPoller`/`computeBackoffDelay` helpers testable with `vi.useFakeTimers()`.
+- **M10 (CSP)**: `<meta http-equiv="Content-Security-Policy">` on `packages/web/index.html`. Policy allows Google OAuth, MapTiler, Carto tiles, fonts, data:/blob:/https: images (for MinIO presigned URLs), wss: for Socket.IO; denies `unsafe-eval`, sets `frame-ancestors 'none'`, `object-src 'none'`. Caddyfile comment updated noting header can be set at the edge too.
+- **M11 (legacy demo preservation)**: CI step in `.github/workflows/deploy.yml` verifies `legacy/demo-site/{index.html,main.jsx,App.jsx,vite.config.js}` exist. Does NOT build — per memory, that dir is preserved for reference only.
+- **L3 (style injection)**: `ensureKeyframeStyle(id, css)` helper replaces module-scoped `let injected = false` booleans in `VoiceMicButton` and `AIChatPanel`. Uses `document.getElementById` for idempotency, works under HMR/double-mount/SSR.
+- **L7**: correcting the earlier "619 tests passing" figure — current measured counts: shared=82, api=628/645 (17 pre-existing failures unrelated to this change), worker=4, web=163/165 (2 pre-existing address-hash failures unrelated to this change). Monorepo total passing: 877, with 29 new tests added in this session.
+- **Tests added**: `usePollingWithBackoff.test.ts` (fake-timer integration, 13 cases), `ensureKeyframeStyle.test.ts` (idempotency + SSR smoke, 4 cases), `csp.test.ts` (policy structural checks, 12 cases).
+
 ### 2026-03-22T15:30 UTC — Voice-First Dispatcher Interface + Undo System
 - **Voice endpoints**: POST /api/ai/transcribe (Whisper STT) + POST /api/ai/tts (OpenAI TTS) — thin wrappers, agent loop unchanged
 - **Undo system**: Redis-backed mutation snapshots (15min TTL), 6 of 10 mutations undoable, SSE `undoable` event, /api/ai/undo endpoint

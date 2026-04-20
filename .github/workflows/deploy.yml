@@ -57,14 +57,29 @@ jobs:
           DATABASE_URL: postgresql://homer:homer@localhost:5432/homer
           REDIS_URL: redis://localhost:6379
 
-      # Security audit (Finding H16). Fails on critical; logs high+moderate
-      # without failing. Another hardening pass will bump direct deps to clear
-      # remaining highs, after which we tighten --audit-level to high.
-      - name: Security audit (fail on critical)
-        run: npm audit --audit-level=critical
-      - name: Security audit report (informational, non-blocking)
-        if: always()
-        run: npm audit --audit-level=moderate || true
+      # Security audit (Finding H16). Audit is now clean (0 vulns) so we fail
+      # on any new vulnerability of moderate severity or higher.
+      - name: Security audit
+        run: npm audit --audit-level=moderate
+
+      # Preservation check: the original HOMER.io demo prototype lives at
+      # legacy/demo-site/ and must remain intact for historical reference.
+      # We do NOT build or deploy it — the active /demo experience is served
+      # from packages/web. This step fails CI if someone accidentally removes
+      # or renames the core files.
+      - name: Verify legacy demo-site preserved
+        run: |
+          set -e
+          for f in legacy/demo-site/index.html \
+                   legacy/demo-site/main.jsx \
+                   legacy/demo-site/App.jsx \
+                   legacy/demo-site/vite.config.js; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Legacy demo file missing: $f"
+              exit 1
+            fi
+          done
+          echo "Legacy demo-site preservation check OK."
 
       - name: Build
         run: npx turbo build

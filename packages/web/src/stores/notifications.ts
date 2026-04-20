@@ -48,12 +48,10 @@ export const useNotificationsStore = create<NotificationsState>()((set) => ({
   },
 
   fetchUnreadCount: async () => {
-    try {
-      const res = await api.get<{ count: number }>('/notifications/unread-count');
-      set({ unreadCount: res.count });
-    } catch {
-      // Silently fail on polling errors
-    }
+    // Throws on network / API error so pollers can back off; callers that
+    // don't want to handle errors can wrap in try/catch.
+    const res = await api.get<{ count: number }>('/notifications/unread-count');
+    set({ unreadCount: res.count });
   },
 
   markAsRead: async (id) => {

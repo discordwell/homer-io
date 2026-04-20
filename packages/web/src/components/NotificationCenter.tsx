@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNotificationsStore } from '../stores/notifications.js';
 import { useAuthStore } from '../stores/auth.js';
 import { NotificationItem } from './NotificationItem.js';
+import { usePollingWithBackoff } from '../hooks/usePollingWithBackoff.js';
 import { C, F } from '../theme.js';
-
-const POLL_INTERVAL = 30_000; // 30 seconds
 
 export function NotificationCenter() {
   const { notifications, unreadCount, fetchNotifications, fetchUnreadCount, markAsRead, markAllAsRead } = useNotificationsStore();
@@ -13,14 +12,8 @@ export function NotificationCenter() {
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Poll unread count
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, POLL_INTERVAL);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+  // Poll unread count with exponential backoff on error.
+  usePollingWithBackoff(fetchUnreadCount, { enabled: isAuthenticated });
 
   // Fetch notifications when panel opens
   useEffect(() => {
