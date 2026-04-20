@@ -8,15 +8,22 @@ function requireEnv(name: string): string {
   return val || '';
 }
 
-// Always-required env var. Fails hard at startup if missing, regardless of
-// NODE_ENV. Use this for secrets that MUST never fall back to a hardcoded
-// value — e.g. JWT signing keys, where a leaked fallback would allow anyone
-// reading this repository to forge tokens for any tenant.
-function requireEnvStrict(name: string): string {
+/**
+ * Require an env var regardless of NODE_ENV. Use for secrets that must never
+ * fall back to a hardcoded/empty value — e.g. JWT signing keys or encryption
+ * keys, where a leaked fallback would allow anyone who reads this repository
+ * to forge tokens or decrypt stored credentials.
+ */
+function requireEnvAlways(name: string, minLength = 0): string {
   const val = process.env[name];
   if (!val) {
     throw new Error(
-      `Missing required env var ${name}. This secret must be set in every environment (development, staging, production, CI). See .env.example.`,
+      `Missing required env var ${name}. This secret must be set in all environments (development, test, and production). See .env.example.`,
+    );
+  }
+  if (minLength > 0 && val.length < minLength) {
+    throw new Error(
+      `Env var ${name} must be at least ${minLength} characters (got ${val.length}). Generate with: openssl rand -hex 32`,
     );
   }
   return val;
@@ -45,7 +52,7 @@ export const config = {
     // unset or set to something other than the literal 'production' (e.g.
     // 'staging', 'prod', '') silently used a public secret — allowing
     // anyone who read this repo to forge JWTs for any tenant.
-    secret: requireEnvStrict('JWT_SECRET'),
+    secret: requireEnvAlways('JWT_SECRET', 32),
     accessExpiresIn: '15m',
     refreshExpiresIn: '7d',
   },
@@ -126,7 +133,9 @@ export const config = {
   },
 
   integrations: {
-    encryptionKey: isProduction ? requireEnv('INTEGRATION_ENCRYPTION_KEY') : (process.env.INTEGRATION_ENCRYPTION_KEY || ''),
+    // Required in every environment. Must be high-entropy (≥32 chars).
+    // The crypto layer SHA-256-derives a 32-byte AES key from this passphrase.
+    encryptionKey: requireEnvAlways('INTEGRATION_ENCRYPTION_KEY', 32),
   },
 
   app: {

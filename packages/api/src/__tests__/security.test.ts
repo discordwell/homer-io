@@ -47,10 +47,15 @@ describe('GDPR routes role enforcement', () => {
 });
 
 // ── Encryption key enforcement ───────────────────────────────────────────────
+// (Detailed tests live in lib/integrations/crypto.test.ts. These high-level
+// smoke tests assert the no-fallback contract at the security-boundary level.)
 
 describe('Integration encryption key enforcement', () => {
-  it('encrypt throws in production without encryption key', async () => {
+  beforeEach(() => {
     vi.resetModules();
+  });
+
+  it('encrypt throws when encryption key is missing (no fallback)', async () => {
     vi.doMock('../config.js', () => ({
       config: {
         nodeEnv: 'production',
@@ -59,13 +64,12 @@ describe('Integration encryption key enforcement', () => {
     }));
 
     const { encrypt } = await import('../lib/integrations/crypto.js');
-    expect(() => encrypt('sensitive-data')).toThrow('INTEGRATION_ENCRYPTION_KEY is required in production');
+    expect(() => encrypt('sensitive-data')).toThrow(/INTEGRATION_ENCRYPTION_KEY is required/);
 
     vi.doUnmock('../config.js');
   });
 
-  it('decrypt throws in production without encryption key', async () => {
-    vi.resetModules();
+  it('decrypt throws when encryption key is missing (no fallback)', async () => {
     vi.doMock('../config.js', () => ({
       config: {
         nodeEnv: 'production',
@@ -74,17 +78,32 @@ describe('Integration encryption key enforcement', () => {
     }));
 
     const { decrypt } = await import('../lib/integrations/crypto.js');
-    expect(() => decrypt('aWYtYmFzZTY0:dGFn:Y2lwaGVy')).toThrow('INTEGRATION_ENCRYPTION_KEY is required in production');
+    expect(() => decrypt('aWYtYmFzZTY0:dGFn:Y2lwaGVy')).toThrow(/INTEGRATION_ENCRYPTION_KEY is required/);
 
     vi.doUnmock('../config.js');
   });
 
-  it('encrypt works in development with fallback key', async () => {
-    vi.resetModules();
+  it('encrypt also throws in development when key is missing (no dev fallback)', async () => {
     vi.doMock('../config.js', () => ({
       config: {
         nodeEnv: 'development',
         integrations: { encryptionKey: '' },
+      },
+    }));
+
+    const { encrypt } = await import('../lib/integrations/crypto.js');
+    expect(() => encrypt('test-secret')).toThrow(/INTEGRATION_ENCRYPTION_KEY is required/);
+
+    vi.doUnmock('../config.js');
+  });
+
+  it('encrypt works when a valid ≥32-char key is configured', async () => {
+    vi.doMock('../config.js', () => ({
+      config: {
+        nodeEnv: 'development',
+        integrations: {
+          encryptionKey: 'a-test-key-with-sufficient-entropy-for-tests-only',
+        },
       },
     }));
 

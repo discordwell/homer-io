@@ -119,12 +119,25 @@ interface ErrorLogEntry {
 
 // ─── Crypto helpers (duplicated from API to avoid cross-package import) ──────
 
+const MIN_ENCRYPTION_KEY_LENGTH = 32;
+
 function deriveKey(key: string): Buffer {
+  if (!key) {
+    throw new Error('INTEGRATION_ENCRYPTION_KEY is required (no fallback allowed)');
+  }
+  if (key.length < MIN_ENCRYPTION_KEY_LENGTH) {
+    throw new Error(
+      `INTEGRATION_ENCRYPTION_KEY must be at least ${MIN_ENCRYPTION_KEY_LENGTH} characters (got ${key.length})`,
+    );
+  }
   return createHash('sha256').update(key).digest();
 }
 
 function decrypt(encrypted: string, key?: string): string {
-  const encKey = key || process.env.INTEGRATION_ENCRYPTION_KEY || 'homer-dev-encryption-key-do-not-use-in-prod';
+  const encKey = key || process.env.INTEGRATION_ENCRYPTION_KEY;
+  if (!encKey) {
+    throw new Error('INTEGRATION_ENCRYPTION_KEY is required (no fallback allowed)');
+  }
   const derivedKey = deriveKey(encKey);
   const [ivB64, authTagB64, ciphertextB64] = encrypted.split(':');
   if (!ivB64 || !authTagB64 || !ciphertextB64) {
