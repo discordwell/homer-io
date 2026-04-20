@@ -14,7 +14,7 @@
     "@homer-io/shared": "*",
     "bullmq": "^5.45.0",
     "cron-parser": "^4.9.0",
-    "drizzle-orm": "^0.44.7",
+    "drizzle-orm": "^0.45.2",
     "expo-server-sdk": "^6.1.0",
     "ioredis": "^5.10.0",
     "pdfkit": "^0.18.0",

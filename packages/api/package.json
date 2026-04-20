@@ -28,7 +28,7 @@
     "argon2": "^0.43.0",
     "bullmq": "^5.45.0",
     "cron-parser": "^4.9.0",
-    "drizzle-orm": "^0.44.0",
+    "drizzle-orm": "^0.45.2",
     "fastify": "^5.3.0",
     "google-auth-library": "^10.6.2",
     "ioredis": "^5.6.0",
