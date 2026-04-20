@@ -8,6 +8,20 @@ function requireEnv(name: string): string {
   return val || '';
 }
 
+// Always-required env var. Fails hard at startup if missing, regardless of
+// NODE_ENV. Use this for secrets that MUST never fall back to a hardcoded
+// value — e.g. JWT signing keys, where a leaked fallback would allow anyone
+// reading this repository to forge tokens for any tenant.
+function requireEnvStrict(name: string): string {
+  const val = process.env[name];
+  if (!val) {
+    throw new Error(
+      `Missing required env var ${name}. This secret must be set in every environment (development, staging, production, CI). See .env.example.`,
+    );
+  }
+  return val;
+}
+
 function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '');
 }
@@ -26,7 +40,12 @@ export const config = {
   },
 
   jwt: {
-    secret: isProduction ? requireEnv('JWT_SECRET') : (process.env.JWT_SECRET || 'homer-dev-secret-do-not-use-in-prod'),
+    // JWT_SECRET is required at startup in every environment. A hardcoded
+    // fallback (previously present here) meant any env where NODE_ENV was
+    // unset or set to something other than the literal 'production' (e.g.
+    // 'staging', 'prod', '') silently used a public secret — allowing
+    // anyone who read this repo to forge JWTs for any tenant.
+    secret: requireEnvStrict('JWT_SECRET'),
     accessExpiresIn: '15m',
     refreshExpiresIn: '7d',
   },
