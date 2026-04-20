@@ -78,12 +78,22 @@ describe('config.ts — JWT_SECRET enforcement', () => {
   });
 
   it('loads successfully when JWT_SECRET is set', async () => {
-    process.env.JWT_SECRET = 'a-real-test-secret-value';
+    const longSecret = 'a-real-test-secret-value-at-least-32-chars-long';
+    process.env.JWT_SECRET = longSecret;
     process.env.NODE_ENV = 'development';
 
     const mod = (await importConfigFresh()) as {
       config: { jwt: { secret: string } };
     };
-    expect(mod.config.jwt.secret).toBe('a-real-test-secret-value');
+    expect(mod.config.jwt.secret).toBe(longSecret);
+  });
+
+  it('throws when JWT_SECRET is shorter than 32 chars', async () => {
+    process.env.JWT_SECRET = 'too-short';
+    process.env.NODE_ENV = 'development';
+
+    await expect(importConfigFresh()).rejects.toThrow(
+      /JWT_SECRET must be at least 32 characters/,
+    );
   });
 });
