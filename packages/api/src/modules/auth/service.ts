@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import * as argon2 from 'argon2';
 import { randomBytes, createHash } from 'crypto';
 import type { RegisterInput, LoginInput, AuthResponse, UserResponse } from '@homer-io/shared';
@@ -256,10 +256,23 @@ export async function resetPassword(app: FastifyInstance, token: string, newPass
   }
   const passwordHash = await argon2.hash(newPassword);
   await db.transaction(async (tx) => {
-    await tx.update(users).set({ passwordHash, failedLoginAttempts: 0, updatedAt: new Date() })
-      .where(eq(users.id, stored.userId));
+    // Clear emailVerificationToken as well — this column also holds outstanding
+    // email-link tokens (`link:<hash>:<email>:<expires>`) which could otherwise
+    // be used to transfer the account to another tenant after a reset.
+    await tx.update(users).set({
+      passwordHash,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+      emailVerificationToken: null,
+      updatedAt: new Date(),
+    }).where(eq(users.id, stored.userId));
+    // Mark the used reset token as consumed AND invalidate any other
+    // outstanding (unused, unexpired) reset tokens for this user.
     await tx.update(passwordResetTokens).set({ usedAt: new Date() })
-      .where(eq(passwordResetTokens.id, stored.id));
+      .where(and(
+        eq(passwordResetTokens.userId, stored.userId),
+        sql`${passwordResetTokens.usedAt} IS NULL`,
+      ));
     // Invalidate all refresh tokens — forces re-login on all devices
     await tx.delete(refreshTokens).where(eq(refreshTokens.userId, stored.userId));
     // Invalidate outstanding email-link / tenant-migration tokens so a stolen

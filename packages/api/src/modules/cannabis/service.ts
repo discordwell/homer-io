@@ -12,6 +12,7 @@ import { vehicles } from '../../lib/db/schema/vehicles.js';
 import { logActivity } from '../../lib/activity.js';
 import { logger } from '../../lib/logger.js';
 import { generateManifestPdf } from '../reports/cannabis-manifest.js';
+import { HttpError, NotFoundError } from '../../lib/errors.js';
 
 // ---------------------------------------------------------------------------
 // Industry gating
@@ -26,7 +27,7 @@ export async function getTenantIndustry(tenantId: string): Promise<string | null
 export async function requireCannabisIndustry(tenantId: string): Promise<void> {
   const industry = await getTenantIndustry(tenantId);
   if (industry !== 'cannabis') {
-    throw Object.assign(new Error('This feature requires the cannabis industry'), { statusCode: 403 });
+    throw new HttpError(403, 'This feature requires the cannabis industry');
   }
 }
 
@@ -119,7 +120,7 @@ export async function createManifest(
   }).from(routes).where(sql`${routes.id} = ${input.routeId} AND ${routes.tenantId} = ${tenantId}`).limit(1);
 
   if (!route) {
-    throw Object.assign(new Error('Route not found'), { statusCode: 404 });
+    throw new NotFoundError('Route not found');
   }
 
   let driverLicenseNumber: string | null = null;
@@ -247,7 +248,7 @@ export async function completeManifest(tenantId: string, manifestId: string, use
     .from(deliveryManifests).where(sql`${deliveryManifests.id} = ${manifestId} AND ${deliveryManifests.tenantId} = ${tenantId}`).limit(1);
   if (!current) return null;
   if (current.status !== 'active') {
-    throw Object.assign(new Error(`Cannot complete a ${current.status} manifest — must be active`), { statusCode: 422 });
+    throw new HttpError(422, `Cannot complete a ${current.status} manifest — must be active`);
   }
 
   const [updated] = await db.update(deliveryManifests)
@@ -275,7 +276,7 @@ export async function voidManifest(tenantId: string, manifestId: string, userId?
     .from(deliveryManifests).where(sql`${deliveryManifests.id} = ${manifestId} AND ${deliveryManifests.tenantId} = ${tenantId}`).limit(1);
   if (!current) return null;
   if (current.status !== 'draft' && current.status !== 'active') {
-    throw Object.assign(new Error(`Cannot void a ${current.status} manifest`), { statusCode: 422 });
+    throw new HttpError(422, `Cannot void a ${current.status} manifest`);
   }
 
   const [updated] = await db.update(deliveryManifests)
@@ -303,7 +304,7 @@ export async function activateManifest(tenantId: string, manifestId: string, use
     .from(deliveryManifests).where(sql`${deliveryManifests.id} = ${manifestId} AND ${deliveryManifests.tenantId} = ${tenantId}`).limit(1);
   if (!current) return null;
   if (current.status !== 'draft') {
-    throw Object.assign(new Error(`Cannot activate a ${current.status} manifest — must be draft`), { statusCode: 422 });
+    throw new HttpError(422, `Cannot activate a ${current.status} manifest — must be draft`);
   }
 
   const [updated] = await db.update(deliveryManifests)
@@ -371,7 +372,7 @@ export async function createDriverKit(
   // Verify route belongs to tenant
   const [route] = await db.select({ driverId: routes.driverId })
     .from(routes).where(sql`${routes.id} = ${input.routeId} AND ${routes.tenantId} = ${tenantId}`).limit(1);
-  if (!route) throw Object.assign(new Error('Route not found'), { statusCode: 404 });
+  if (!route) throw new NotFoundError('Route not found');
 
   // Calculate totals
   let totalItems = 0;
@@ -437,7 +438,7 @@ export async function markKitLoaded(tenantId: string, kitId: string, userId?: st
     .from(driverKits).where(sql`${driverKits.id} = ${kitId} AND ${driverKits.tenantId} = ${tenantId}`).limit(1);
   if (!kit) return null;
   if (kit.status !== 'loading') {
-    throw Object.assign(new Error(`Kit is ${kit.status}, cannot mark as loaded`), { statusCode: 422 });
+    throw new HttpError(422, `Kit is ${kit.status}, cannot mark as loaded`);
   }
 
   const [updated] = await db.update(driverKits)
@@ -476,7 +477,7 @@ export async function reconcileKit(
   const kit = await getDriverKit(tenantId, kitId);
   if (!kit) return null;
   if (kit.status !== 'in_transit' && kit.status !== 'reconciling') {
-    throw Object.assign(new Error(`Kit is ${kit.status}, cannot reconcile`), { statusCode: 422 });
+    throw new HttpError(422, `Kit is ${kit.status}, cannot reconcile`);
   }
 
   // Build discrepancy list by comparing loaded items vs returned

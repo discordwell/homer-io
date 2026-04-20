@@ -65,4 +65,9 @@ export const REQUIRED_ACTIONS = {
   unknown: ['open', 'refresh'],
 };
 
-export const TODAY = '2026-03-24';
+// Audit baseline date: the date the report was generated for.
+// Previously this was hardcoded to '2026-03-24' which caused reports to drift
+// and misrepresent when they were generated. Use TODAY for live generation;
+// FROZEN_TODAY remains for any callers that need a reproducible snapshot date.
+export const FROZEN_TODAY = '2026-03-24';
+export const TODAY = new Date().toISOString().split('T')[0];

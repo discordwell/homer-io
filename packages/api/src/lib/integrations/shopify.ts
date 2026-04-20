@@ -8,19 +8,22 @@ import { logger } from '../logger.js';
 export class ShopifyConnector implements EcommerceConnector {
   platform = 'shopify';
 
-  private getBaseUrl(storeUrl: string, credentials: Record<string, string>): string {
-    // Normalize: strip protocol and trailing slash
+  private getBaseUrl(storeUrl: string, _credentials: Record<string, string>): string {
+    // Normalize: strip protocol and trailing slash. Never embed credentials in URL —
+    // they would leak through APM traces, error stacks, proxy logs, browser history,
+    // etc. Auth is carried in headers (see getHeaders).
     const host = storeUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    if (credentials.accessToken) {
-      return `https://${host}/admin/api/2024-01`;
-    }
-    return `https://${credentials.apiKey}:${credentials.password}@${host}/admin/api/2024-01`;
+    return `https://${host}/admin/api/2024-01`;
   }
 
   private getHeaders(credentials: Record<string, string>): Record<string, string> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (credentials.accessToken) {
       headers['X-Shopify-Access-Token'] = credentials.accessToken;
+    } else if (credentials.apiKey && credentials.password) {
+      // Private-app basic auth — apiKey:password base64-encoded in the Authorization header.
+      const basic = Buffer.from(`${credentials.apiKey}:${credentials.password}`).toString('base64');
+      headers['Authorization'] = `Basic ${basic}`;
     }
     return headers;
   }

@@ -5,7 +5,7 @@ import { db } from '../../lib/db/index.js';
 import { tenants } from '../../lib/db/schema/tenants.js';
 import { orders, orderStatusEnum } from '../../lib/db/schema/orders.js';
 import { routes } from '../../lib/db/schema/routes.js';
-import { NotFoundError } from '../../lib/errors.js';
+import { NotFoundError, HttpError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
 import { hasFeature } from '@homer-io/shared';
 import { checkDeliveryZone } from '../cannabis/service.js';
@@ -41,7 +41,7 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
     if (lat && lng) {
       const zoneCheck = await checkDeliveryZone(tenantId, lat, lng, zip);
       if (!zoneCheck.allowed) {
-        throw Object.assign(new Error(zoneCheck.reason || 'Delivery address is outside allowed zone'), { statusCode: 422 });
+        throw new HttpError(422, zoneCheck.reason || 'Delivery address is outside allowed zone');
       }
     }
   }
@@ -154,8 +154,28 @@ export async function listOrders(
   })();
   const orderByClause = sortDir === 'asc' ? asc(sortColumn) : desc(sortColumn);
 
+  // M3: explicit column list — avoid pulling heavy JSONB blobs (barcodes, customFields,
+  // pickupAddress) and PHI-sensitive text (hipaaSafeNotes) on list views. Only columns
+  // the LIST UI / orders store actually consume.
+  const listColumns = {
+    id: orders.id,
+    externalId: orders.externalId,
+    status: orders.status,
+    priority: orders.priority,
+    recipientName: orders.recipientName,
+    recipientPhone: orders.recipientPhone,
+    recipientEmail: orders.recipientEmail,
+    deliveryAddress: orders.deliveryAddress,
+    packageCount: orders.packageCount,
+    weight: orders.weight,
+    volume: orders.volume,
+    notes: orders.notes,
+    routeId: orders.routeId,
+    stopSequence: orders.stopSequence,
+    createdAt: orders.createdAt,
+  };
   const [items, countResult] = await Promise.all([
-    db.select().from(orders).where(where)
+    db.select(listColumns).from(orders).where(where)
       .limit(limit).offset(offset)
       .orderBy(orderByClause),
     db.select({ count: sql<number>`count(*)` }).from(orders).where(where),

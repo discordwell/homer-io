@@ -4,6 +4,7 @@ import { pharmacySettingsSchema } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { tenants } from '../../lib/db/schema/tenants.js';
 import { logActivity } from '../../lib/activity.js';
+import { HttpError } from '../../lib/errors.js';
 
 export async function getPharmacySettings(tenantId: string): Promise<PharmacySettings | null> {
   const [row] = await db.select({ settings: tenants.settings })
@@ -46,6 +47,6 @@ export async function requirePharmacyIndustry(tenantId: string): Promise<void> {
   const [row] = await db.select({ industry: tenants.industry })
     .from(tenants).where(eq(tenants.id, tenantId)).limit(1);
   if (row?.industry !== 'pharmacy') {
-    throw Object.assign(new Error('This feature requires the pharmacy industry'), { statusCode: 403 });
+    throw new HttpError(403, 'This feature requires the pharmacy industry');
   }
 }
