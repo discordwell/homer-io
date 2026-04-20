@@ -7,6 +7,7 @@ import { tenants } from '../lib/db/schema/tenants.js';
 import { apiKeys } from '../lib/db/schema/api-keys.js';
 import { users } from '../lib/db/schema/users.js';
 import { cacheGet, cacheSet } from '../lib/cache.js';
+import { logger } from '../lib/logger.js';
 
 export interface JwtPayload {
   id: string;
@@ -56,8 +57,15 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
       role: user.role,
     };
 
-    // Update lastUsedAt (fire-and-forget)
-    db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, key.id)).catch(() => {});
+    // Update lastUsedAt (fire-and-forget) — non-load-bearing observability field.
+    // If the DB write fails we still want the request to succeed, but the failure
+    // should be logged so a Redis/DB blip doesn't disappear silently.
+    db.update(apiKeys)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiKeys.id, key.id))
+      .catch((err: unknown) =>
+        logger.warn({ err, keyId: key.id, tenantId: key.tenantId }, '[auth] Failed to update API key lastUsedAt'),
+      );
     return;
   }
 

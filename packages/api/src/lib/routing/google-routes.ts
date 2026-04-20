@@ -7,6 +7,7 @@
 
 import { config } from '../../config.js';
 import { cacheGet, cacheSet } from '../cache.js';
+import { logger } from '../logger.js';
 import { createHash } from 'crypto';
 
 export interface RouteLeg {
@@ -110,7 +111,8 @@ export async function computeRouteETAs(
     });
 
     if (!res.ok) {
-      console.error(`[google-routes] HTTP ${res.status}: ${await res.text()}`);
+      const body = await res.text();
+      logger.error({ status: res.status, body }, '[google-routes] HTTP error');
       return null;
     }
 
@@ -134,7 +136,7 @@ export async function computeRouteETAs(
 
     return result;
   } catch (err) {
-    console.error('[google-routes] Error:', err instanceof Error ? err.message : err);
+    logger.error({ err }, '[google-routes] Error');
     return null;
   }
 }

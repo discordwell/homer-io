@@ -6,6 +6,7 @@ import rateLimit from '@fastify/rate-limit';
 import { ZodError } from 'zod';
 import { config } from './config.js';
 import { HttpError } from './lib/errors.js';
+import { logger } from './lib/logger.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { fleetRoutes } from './modules/fleet/routes.js';
 import { orderRoutes } from './modules/orders/routes.js';
@@ -53,13 +54,9 @@ const app = Fastify({
   // (GHSA-444r-cwp2-x5xf). Defaults to loopback-only (Caddy → API on same
   // host); configurable via TRUST_PROXY env var. See packages/api/src/config.ts.
   trustProxy: config.server.trustProxy,
-  logger: {
-    level: config.nodeEnv === 'production' ? 'info' : 'debug',
-    transport: config.nodeEnv !== 'production' ? {
-      target: 'pino-pretty',
-      options: { colorize: true },
-    } : undefined,
-  },
+  // Reuse the shared module-level logger so service modules and Fastify
+  // share the same Pino instance (consistent redact / level / transport).
+  loggerInstance: logger,
 });
 
 // Global error handler — catch Zod and HttpError, clean up responses

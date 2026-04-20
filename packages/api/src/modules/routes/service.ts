@@ -14,6 +14,7 @@ import { enqueueCustomerNotification } from '../customer-notifications/service.j
 import { enqueueDeliveryLearning } from '../../lib/delivery-learning.js';
 import { tenants } from '../../lib/db/schema/tenants.js';
 import { checkDeliveryLimits } from '../cannabis/service.js';
+import { logger } from '../../lib/logger.js';
 
 export async function createRoute(tenantId: string, input: CreateRouteInput) {
   const [route] = await db.transaction(async (tx) => {
@@ -345,7 +346,11 @@ export async function transitionRouteStatus(
     completed: 'route.completed', cancelled: 'route.cancelled',
   };
   if (webhookEventMap[newStatus]) {
-    enqueueWebhook(tenantId, webhookEventMap[newStatus], { routeId, routeName: route.name, previousStatus: route.status, newStatus, driverId: route.driverId }).catch(err => console.error('[trigger]', err?.message || err));
+    // Fire-and-forget enqueue. BullMQ handles delivery retry; only the
+    // enqueue itself can fail here (e.g. Redis down) — log loudly if so.
+    enqueueWebhook(tenantId, webhookEventMap[newStatus], { routeId, routeName: route.name, previousStatus: route.status, newStatus, driverId: route.driverId }).catch(err =>
+      logger.error({ err, tenantId, routeId, event: webhookEventMap[newStatus] }, '[routes] Failed to enqueue webhook on route status change'),
+    );
   }
 
   // Customer notifications: driver_en_route for all orders when route starts
@@ -353,7 +358,9 @@ export async function transitionRouteStatus(
     const routeOrders = await db.select().from(orders)
       .where(and(eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)));
     for (const order of routeOrders) {
-      enqueueCustomerNotification(tenantId, order.id, 'driver_en_route').catch(err => console.error('[trigger]', err?.message || err));
+      enqueueCustomerNotification(tenantId, order.id, 'driver_en_route').catch(err =>
+        logger.error({ err, tenantId, orderId: order.id }, '[routes] Failed to enqueue driver_en_route customer notification'),
+      );
     }
   }
 
@@ -478,14 +485,22 @@ export async function completeStop(
 
   // Webhook: delivery event
   const webhookEvent = result.status === 'delivered' ? 'delivery.completed' : 'delivery.failed';
-  enqueueWebhook(tenantId, webhookEvent, { routeId, orderId, recipientName: order.recipientName, status: result.status, failureReason: result.failureReason ?? null }).catch(err => console.error('[trigger]', err?.message || err));
-  enqueueWebhook(tenantId, result.status === 'delivered' ? 'order.delivered' : 'order.failed', { orderId, recipientName: order.recipientName, status: result.status }).catch(err => console.error('[trigger]', err?.message || err));
+  enqueueWebhook(tenantId, webhookEvent, { routeId, orderId, recipientName: order.recipientName, status: result.status, failureReason: result.failureReason ?? null }).catch(err =>
+    logger.error({ err, tenantId, routeId, orderId, event: webhookEvent }, '[routes] Failed to enqueue delivery webhook'),
+  );
+  enqueueWebhook(tenantId, result.status === 'delivered' ? 'order.delivered' : 'order.failed', { orderId, recipientName: order.recipientName, status: result.status }).catch(err =>
+    logger.error({ err, tenantId, orderId }, '[routes] Failed to enqueue order status webhook'),
+  );
 
   // Customer notification: delivered or failed
-  enqueueCustomerNotification(tenantId, orderId, result.status).catch(err => console.error('[trigger]', err?.message || err));
+  enqueueCustomerNotification(tenantId, orderId, result.status).catch(err =>
+    logger.error({ err, tenantId, orderId, status: result.status }, '[routes] Failed to enqueue customer notification'),
+  );
 
   // Delivery learning: record metrics + build address intelligence
-  enqueueDeliveryLearning(tenantId, orderId, routeId, result.status, result.failureReason, now).catch(err => console.error('[trigger]', err?.message || err));
+  enqueueDeliveryLearning(tenantId, orderId, routeId, result.status, result.failureReason, now).catch(err =>
+    logger.error({ err, tenantId, orderId, routeId }, '[routes] Failed to enqueue delivery learning'),
+  );
 
   // Re-read route to get the actual completedStops after the atomic increment
   const [updatedRoute] = await db

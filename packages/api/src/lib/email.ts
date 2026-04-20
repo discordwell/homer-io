@@ -1,4 +1,5 @@
 import { config } from '../config.js';
+import { logger } from './logger.js';
 
 const HTML_ESCAPE_MAP: Record<string, string> = {
   '&': '&amp;',
@@ -18,7 +19,7 @@ export async function sendTransactionalEmail(
   html: string,
 ): Promise<{ success: boolean; error?: string }> {
   if (!config.sendgrid.apiKey) {
-    console.log(`[email] No SendGrid API key configured, would send to ${to}: ${subject}`);
+    logger.info({ to, subject }, '[email] No SendGrid API key configured — email not delivered');
     return { success: true };
   }
 
@@ -38,7 +39,7 @@ export async function sendTransactionalEmail(
 
   if (!response.ok) {
     const err = await response.text();
-    console.error(`[email] SendGrid error:`, err);
+    logger.error({ err, to, subject, status: response.status }, '[email] SendGrid error');
     return { success: false, error: err };
   }
 

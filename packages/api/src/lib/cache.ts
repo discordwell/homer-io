@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import { config } from '../config.js';
+import { logger } from './logger.js';
 
 const KEY_PREFIX = 'homer:';
 
@@ -18,7 +19,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
     if (!raw) return null;
     return JSON.parse(raw) as T;
   } catch (err) {
-    console.error(`[cache] GET error for key "${key}":`, err);
+    logger.error({ err, key }, '[cache] GET error');
     return null;
   }
 }
@@ -28,7 +29,7 @@ export async function cacheSet(key: string, value: unknown, ttlSeconds: number):
     const raw = JSON.stringify(value);
     await getRedis().set(`${KEY_PREFIX}${key}`, raw, 'EX', ttlSeconds);
   } catch (err) {
-    console.error(`[cache] SET error for key "${key}":`, err);
+    logger.error({ err, key }, '[cache] SET error');
   }
 }
 
@@ -64,7 +65,7 @@ export async function cacheDelete(key: string): Promise<void> {
   try {
     await getRedis().del(`${KEY_PREFIX}${key}`);
   } catch (err) {
-    console.error(`[cache] DEL error for key "${key}":`, err);
+    logger.error({ err, key }, '[cache] DEL error');
   }
 }
 
@@ -80,7 +81,7 @@ export async function cacheIncr(key: string, ttlSeconds: number): Promise<number
     }
     return val;
   } catch (err) {
-    console.error(`[cache] INCR error for key "${key}":`, err);
+    logger.error({ err, key }, '[cache] INCR error');
     return 0;
   }
 }
@@ -97,7 +98,7 @@ export async function cacheDecr(key: string): Promise<number> {
     }
     return val;
   } catch (err) {
-    console.error(`[cache] DECR error for key "${key}":`, err);
+    logger.error({ err, key }, '[cache] DECR error');
     return 0;
   }
 }
@@ -116,6 +117,6 @@ export async function cacheDeletePattern(pattern: string): Promise<void> {
       }
     } while (cursor !== '0');
   } catch (err) {
-    console.error(`[cache] DEL pattern error for "${pattern}":`, err);
+    logger.error({ err, pattern }, '[cache] DEL pattern error');
   }
 }

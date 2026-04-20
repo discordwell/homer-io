@@ -1,4 +1,5 @@
 import type { EcommerceConnector, ExternalOrder } from './connector.js';
+import { logger } from '../logger.js';
 
 /**
  * WooCommerce REST API v3 connector.
@@ -71,10 +72,10 @@ export class WooCommerceConnector implements EcommerceConnector {
           const data = await res.json() as { id: number };
           webhookIds.push(String(data.id));
         } else {
-          console.warn(`[woocommerce] Failed to register webhook ${topic}: ${res.status}`);
+          logger.warn({ topic, status: res.status }, '[woocommerce] Failed to register webhook');
         }
       } catch (err) {
-        console.warn(`[woocommerce] Error registering webhook ${topic}:`, err);
+        logger.warn({ err, topic }, '[woocommerce] Error registering webhook');
       }
     }
 

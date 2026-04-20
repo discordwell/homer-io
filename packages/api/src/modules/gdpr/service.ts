@@ -8,6 +8,7 @@ import { HttpError, NotFoundError } from '../../lib/errors.js';
 import { config } from '../../config.js';
 import { sendTransactionalEmail, escapeHtml } from '../../lib/email.js';
 import { users } from '../../lib/db/schema/users.js';
+import { logger } from '../../lib/logger.js';
 
 const dataExportQueue = new Queue('data-export', { connection: { url: config.redis.url } });
 
@@ -93,7 +94,7 @@ export async function requestAccountDeletion(tenantId: string, userId: string, c
        <p>You requested to delete your HOMER.io account. This will be processed after a 30-day grace period (${escapeHtml(scheduledAt.toLocaleDateString())}).</p>
        <p>To confirm, click <a href="${safeUrl}">here</a>.</p>
        <p>To cancel, go to Settings &gt; Privacy in your dashboard.</p>`
-    ).catch(err => console.error('[gdpr] deletion email failed:', err));
+    ).catch(err => logger.error({ err, tenantId, userId }, '[gdpr] deletion email failed'));
   }
 
   return { ...request, scheduledAt: scheduledAt.toISOString() };

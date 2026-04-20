@@ -11,6 +11,7 @@ import { computeRouteETAs } from './google-routes.js';
 import { haversineDistance, estimateEtaMinutes } from '../geo.js';
 import { dwellTimesMinutes } from '@homer-io/shared';
 import { cacheGet, cacheSet } from '../cache.js';
+import { logger } from '../logger.js';
 
 // ---- Fallback tracking ----
 // Every haversine fallback gets a loud log and a Redis counter so degradation is never silent.
@@ -19,8 +20,7 @@ const FALLBACK_COUNTER_KEY = 'routing:haversine_fallbacks';
 const FALLBACK_COUNTER_TTL = 86400; // 24h rolling window
 
 async function trackFallback(context: string, error?: unknown) {
-  const msg = error instanceof Error ? error.message : String(error ?? 'unknown');
-  console.error(`[ROUTING FALLBACK] ${context} — OSRM unreachable, using haversine. Error: ${msg}`);
+  logger.error({ err: error, context }, '[ROUTING FALLBACK] OSRM unreachable, using haversine');
   try {
     // Increment Redis counter for monitoring/alerting
     const count = await cacheGet<number>(FALLBACK_COUNTER_KEY) ?? 0;

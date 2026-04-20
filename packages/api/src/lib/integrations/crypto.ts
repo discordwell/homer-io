@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 import { config } from '../../config.js';
+import { logger } from '../logger.js';
 
 /**
  * Minimum passphrase length for INTEGRATION_ENCRYPTION_KEY.

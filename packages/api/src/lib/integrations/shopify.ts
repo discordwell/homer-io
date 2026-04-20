@@ -1,4 +1,5 @@
 import type { EcommerceConnector, ExternalOrder } from './connector.js';
+import { logger } from '../logger.js';
 
 /**
  * Shopify REST API connector.
@@ -66,10 +67,10 @@ export class ShopifyConnector implements EcommerceConnector {
           const data = await res.json() as { webhook: { id: number } };
           webhookIds.push(String(data.webhook.id));
         } else {
-          console.warn(`[shopify] Failed to register webhook ${topic}: ${res.status}`);
+          logger.warn({ topic, status: res.status }, '[shopify] Failed to register webhook');
         }
       } catch (err) {
-        console.warn(`[shopify] Error registering webhook ${topic}:`, err);
+        logger.warn({ err, topic }, '[shopify] Error registering webhook');
       }
     }
 

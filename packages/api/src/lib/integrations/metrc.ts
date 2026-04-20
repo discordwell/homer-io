@@ -7,6 +7,8 @@
  * Phase 3 scope: read-only (packages + transfers). Full sync is future work.
  */
 
+import { logger } from '../logger.js';
+
 // ---------------------------------------------------------------------------
 // METRC API base URLs by state
 // ---------------------------------------------------------------------------
@@ -158,7 +160,7 @@ export class MetrcConnector implements SeedToSaleConnector {
     // METRC delivery reporting uses the transfers endpoint
     // This is a simplified implementation — full METRC delivery flow
     // requires updating the transfer with actual delivery data
-    console.log(`[metrc] Delivery reported: ${deliveryData.packageLabels.length} packages to ${deliveryData.recipientName}`);
+    logger.info({ packageCount: deliveryData.packageLabels.length, recipientName: deliveryData.recipientName, state }, '[metrc] Delivery reported');
   }
 
   // ── Helpers ────────────────────────────────────────────────────────
