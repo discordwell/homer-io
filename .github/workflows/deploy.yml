@@ -36,12 +36,38 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+
+      # Port drift guard (Finding H14) — fail fast before anything else runs
+      - name: Verify infra port consistency
+        run: node scripts/verify-port-consistency.mjs
+
+      # Shared is a workspace dep consumed by api/web/worker/mobile, so its
+      # dist must exist before typecheck / lint can resolve `@homer-io/shared`.
       - run: npm run -w @homer-io/shared build
-      - run: npx turbo build
-      - run: npx turbo test
+
+      - name: Lint
+        run: npx turbo lint
+
+      - name: Typecheck
+        run: npx turbo typecheck
+
+      - name: Test
+        run: npx turbo test
         env:
           DATABASE_URL: postgresql://homer:homer@localhost:5432/homer
           REDIS_URL: redis://localhost:6379
+
+      # Security audit (Finding H16). Fails on critical; logs high+moderate
+      # without failing. Another hardening pass will bump direct deps to clear
+      # remaining highs, after which we tighten --audit-level to high.
+      - name: Security audit (fail on critical)
+        run: npm audit --audit-level=critical
+      - name: Security audit report (informational, non-blocking)
+        if: always()
+        run: npm audit --audit-level=moderate || true
+
+      - name: Build
+        run: npx turbo build
 
   deploy:
     needs: test
@@ -67,7 +93,10 @@ jobs:
             npm ci
             npx turbo build
             rsync -a --delete packages/web/dist/ site/
-            echo 'n' | npx drizzle-kit push --config infra/drizzle-push.config.ts --force || echo 'drizzle push skipped'
+            # Finding H17: use versioned migrations instead of `drizzle-kit push --force`.
+            # db:migrate:run applies committed SQL files in packages/api/drizzle/ in order.
+            # Fails the deploy step on migration error so we don't ship schema drift.
+            npm run -w @homer-io/api db:migrate:run
             pm2 reload infra/ecosystem.config.cjs || pm2 start infra/ecosystem.config.cjs
             if curl -sf http://localhost:5000/ > /dev/null 2>&1; then
               echo "OSRM: healthy"
@@ -117,7 +146,8 @@ jobs:
             npm ci
             npx turbo build
             rsync -a --delete packages/web/dist/ site/
-            echo 'n' | npx drizzle-kit push --config infra/drizzle-push.config.ts --force || echo 'drizzle push skipped'
+            # Finding H17: use versioned migrations instead of `drizzle-kit push --force`.
+            npm run -w @homer-io/api db:migrate:run
             pm2 reload infra/ecosystem.config.cjs || pm2 start infra/ecosystem.config.cjs
             if curl -sf http://localhost:5000/ > /dev/null 2>&1; then
               echo "OSRM: healthy"

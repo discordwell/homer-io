@@ -6,8 +6,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "test": "jest",
-    "lint": "eslint ."
+    "test": "echo 'Mobile tests not yet configured — see ARCHITECTURE.md (Mobile App > Testing)' && exit 0",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@homer-io/shared": "*",

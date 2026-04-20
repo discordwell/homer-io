@@ -20,6 +20,30 @@
     "test": {
       "dependsOn": ["^build"]
     },
-    "lint": {}
+    "lint": {
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.js",
+        "src/**/*.jsx",
+        "app/**/*.ts",
+        "app/**/*.tsx",
+        "eslint.config.js",
+        "../../eslint.config.js"
+      ],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "app/**/*.ts",
+        "app/**/*.tsx",
+        "tsconfig.json",
+        "../../tsconfig.base.json"
+      ],
+      "outputs": []
+    }
   }
 }

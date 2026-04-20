@@ -9,7 +9,9 @@ module.exports = {
       node_args: '--env-file=/opt/homer-io/.env',
       env: {
         NODE_ENV: 'production',
-        PORT: 3030,
+        // Canonical API port — must match infra/Caddyfile reverse_proxy and .env.example PORT.
+        // See scripts/verify-port-consistency.mjs which guards drift.
+        PORT: 3000,
         HOST: '127.0.0.1',
       },
     },

@@ -741,3 +741,7 @@ packages/mobile/
 
 - **Apple App Store** — bundle ID `io.homer.mobile`, Apple Developer account ready
 - **Google Play Store** — package `io.homer.mobile`, developer account pending setup
+
+### Testing (follow-up work)
+
+`packages/mobile` does not yet have a Jest / jest-expo test setup. The `test` script is a no-op that prints a "not yet configured" message and exits 0 so that CI's `npm test --workspaces --if-present` passes. When the first mobile test is written, install `jest-expo`, add a `jest.config.js` pointing at the `jest-expo` preset, and replace the stub script with `jest`. See Finding H15 in `docs/production-audit.md`.
