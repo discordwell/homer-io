@@ -32,6 +32,34 @@ export async function cacheSet(key: string, value: unknown, ttlSeconds: number):
   }
 }
 
+/**
+ * Atomic "set-if-not-exists" with TTL. Returns true if the key was newly
+ * claimed (i.e. did not exist), false if another caller already holds it.
+ *
+ * On Redis errors we fail OPEN (return true) so transient Redis issues don't
+ * block critical paths — callers that need strict dedup should layer a DB
+ * uniqueness constraint on top of this.
+ *
+ * Use for idempotency / dedup primitives (e.g. Stripe webhook event IDs,
+ * confirmation-token replay protection) where a check-then-set is racy.
+ */
+export async function cacheSetNX(
+  key: string,
+  value: unknown,
+  ttlSeconds: number,
+): Promise<boolean> {
+  try {
+    const raw = JSON.stringify(value);
+    const result = await getRedis().set(`${KEY_PREFIX}${key}`, raw, 'EX', ttlSeconds, 'NX');
+    // ioredis returns 'OK' on successful NX set, null if the key already existed
+    return result === 'OK';
+  } catch (err) {
+    console.error(`[cache] SETNX error for key "${key}":`, err);
+    // Fail open: do not block callers on transient Redis errors.
+    return true;
+  }
+}
+
 export async function cacheDelete(key: string): Promise<void> {
   try {
     await getRedis().del(`${KEY_PREFIX}${key}`);

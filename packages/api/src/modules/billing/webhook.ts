@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import Stripe from 'stripe';
 import { config } from '../../config.js';
 import { handleWebhookEvent } from './service.js';
-import { cacheGet, cacheSet } from '../../lib/cache.js';
+import { cacheSetNX, cacheDelete } from '../../lib/cache.js';
 
 export async function billingWebhookPlugin(app: FastifyInstance) {
   if (!config.stripe.secretKey || !config.stripe.webhookSecret) {
@@ -41,23 +41,27 @@ export async function billingWebhookPlugin(app: FastifyInstance) {
       return reply.code(400).send({ message: 'Webhook signature verification failed' });
     }
 
-    // Deduplicate — Stripe can retry events; reject if already processed
+    // Deduplicate — Stripe can retry events, and concurrent retries can race.
+    // Use an atomic SET NX to claim the event BEFORE processing. Two concurrent
+    // deliveries of the same event.id will race on the SETNX; exactly one wins
+    // and processes, the rest short-circuit. 48h TTL covers Stripe's retry window.
     const dedupKey = `stripe:event:${event.id}`;
-    const already = await cacheGet(dedupKey);
-    if (already) {
+    const claimed = await cacheSetNX(dedupKey, '1', 172800);
+    if (!claimed) {
       app.log.info(`[billing] Duplicate event skipped: ${event.type} (${event.id})`);
       return { received: true };
     }
 
     try {
       await handleWebhookEvent(event);
-      // Mark as processed with 48h TTL (covers Stripe's retry window)
-      await cacheSet(dedupKey, '1', 172800);
       app.log.info(`[billing] Processed webhook event: ${event.type} (${event.id})`);
     } catch (err) {
       app.log.error({ err, eventType: event.type }, '[billing] Error processing webhook event');
-      // Return 200 to avoid Stripe retries for processing errors we've logged
-      return reply.code(200).send({ received: true, error: 'Processing error logged' });
+      // Release the dedup claim so Stripe's retry can actually reprocess.
+      // Without this, a transient failure would be poisoned for 48h.
+      await cacheDelete(dedupKey);
+      // Return 5xx so Stripe retries — processing failed, not a duplicate.
+      return reply.code(500).send({ received: false, error: 'Processing error' });
     }
 
     return { received: true };

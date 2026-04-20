@@ -158,8 +158,9 @@ describe('Stripe webhook deduplication', () => {
     );
 
     expect(webhookSource).toContain('stripe:event:');
-    expect(webhookSource).toContain('cacheGet');
-    expect(webhookSource).toContain('cacheSet');
+    // Atomic SET NX replaces the prior check-then-set (which had a TOCTOU race
+    // where two concurrent deliveries could both pass the check and double-process).
+    expect(webhookSource).toContain('cacheSetNX');
     expect(webhookSource).toContain('Duplicate event skipped');
   });
 });
