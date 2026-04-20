@@ -7,8 +7,20 @@ describe('GDPR routes role enforcement', () => {
     const { gdprRoutes } = await import('../modules/gdpr/routes.js');
 
     const registeredRoutes: { method: string; path: string; preHandler?: unknown[] }[] = [];
-    const mockApp = {
+    // The mock recursively applies itself to `register(plugin)` so sub-scoped
+    // plugins (e.g. the /export rate-limit scope) route their .post() calls
+    // back into the same registeredRoutes accumulator.
+    const mockApp: any = {
       addHook: vi.fn(),
+      register: vi.fn(async (plugin: any, _opts?: any) => {
+        // Recurse only for inline plugin functions that take a single arg
+        // (the sub-scope `async (scope) => { ... }`). Real Fastify plugins
+        // like @fastify/rate-limit declare `(fastify, opts, next)` = length 3;
+        // invoking them against this bare mock would blow up on internals.
+        if (typeof plugin === 'function' && plugin.length === 1) {
+          await plugin(mockApp);
+        }
+      }),
       post: vi.fn((path: string, opts: any, _handler?: any) => {
         const config = typeof opts === 'object' && !Array.isArray(opts) ? opts : {};
         registeredRoutes.push({ method: 'POST', path, preHandler: config.preHandler });

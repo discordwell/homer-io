@@ -11,7 +11,30 @@ import { users } from '../../lib/db/schema/users.js';
 
 const dataExportQueue = new Queue('data-export', { connection: { url: config.redis.url } });
 
+/**
+ * Statuses considered "in progress" — a tenant cannot queue a new export while
+ * one of these is outstanding. This gates resource exhaustion at the tenant
+ * level (storage quota, worker capacity) on top of the per-user rate limiter.
+ */
+const IN_PROGRESS_EXPORT_STATUSES = ['queued', 'processing'] as const;
+
 export async function requestDataExport(tenantId: string, userId: string) {
+  // Tenant-scoped guard: if there's already a queued or processing export for
+  // this tenant, refuse to enqueue a duplicate. This complements the per-user
+  // Fastify rate limiter (1/hour) and protects against pathological cases
+  // where different owner accounts in the same tenant could each queue jobs.
+  const [pending] = await db.select({ id: dataExportRequests.id, status: dataExportRequests.status })
+    .from(dataExportRequests)
+    .where(and(
+      eq(dataExportRequests.tenantId, tenantId),
+      inArray(dataExportRequests.status, [...IN_PROGRESS_EXPORT_STATUSES]),
+    ))
+    .orderBy(desc(dataExportRequests.createdAt))
+    .limit(1);
+  if (pending) {
+    throw new HttpError(409, 'Export already in progress');
+  }
+
   const [request] = await db.insert(dataExportRequests).values({
     tenantId, requestedBy: userId, status: 'queued',
   }).returning();

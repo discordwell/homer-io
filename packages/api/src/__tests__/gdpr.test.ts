@@ -12,9 +12,14 @@ const set = vi.fn();
 const values = vi.fn();
 
 function makeChain(resolveValue: unknown = []) {
-  const chainLimit = vi.fn().mockReturnValue({
+  // .limit() can be terminal (promise) OR chained to .offset() (also promise).
+  // Use a proxy-like object: it's thenable AND has an .offset() method.
+  const makeLimitResult = () => ({
     offset: vi.fn().mockResolvedValue(resolveValue),
+    then: (resolve: (v: unknown) => void, reject?: (e: unknown) => void) =>
+      Promise.resolve(resolveValue).then(resolve, reject),
   });
+  const chainLimit = vi.fn().mockImplementation(() => makeLimitResult());
   const chainOrderBy = vi.fn().mockReturnValue({
     limit: chainLimit,
   });
@@ -146,6 +151,8 @@ describe('GDPR service - export', () => {
 
   it('requestDataExport inserts a record and enqueues a job', async () => {
     const mockExport = { id: 'exp-1', tenantId: 't-1', requestedBy: 'u-1', status: 'queued' };
+    // First select: in-progress check returns empty (no pending/processing)
+    setupSelectChains(makeChain([]));
     returning.mockResolvedValueOnce([mockExport]);
 
     const { requestDataExport } = await import('../modules/gdpr/service.js');
@@ -153,6 +160,47 @@ describe('GDPR service - export', () => {
 
     expect(result.id).toBe('exp-1');
     expect(result.status).toBe('queued');
+    expect(mockInsert).toHaveBeenCalled();
+  });
+
+  it('requestDataExport rejects with 409 when a queued export already exists', async () => {
+    // In-progress check returns an existing queued row — the guard must fire
+    // BEFORE any insert, protecting worker/storage from duplicate jobs.
+    setupSelectChains(makeChain([{ id: 'exp-existing', status: 'queued' }]));
+
+    const { requestDataExport } = await import('../modules/gdpr/service.js');
+    await expect(requestDataExport('t-1', 'u-1')).rejects.toMatchObject({
+      statusCode: 409,
+      message: 'Export already in progress',
+    });
+    // Confirm no insert happened — duplicate was blocked at the tenant gate.
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it('requestDataExport rejects with 409 when a processing export already exists', async () => {
+    // Same as queued — "processing" is also counted as in-progress so a worker
+    // that picked up a job but hasn't completed still blocks duplicates.
+    setupSelectChains(makeChain([{ id: 'exp-running', status: 'processing' }]));
+
+    const { requestDataExport } = await import('../modules/gdpr/service.js');
+    await expect(requestDataExport('t-1', 'u-1')).rejects.toMatchObject({
+      statusCode: 409,
+    });
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it('requestDataExport succeeds when prior export is completed (new one allowed)', async () => {
+    // Completed exports are NOT in-progress, so the service-layer gate does
+    // not fire. (At the HTTP layer, the per-user 1/hour Fastify rate limiter
+    // is the gate that fires until the hour elapses — this test verifies the
+    // in-progress gate specifically ignores terminal states.)
+    setupSelectChains(makeChain([])); // select filters by queued|processing, returns none
+    const mockExport = { id: 'exp-2', tenantId: 't-1', requestedBy: 'u-1', status: 'queued' };
+    returning.mockResolvedValueOnce([mockExport]);
+
+    const { requestDataExport } = await import('../modules/gdpr/service.js');
+    const result = await requestDataExport('t-1', 'u-1');
+    expect(result.id).toBe('exp-2');
     expect(mockInsert).toHaveBeenCalled();
   });
 
