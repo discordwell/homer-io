@@ -30,7 +30,9 @@ const mockDb = {
     }),
   }),
   transaction: vi.fn().mockImplementation(async (fn: any) => {
-    await fn({ insert: mockInsert });
+    // Propagate the callback's return value so the caller of
+    // db.transaction(cb) receives whatever cb returned (e.g. the inserted row).
+    return fn({ insert: mockInsert });
   }),
 };
 
@@ -78,7 +80,21 @@ vi.mock('../lib/activity.js', () => ({
 
 // Mock billing service (syncSeats removed — per-order pricing now)
 vi.mock('../modules/billing/service.js', () => ({
-  recordMeteredUsage: vi.fn().mockResolvedValue({ allowed: true }),
+  recordMeteredUsage: vi.fn().mockResolvedValue({ allowed: true, newTotal: 1 }),
+  // assertOrderLimitAndLock takes an advisory lock + counts orders inside a tx.
+  // For unit tests that mock db.transaction, we just no-op.
+  assertOrderLimitAndLock: vi.fn().mockResolvedValue(undefined),
+  OrderLimitExceededError: class OrderLimitExceededError extends Error {
+    statusCode = 402;
+    ordersUsed: number;
+    ordersLimit: number;
+    constructor(used: number, limit: number) {
+      super(`Limit (${limit}) reached`);
+      this.name = 'OrderLimitExceededError';
+      this.ordersUsed = used;
+      this.ordersLimit = limit;
+    }
+  },
 }));
 
 // Mock errors

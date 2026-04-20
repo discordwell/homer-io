@@ -2,14 +2,28 @@ import { FastifyInstance } from 'fastify';
 import { createOrderSchema, updateOrderStatusSchema, paginationSchema, csvImportSchema, batchOrderStatusSchema, batchDriverAssignSchema } from '@homer-io/shared';
 import { authenticate, requireRole } from '../../plugins/auth.js';
 import { createOrder, listOrders, getOrder, updateOrderStatus, deleteOrder, importOrdersCsv, batchUpdateStatus, batchAssignToRoute } from './service.js';
+import { OrderLimitExceededError } from '../billing/service.js';
 
 export async function orderRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
   app.post('/', { preHandler: [requireRole('dispatcher')] }, async (request, reply) => {
     const body = createOrderSchema.parse(request.body);
-    const order = await createOrder(request.user.tenantId, body);
-    reply.code(201).send(order);
+    try {
+      const order = await createOrder(request.user.tenantId, body);
+      reply.code(201).send(order);
+    } catch (err) {
+      if (err instanceof OrderLimitExceededError) {
+        return reply.code(402).send({
+          message: err.message,
+          status: 'order_limit_reached',
+          ordersUsed: err.ordersUsed,
+          ordersLimit: err.ordersLimit,
+          readOnly: false,
+        });
+      }
+      throw err;
+    }
   });
 
   app.get('/', async (request) => {
@@ -44,8 +58,21 @@ export async function orderRoutes(app: FastifyInstance) {
 
   app.post('/import/csv', { preHandler: [requireRole('dispatcher')] }, async (request, reply) => {
     const { orders: orderRows } = csvImportSchema.parse(request.body);
-    const result = await importOrdersCsv(request.user.tenantId, orderRows);
-    reply.code(201).send(result);
+    try {
+      const result = await importOrdersCsv(request.user.tenantId, orderRows);
+      reply.code(201).send(result);
+    } catch (err) {
+      if (err instanceof OrderLimitExceededError) {
+        return reply.code(402).send({
+          message: err.message,
+          status: 'order_limit_reached',
+          ordersUsed: err.ordersUsed,
+          ordersLimit: err.ordersLimit,
+          readOnly: false,
+        });
+      }
+      throw err;
+    }
   });
 
   app.post('/batch/status', { preHandler: [requireRole('dispatcher')] }, async (request, reply) => {

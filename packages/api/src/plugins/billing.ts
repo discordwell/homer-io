@@ -81,9 +81,20 @@ export async function requireActiveSubscription(request: FastifyRequest, reply: 
     // Trial expired — fall through to block mutations
   }
 
-  // active — check order limits for mutations that create orders
+  // active — fast-fail / UX hint for order-creation limits.
+  //
+  // NOTE: This is NOT the authoritative enforcement of the order limit.
+  // Authoritative enforcement lives in createOrder / importOrdersCsv
+  // (orders/service.ts), which takes a per-tenant advisory xact lock and
+  // checks the count inside the same transaction that does the INSERT.
+  // Doing the check here alone would be racy: two concurrent POSTs could
+  // both observe `count = limit - 1` and both pass through to insert,
+  // overshooting the plan limit by one.
+  //
+  // We keep this check for: (a) a snappy 402 before the request hits the
+  // service layer when the tenant is already clearly over, and (b) the
+  // X-Orders-Used / X-Orders-Limit headers the frontend displays.
   if (sub.status === 'active') {
-    // For POST to /api/orders (creating new orders), check the plan order limit
     if (request.method === 'POST' && (path === '/api/orders' || path === '/api/orders/import/csv')) {
       const plan = sub.plan as keyof typeof planFeatures;
       const planDef = planFeatures[plan] || planFeatures.free;

@@ -321,62 +321,83 @@ export async function togglePayAsYouGo(tenantId: string, enabled: boolean) {
 }
 
 // --- recordMeteredUsage ---
-// Returns { allowed: true } if within quota or payAsYouGo is enabled
-// Returns { allowed: false, reason: string } if over quota and payAsYouGo is off
-// Uses atomic upsert to prevent race conditions on concurrent requests
+// Returns { allowed: true, newTotal } if within quota or payAsYouGo is enabled.
+// Returns { allowed: false, reason, newTotal } if over quota and payAsYouGo is off.
+//
+// Uses a single serialized transaction with SELECT ... FOR UPDATE to eliminate
+// the TOCTOU ("check-then-increment") race. Two concurrent callers can no longer
+// both observe "1 remaining" and both increment — the row-level lock forces them
+// to serialize, so the second caller sees the first caller's increment before
+// deciding whether to proceed.
+//
+// Policy on over-quota denial: we DO NOT increment (no bogus billing). We still
+// ensure a row exists so subsequent reads show the real usage.
 export async function recordMeteredUsage(
   tenantId: string,
   feature: MeteredFeature,
   amount: number = 1,
-): Promise<{ allowed: boolean; reason?: string }> {
+): Promise<{ allowed: boolean; reason?: string; newTotal: number }> {
   const period = new Date().toISOString().slice(0, 7);
   const quota = meteredQuotas[feature];
 
-  // Get subscription to check payAsYouGo status
-  const [sub] = await db
-    .select({ payAsYouGoEnabled: subscriptions.payAsYouGoEnabled })
-    .from(subscriptions)
-    .where(eq(subscriptions.tenantId, tenantId))
-    .limit(1);
+  return db.transaction(async (tx) => {
+    // 1. Ensure row exists. ON CONFLICT DO NOTHING is safe and idempotent.
+    await tx
+      .insert(meteredUsage)
+      .values({ tenantId, period })
+      .onConflictDoNothing({
+        target: [meteredUsage.tenantId, meteredUsage.period],
+      });
 
-  // Atomic upsert: insert or increment in a single statement
-  // This prevents TOCTOU race conditions on concurrent requests
-  const [result] = await db
-    .insert(meteredUsage)
-    .values({
-      tenantId,
-      period,
-      [feature]: amount,
-    })
-    .onConflictDoUpdate({
-      target: [meteredUsage.tenantId, meteredUsage.period],
-      set: {
-        [feature]: sql`${meteredUsage[feature]} + ${amount}`,
-        updatedAt: new Date(),
-      },
-    })
-    .returning({ newValue: meteredUsage[feature] });
+    // 2. Lock the row for this tenant+period. This serializes concurrent
+    //    recordMeteredUsage calls for the same tenant+feature within a single
+    //    period: the second caller blocks here until the first commits.
+    const [current] = await tx
+      .select()
+      .from(meteredUsage)
+      .where(
+        and(eq(meteredUsage.tenantId, tenantId), eq(meteredUsage.period, period)),
+      )
+      .for('update')
+      .limit(1);
 
-  const currentUsage = Number(result?.newValue ?? amount);
+    const existingValue = Number(current?.[feature] ?? 0);
+    const prospectiveTotal = existingValue + amount;
 
-  // Check if over quota AFTER the increment (post-check is safe — we can decrement if denied)
-  if (currentUsage > quota && !sub?.payAsYouGoEnabled) {
-    // Roll back the increment since we're denying the request
-    await db
+    // 3. Read payAsYouGo inside the same tx (snapshot consistent with the lock).
+    const [sub] = await tx
+      .select({ payAsYouGoEnabled: subscriptions.payAsYouGoEnabled })
+      .from(subscriptions)
+      .where(eq(subscriptions.tenantId, tenantId))
+      .limit(1);
+
+    const overQuota = prospectiveTotal > quota;
+    const allowOverage = !!sub?.payAsYouGoEnabled;
+
+    // 4. If over quota and pay-as-you-go is off: deny without incrementing.
+    if (overQuota && !allowOverage) {
+      return {
+        allowed: false,
+        reason: `Monthly ${feature} quota exceeded (${existingValue}/${quota}). Enable Pay-as-you-go in Settings > Billing to continue.`,
+        newTotal: existingValue,
+      };
+    }
+
+    // 5. Atomic increment on the locked row.
+    const [updated] = await tx
       .update(meteredUsage)
       .set({
-        [feature]: sql`GREATEST(0, ${meteredUsage[feature]} - ${amount})`,
+        [feature]: sql`${meteredUsage[feature]} + ${amount}`,
         updatedAt: new Date(),
       })
-      .where(and(eq(meteredUsage.tenantId, tenantId), eq(meteredUsage.period, period)));
+      .where(
+        and(eq(meteredUsage.tenantId, tenantId), eq(meteredUsage.period, period)),
+      )
+      .returning();
 
-    return {
-      allowed: false,
-      reason: `Monthly ${feature} quota exceeded (${currentUsage - amount}/${quota}). Enable Pay-as-you-go in Settings > Billing to continue.`,
-    };
-  }
-
-  return { allowed: true };
+    const newTotal = Number(updated?.[feature] ?? prospectiveTotal);
+    return { allowed: true, newTotal };
+  });
 }
 
 // --- getMeteredUsage ---
@@ -418,6 +439,77 @@ export async function getMonthlyOrderCount(tenantId: string): Promise<number> {
     .from(orders)
     .where(and(eq(orders.tenantId, tenantId), gte(orders.createdAt, monthStart)));
   return Number(result?.count ?? 0);
+}
+
+// --- getTenantOrderLimit ---
+// Returns the plan's monthly order limit for this tenant, or null if unlimited
+// (enterprise) or no subscription exists yet.
+export async function getTenantOrderLimit(tenantId: string): Promise<number | null> {
+  const [sub] = await db
+    .select({ plan: subscriptions.plan })
+    .from(subscriptions)
+    .where(eq(subscriptions.tenantId, tenantId))
+    .limit(1);
+  if (!sub) return null;
+  const plan = sub.plan as keyof typeof planFeatures;
+  const planDef = planFeatures[plan] || planFeatures.free;
+  if (planDef.ordersPerMonth === Infinity) return null;
+  return planDef.ordersPerMonth;
+}
+
+// --- OrderLimitExceededError ---
+// Thrown by assertOrderLimitAndLock (called from within a transaction that will
+// insert an order) when the tenant would exceed their plan's monthly order
+// limit. Carries a statusCode so route handlers can return HTTP 402.
+export class OrderLimitExceededError extends Error {
+  statusCode = 402;
+  ordersUsed: number;
+  ordersLimit: number;
+  constructor(ordersUsed: number, ordersLimit: number) {
+    super(
+      `You've reached your plan's monthly order limit (${ordersLimit}). Upgrade your plan to continue.`,
+    );
+    this.name = 'OrderLimitExceededError';
+    this.ordersUsed = ordersUsed;
+    this.ordersLimit = ordersLimit;
+  }
+}
+
+// --- assertOrderLimitAndLock ---
+// Must be called inside a transaction that is about to INSERT an order (or N orders).
+//
+// Takes a per-tenant PostgreSQL advisory xact lock — acquired on a hash of the
+// tenant id — so concurrent order-creation transactions for the same tenant
+// serialize across this check-and-insert. The lock is automatically released
+// at COMMIT/ROLLBACK.
+//
+// Counts current-month orders inside the locked transaction, then throws
+// OrderLimitExceededError if adding `addCount` would exceed the plan limit.
+// Does nothing for tenants with no subscription or on unlimited plans.
+export async function assertOrderLimitAndLock(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tenantId: string,
+  addCount: number = 1,
+): Promise<void> {
+  const limit = await getTenantOrderLimit(tenantId);
+  if (limit === null) return;
+
+  // Advisory lock keyed on the tenant id. hashtextextended(text, int8) returns
+  // int8 which pg_advisory_xact_lock(bigint) accepts directly. Serializes
+  // concurrent order-insert transactions per tenant only — different tenants
+  // never contend.
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId}, 0))`);
+
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const [result] = await tx
+    .select({ count: sql<number>`count(*)` })
+    .from(orders)
+    .where(and(eq(orders.tenantId, tenantId), gte(orders.createdAt, monthStart)));
+  const current = Number(result?.count ?? 0);
+
+  if (current + addCount > limit) {
+    throw new OrderLimitExceededError(current, limit);
+  }
 }
 
 // --- invalidate billing cache helper ---

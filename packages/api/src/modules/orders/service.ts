@@ -9,6 +9,7 @@ import { NotFoundError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
 import { hasFeature } from '@homer-io/shared';
 import { checkDeliveryZone } from '../cannabis/service.js';
+import { assertOrderLimitAndLock } from '../billing/service.js';
 
 export async function createOrder(tenantId: string, input: CreateOrderInput) {
   let requiresSignature = input.requiresSignature;
@@ -45,58 +46,66 @@ export async function createOrder(tenantId: string, input: CreateOrderInput) {
     }
   }
 
-  const [order] = await db
-    .insert(orders)
-    .values({
-      tenantId,
-      externalId: input.externalId,
-      recipientName: input.recipientName,
-      recipientPhone: input.recipientPhone,
-      recipientEmail: input.recipientEmail,
-      pickupAddress: input.pickupAddress,
-      deliveryAddress: input.deliveryAddress,
-      deliveryLat: input.deliveryAddress.coords?.lat?.toString() ?? null,
-      deliveryLng: input.deliveryAddress.coords?.lng?.toString() ?? null,
-      packageCount: input.packageCount,
-      weight: input.weight?.toString(),
-      volume: input.volume?.toString(),
-      priority: input.priority,
-      timeWindowStart: input.timeWindow?.start ? new Date(input.timeWindow.start) : undefined,
-      timeWindowEnd: input.timeWindow?.end ? new Date(input.timeWindow.end) : undefined,
-      notes: input.notes,
-      serviceDurationMinutes,
-      orderType: input.orderType,
-      barcodes: input.barcodes,
-      customFields: input.customFields,
-      requiresSignature,
-      requiresPhoto,
-      // Sender / gift fields
-      senderName: input.senderName,
-      senderEmail: input.senderEmail,
-      senderPhone: input.senderPhone,
-      giftMessage: input.giftMessage,
-      isGift: input.isGift || !!input.giftMessage,
-      // Pharmacy compliance
-      isControlledSubstance: input.isControlledSubstance || false,
-      controlledSchedule: input.controlledSchedule,
-      isColdChain: input.isColdChain || false,
-      patientDob: input.patientDob,
-      prescriberName: input.prescriberName,
-      prescriberNpi: input.prescriberNpi,
-      hipaaSafeNotes: input.hipaaSafeNotes,
-      // Grocery
-      substitutionAllowed: input.substitutionAllowed,
-      substitutionNotes: input.substitutionNotes,
-      temperatureZone: input.temperatureZone,
-      // Furniture
-      crewSize: input.crewSize,
-      assemblyRequired: input.assemblyRequired,
-      haulAway: input.haulAway,
-      // Cash-on-delivery / Copay
-      cashAmount: input.cashAmount?.toString(),
-      paymentMethod: input.paymentMethod,
-    })
-    .returning();
+  // Enforce the plan's monthly order limit atomically with the insert so two
+  // concurrent createOrder calls cannot both pass the check and both insert.
+  // assertOrderLimitAndLock takes a per-tenant advisory xact lock; different
+  // tenants never contend.
+  const order = await db.transaction(async (tx) => {
+    await assertOrderLimitAndLock(tx, tenantId, 1);
+    const [row] = await tx
+      .insert(orders)
+      .values({
+        tenantId,
+        externalId: input.externalId,
+        recipientName: input.recipientName,
+        recipientPhone: input.recipientPhone,
+        recipientEmail: input.recipientEmail,
+        pickupAddress: input.pickupAddress,
+        deliveryAddress: input.deliveryAddress,
+        deliveryLat: input.deliveryAddress.coords?.lat?.toString() ?? null,
+        deliveryLng: input.deliveryAddress.coords?.lng?.toString() ?? null,
+        packageCount: input.packageCount,
+        weight: input.weight?.toString(),
+        volume: input.volume?.toString(),
+        priority: input.priority,
+        timeWindowStart: input.timeWindow?.start ? new Date(input.timeWindow.start) : undefined,
+        timeWindowEnd: input.timeWindow?.end ? new Date(input.timeWindow.end) : undefined,
+        notes: input.notes,
+        serviceDurationMinutes,
+        orderType: input.orderType,
+        barcodes: input.barcodes,
+        customFields: input.customFields,
+        requiresSignature,
+        requiresPhoto,
+        // Sender / gift fields
+        senderName: input.senderName,
+        senderEmail: input.senderEmail,
+        senderPhone: input.senderPhone,
+        giftMessage: input.giftMessage,
+        isGift: input.isGift || !!input.giftMessage,
+        // Pharmacy compliance
+        isControlledSubstance: input.isControlledSubstance || false,
+        controlledSchedule: input.controlledSchedule,
+        isColdChain: input.isColdChain || false,
+        patientDob: input.patientDob,
+        prescriberName: input.prescriberName,
+        prescriberNpi: input.prescriberNpi,
+        hipaaSafeNotes: input.hipaaSafeNotes,
+        // Grocery
+        substitutionAllowed: input.substitutionAllowed,
+        substitutionNotes: input.substitutionNotes,
+        temperatureZone: input.temperatureZone,
+        // Furniture
+        crewSize: input.crewSize,
+        assemblyRequired: input.assemblyRequired,
+        haulAway: input.haulAway,
+        // Cash-on-delivery / Copay
+        cashAmount: input.cashAmount?.toString(),
+        paymentMethod: input.paymentMethod,
+      })
+      .returning();
+    return row;
+  });
   logActivity({ tenantId, action: 'order_created', entityType: 'order', entityId: order.id });
   return order;
 }
@@ -196,8 +205,13 @@ export async function importOrdersCsv(tenantId: string, rows: Array<Record<strin
   const created: Array<typeof orders.$inferSelect> = [];
   const errors: Array<{ row: number; error: string }> = [];
 
-  // Use a transaction so partial imports can be rolled back on catastrophic failure
+  // Use a transaction so partial imports can be rolled back on catastrophic failure.
+  // assertOrderLimitAndLock takes a per-tenant advisory xact lock and verifies
+  // count(orders) + rows.length <= limit *inside* the tx, before any insert —
+  // so concurrent imports (or concurrent single-order creations) for the same
+  // tenant serialize and cannot collectively overshoot the plan limit.
   await db.transaction(async (tx) => {
+    await assertOrderLimitAndLock(tx, tenantId, rows.length);
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
