@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import * as argon2 from 'argon2';
 import { randomBytes, createHash } from 'crypto';
 import type { RegisterInput, LoginInput, AuthResponse, UserResponse } from '@homer-io/shared';
@@ -9,6 +9,7 @@ import { db } from '../../lib/db/index.js';
 import { tenants } from '../../lib/db/schema/tenants.js';
 import { users, refreshTokens } from '../../lib/db/schema/users.js';
 import { passwordResetTokens } from '../../lib/db/schema/password-reset-tokens.js';
+import { emailLinkTokens } from '../../lib/db/schema/email-link-tokens.js';
 import type { JwtPayload } from '../../plugins/auth.js';
 import { createStripeCustomer } from '../billing/service.js';
 import { sendTransactionalEmail } from '../../lib/email.js';
@@ -260,6 +261,14 @@ export async function resetPassword(app: FastifyInstance, token: string, newPass
       .where(eq(passwordResetTokens.id, stored.id));
     // Invalidate all refresh tokens — forces re-login on all devices
     await tx.delete(refreshTokens).where(eq(refreshTokens.userId, stored.userId));
+    // Invalidate outstanding email-link / tenant-migration tokens so a stolen
+    // password reset also kills any attacker-crafted pending migration.
+    await tx.update(emailLinkTokens)
+      .set({ usedAt: new Date() })
+      .where(and(
+        eq(emailLinkTokens.userId, stored.userId),
+        isNull(emailLinkTokens.usedAt),
+      ));
   });
   return { success: true };
 }

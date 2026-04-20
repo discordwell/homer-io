@@ -21,6 +21,7 @@ export * from './metered-usage.js';
 export * from './integration-connections.js';
 export * from './integration-orders.js';
 export * from './password-reset-tokens.js';
+export * from './email-link-tokens.js';
 export * from './route-templates.js';
 export * from './messages.js';
 export * from './data-requests.js';

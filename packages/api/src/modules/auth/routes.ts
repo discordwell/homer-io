@@ -89,15 +89,29 @@ export async function authRoutes(app: FastifyInstance) {
     reply.code(201).send(result);
   });
 
-  app.post('/email-link/request', { preHandler: [authenticate] }, async (request, reply) => {
-    const body = emailLinkRequestSchema.parse(request.body);
-    const result = await requestEmailLink(app, request.user.id, body.workEmail);
-    reply.send(result);
+  // Email-link request + verify are rate-limited tighter than generic auth routes.
+  // Request: 3/min per authenticated user (prevents spam to victim inboxes).
+  // Verify: 5/min per IP (prevents bruteforce of the one-time token + reauth).
+  await app.register(async (linkScope) => {
+    await linkScope.register(rateLimit, { max: 3, timeWindow: '1 minute' });
+
+    linkScope.post('/email-link/request', { preHandler: [authenticate] }, async (request, reply) => {
+      const body = emailLinkRequestSchema.parse(request.body);
+      const result = await requestEmailLink(app, request.user.id, body.workEmail);
+      reply.send(result);
+    });
   });
 
-  app.post('/email-link/verify', async (request, reply) => {
-    const body = emailLinkVerifySchema.parse(request.body);
-    const result = await verifyEmailLink(app, body.token);
-    reply.send(result);
+  await app.register(async (verifyScope) => {
+    await verifyScope.register(rateLimit, { max: 5, timeWindow: '1 minute' });
+
+    verifyScope.post('/email-link/verify', async (request, reply) => {
+      const body = emailLinkVerifySchema.parse(request.body);
+      const result = await verifyEmailLink(app, body.token, {
+        password: body.password,
+        googleCredential: body.googleCredential,
+      });
+      reply.send(result);
+    });
   });
 }

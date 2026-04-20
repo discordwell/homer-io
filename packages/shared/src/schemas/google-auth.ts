@@ -46,7 +46,26 @@ export const emailLinkRequestSchema = z.object({
 });
 export type EmailLinkRequest = z.infer<typeof emailLinkRequestSchema>;
 
+/**
+ * Email-link verification requires the user to *re-authenticate* before the
+ * server will switch their tenant. This closes the account-takeover vector
+ * where an attacker emails a crafted link to a victim that silently migrates
+ * them into the attacker's tenant on click.
+ *
+ * The client must supply exactly one of:
+ *   - password          → for password-auth users
+ *   - googleCredential  → for Google-OAuth-only users (fresh ID token)
+ *
+ * The link can still be clicked from the link-email inbox (which may be a
+ * different browser / device than the logged-in session); the re-auth step
+ * forces proof of control over the *original* account.
+ */
 export const emailLinkVerifySchema = z.object({
   token: z.string().min(1),
-});
+  password: z.string().min(1).optional(),
+  googleCredential: z.string().min(1).optional(),
+}).refine(
+  (data) => Boolean(data.password) !== Boolean(data.googleCredential),
+  { message: 'Provide exactly one of password or googleCredential for re-authentication' },
+);
 export type EmailLinkVerifyInput = z.infer<typeof emailLinkVerifySchema>;
