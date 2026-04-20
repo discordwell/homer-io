@@ -282,18 +282,40 @@ export async function batchUpdateStatus(tenantId: string, orderIds: string[], st
 }
 
 export async function batchAssignToRoute(tenantId: string, orderIds: string[], routeId: string) {
+  // Empty input: nothing to assign. Match prior behavior (no-op transaction).
+  if (orderIds.length === 0) {
+    await logActivity({ tenantId, action: 'batch_assigned', entityType: 'order', metadata: { count: 0, routeId } });
+    return { assigned: 0 };
+  }
+
   await db.transaction(async (tx) => {
-    let sequence = 1;
+    // Pre-check: ensure all orderIds exist for this tenant before mutating.
+    const existing = await tx
+      .select({ id: orders.id })
+      .from(orders)
+      .where(and(inArray(orders.id, orderIds), eq(orders.tenantId, tenantId)));
+    if (existing.length !== orderIds.length) {
+      throw new NotFoundError('One or more orders not found for this tenant');
+    }
+
     // Get current max stop sequence on the route
     const [maxSeq] = await tx.select({ max: sql<number>`coalesce(max(${orders.stopSequence}), 0)` })
       .from(orders).where(and(eq(orders.routeId, routeId), eq(orders.tenantId, tenantId)));
-    sequence = (maxSeq?.max ?? 0) + 1;
+    const baseSeq = Number(maxSeq?.max ?? 0);
 
-    for (const orderId of orderIds) {
-      await tx.update(orders).set({
-        routeId, stopSequence: sequence++, status: 'assigned' as any, updatedAt: new Date(),
-      }).where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
-    }
+    // Single bulk UPDATE with a CASE WHEN expression so each order gets its
+    // per-input-index sequence number in one round-trip instead of N.
+    const cases = orderIds.map(
+      (id, i) => sql`WHEN ${id} THEN ${baseSeq + i + 1}`,
+    );
+    const stopSequenceExpr = sql`CASE ${orders.id} ${sql.join(cases, sql` `)} END`;
+
+    await tx.update(orders).set({
+      routeId,
+      stopSequence: stopSequenceExpr,
+      status: 'assigned' as any,
+      updatedAt: new Date(),
+    }).where(and(inArray(orders.id, orderIds), eq(orders.tenantId, tenantId)));
 
     // Update route total stops
     const [countResult] = await tx.select({ count: sql<number>`count(*)` })

@@ -1,4 +1,4 @@
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import type { PaginationInput, CreateRouteInput } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { routes, routeStatusEnum } from '../../lib/db/schema/routes.js';
@@ -33,18 +33,34 @@ export async function createRoute(tenantId: string, input: CreateRouteInput) {
       })
       .returning();
 
-    // Assign orders to route
+    // Assign orders to route — single bulk UPDATE with a CASE WHEN expression
+    // so we set each order's stopSequence in one round-trip instead of N.
     if (input.orderIds?.length) {
-      for (let i = 0; i < input.orderIds.length; i++) {
-        await tx.update(orders)
-          .set({
-            routeId: newRoute.id,
-            stopSequence: i + 1,
-            status: 'assigned',
-            updatedAt: new Date(),
-          })
-          .where(and(eq(orders.id, input.orderIds[i]), eq(orders.tenantId, tenantId)));
+      // Pre-check: verify every orderId exists for this tenant. Preserves the
+      // prior implicit semantics where a caller-supplied bogus id would simply
+      // not match and silently be ignored — now we fail loudly, which is safer
+      // and matches how `batchAssignToRoute` is expected to behave.
+      const existing = await tx
+        .select({ id: orders.id })
+        .from(orders)
+        .where(and(inArray(orders.id, input.orderIds), eq(orders.tenantId, tenantId)));
+      if (existing.length !== input.orderIds.length) {
+        throw new NotFoundError('One or more orders not found for this tenant');
       }
+
+      const cases = input.orderIds.map(
+        (id, i) => sql`WHEN ${id} THEN ${i + 1}`,
+      );
+      const stopSequenceExpr = sql`CASE ${orders.id} ${sql.join(cases, sql` `)} END`;
+
+      await tx.update(orders)
+        .set({
+          routeId: newRoute.id,
+          stopSequence: stopSequenceExpr,
+          status: 'assigned',
+          updatedAt: new Date(),
+        })
+        .where(and(inArray(orders.id, input.orderIds), eq(orders.tenantId, tenantId)));
     }
 
     return [newRoute];
