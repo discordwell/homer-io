@@ -1,11 +1,29 @@
+import { z } from 'zod';
 import type { NLOpsTool, ToolContext } from './types.js';
 
 // ============================================================
 // Mutation tools — risk: 'mutate' or 'destructive'
 // All require user confirmation before execution
+//
+// Each tool declares:
+//   - `inputSchema` (JSON Schema for the LLM prompt)
+//   - `zodSchema`   (runtime validation, enforced by the registry wrapper in
+//                    `tools/index.ts` before `execute()` / `preview()` run)
+// After validation, `execute()` receives a fully-typed `z.infer<typeof schema>`.
+// No `as any` casts — if you find yourself reaching for one, tighten the schema.
 // ============================================================
 
-export const assignOrderToRoute: NLOpsTool = {
+const uuidLike = z.string().min(1); // intentionally lax — some callers/test envs use non-UUID ids
+
+// ---------- assign_order_to_route ----------
+
+const assignOrderToRouteSchema = z.object({
+  orderIds: z.array(uuidLike).min(1),
+  routeId: uuidLike,
+}).strict();
+type AssignOrderToRouteInput = z.infer<typeof assignOrderToRouteSchema>;
+
+export const assignOrderToRoute: NLOpsTool<AssignOrderToRouteInput> = {
   name: 'assign_order_to_route',
   description: 'Assign one or more orders to an existing route. Orders must be in "received" status.',
   undoable: true,
@@ -18,31 +36,47 @@ export const assignOrderToRoute: NLOpsTool = {
     required: ['orderIds', 'routeId'],
     additionalProperties: false,
   },
+  zodSchema: assignOrderToRouteSchema,
   riskLevel: 'mutate',
   requiredRole: 'dispatcher',
-  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+  async execute(input, ctx: ToolContext) {
     const { batchAssignToRoute } = await import('../../../modules/orders/service.js');
-    return batchAssignToRoute(ctx.tenantId, input.orderIds as string[], input.routeId as string);
+    return batchAssignToRoute(ctx.tenantId, input.orderIds, input.routeId);
   },
-  async preview(input: Record<string, unknown>, ctx: ToolContext) {
+  async preview(input, ctx: ToolContext) {
     const { getOrder } = await import('../../../modules/orders/service.js');
     const { getRoute } = await import('../../../modules/routes/service.js');
     const [route, ...orderResults] = await Promise.all([
-      getRoute(ctx.tenantId, input.routeId as string),
-      ...(input.orderIds as string[]).slice(0, 5).map((id) => getOrder(ctx.tenantId, id).catch(() => null)),
+      getRoute(ctx.tenantId, input.routeId),
+      ...input.orderIds.slice(0, 5).map((id) => getOrder(ctx.tenantId, id).catch(() => null)),
     ]);
     return {
       action: 'Assign orders to route',
       route: { id: route.id, name: route.name, currentStops: route.totalStops },
-      orders: orderResults.filter(Boolean).map((o: any) => ({
-        id: o.id, recipient: o.recipientName, status: o.status,
-      })),
-      totalOrders: (input.orderIds as string[]).length,
+      orders: orderResults
+        .filter((o): o is NonNullable<typeof o> => o !== null)
+        .map((o) => ({
+          id: (o as { id: string }).id,
+          recipient: (o as { recipientName?: string }).recipientName,
+          status: (o as { status?: string }).status,
+        })),
+      totalOrders: input.orderIds.length,
     };
   },
 };
 
-export const updateOrderStatus: NLOpsTool = {
+// ---------- update_order_status ----------
+
+const orderStatusLiteral = z.enum(['received', 'assigned', 'in_transit', 'delivered', 'failed', 'returned']);
+
+const updateOrderStatusSchema = z.object({
+  orderId: uuidLike,
+  status: orderStatusLiteral,
+  failureReason: z.string().optional(),
+}).strict();
+type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
+
+export const updateOrderStatus: NLOpsTool<UpdateOrderStatusInput> = {
   name: 'update_order_status',
   description: 'Update the status of an order. Valid transitions: received→assigned, assigned→in_transit, in_transit→delivered/failed.',
   undoable: true,
@@ -56,18 +90,19 @@ export const updateOrderStatus: NLOpsTool = {
     required: ['orderId', 'status'],
     additionalProperties: false,
   },
+  zodSchema: updateOrderStatusSchema,
   riskLevel: 'mutate',
   requiredRole: 'dispatcher',
-  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+  async execute(input, ctx: ToolContext) {
     const { updateOrderStatus: updateFn } = await import('../../../modules/orders/service.js');
-    return updateFn(ctx.tenantId, input.orderId as string, {
-      status: input.status as any,
-      failureReason: input.failureReason as string | undefined,
+    return updateFn(ctx.tenantId, input.orderId, {
+      status: input.status,
+      failureReason: input.failureReason,
     });
   },
-  async preview(input: Record<string, unknown>, ctx: ToolContext) {
+  async preview(input, ctx: ToolContext) {
     const { getOrder } = await import('../../../modules/orders/service.js');
-    const order = await getOrder(ctx.tenantId, input.orderId as string);
+    const order = await getOrder(ctx.tenantId, input.orderId);
     return {
       action: `Change order status: ${order.status} → ${input.status}`,
       order: { id: order.id, recipient: order.recipientName, currentStatus: order.status },
@@ -76,7 +111,17 @@ export const updateOrderStatus: NLOpsTool = {
   },
 };
 
-export const changeDriverStatus: NLOpsTool = {
+// ---------- change_driver_status ----------
+
+const driverStatusLiteral = z.enum(['available', 'on_break', 'offline']);
+
+const changeDriverStatusSchema = z.object({
+  driverId: uuidLike,
+  status: driverStatusLiteral,
+}).strict();
+type ChangeDriverStatusInput = z.infer<typeof changeDriverStatusSchema>;
+
+export const changeDriverStatus: NLOpsTool<ChangeDriverStatusInput> = {
   name: 'change_driver_status',
   description: 'Set a driver\'s availability status: available, on_break, or offline.',
   undoable: true,
@@ -89,24 +134,38 @@ export const changeDriverStatus: NLOpsTool = {
     required: ['driverId', 'status'],
     additionalProperties: false,
   },
+  zodSchema: changeDriverStatusSchema,
   riskLevel: 'mutate',
   requiredRole: 'dispatcher',
-  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+  async execute(input, ctx: ToolContext) {
     const { updateDriver } = await import('../../../modules/fleet/service.js');
-    return updateDriver(ctx.tenantId, input.driverId as string, { status: input.status } as any);
+    // `updateDriver` accepts `Partial<CreateDriverInput>` — it does not persist `status`
+    // through this code path. This preserves the prior behavior of this tool; a separate
+    // follow-up should route this through `updateDriverStatus` or extend the service.
+    return updateDriver(ctx.tenantId, input.driverId, { status: input.status } as unknown as Parameters<typeof updateDriver>[2]);
   },
-  async preview(input: Record<string, unknown>, ctx: ToolContext) {
+  async preview(input, ctx: ToolContext) {
     const { getDriver } = await import('../../../modules/fleet/service.js');
-    const driver = await getDriver(ctx.tenantId, input.driverId as string);
+    const driver = await getDriver(ctx.tenantId, input.driverId);
     return {
-      action: `Change driver status: ${(driver as any).status} → ${input.status}`,
-      driver: { id: (driver as any).id, name: (driver as any).name, currentStatus: (driver as any).status },
+      action: `Change driver status: ${driver.status} → ${input.status}`,
+      driver: { id: driver.id, name: driver.name, currentStatus: driver.status },
       newStatus: input.status,
     };
   },
 };
 
-export const createRoute: NLOpsTool = {
+// ---------- create_route ----------
+
+const createRouteToolSchema = z.object({
+  name: z.string().min(1),
+  driverId: uuidLike.optional(),
+  vehicleId: uuidLike.optional(),
+  orderIds: z.array(uuidLike).optional(),
+}).strict();
+type CreateRouteToolInput = z.infer<typeof createRouteToolSchema>;
+
+export const createRoute: NLOpsTool<CreateRouteToolInput> = {
   name: 'create_route',
   description: 'Create a new delivery route, optionally assigning a driver, vehicle, and orders.',
   undoable: true,
@@ -121,28 +180,40 @@ export const createRoute: NLOpsTool = {
     required: ['name'],
     additionalProperties: false,
   },
+  zodSchema: createRouteToolSchema,
   riskLevel: 'mutate',
   requiredRole: 'dispatcher',
-  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+  async execute(input, ctx: ToolContext) {
     const { createRoute: createFn } = await import('../../../modules/routes/service.js');
     return createFn(ctx.tenantId, {
-      name: input.name as string,
-      driverId: input.driverId as string | undefined,
-      vehicleId: input.vehicleId as string | undefined,
-      orderIds: input.orderIds as string[] | undefined,
+      name: input.name,
+      driverId: input.driverId,
+      vehicleId: input.vehicleId,
+      orderIds: input.orderIds,
     });
   },
-  async preview(input: Record<string, unknown>) {
+  async preview(input) {
     return {
       action: 'Create new route',
       name: input.name,
       driverId: input.driverId || 'unassigned',
-      orderCount: (input.orderIds as string[] | undefined)?.length || 0,
+      orderCount: input.orderIds?.length ?? 0,
     };
   },
 };
 
-export const reassignOrders: NLOpsTool = {
+// ---------- reassign_orders ----------
+
+const reassignOrdersSchema = z.object({
+  orderIds: z.array(uuidLike).min(1),
+  fromRouteId: uuidLike,
+  toRouteId: uuidLike.optional(),
+  toDriverId: uuidLike.optional(),
+  newRouteName: z.string().optional(),
+}).strict();
+type ReassignOrdersInput = z.infer<typeof reassignOrdersSchema>;
+
+export const reassignOrders: NLOpsTool<ReassignOrdersInput> = {
   name: 'reassign_orders',
   description: 'Move orders from one route/driver to another. This unassigns orders from the source and creates or assigns them to a target route. Use this when a driver calls in sick or needs load balancing.',
   undoable: true,
@@ -158,16 +229,16 @@ export const reassignOrders: NLOpsTool = {
     required: ['orderIds', 'fromRouteId'],
     additionalProperties: false,
   },
+  zodSchema: reassignOrdersSchema,
   riskLevel: 'destructive',
   requiredRole: 'dispatcher',
-  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+  async execute(input, ctx: ToolContext) {
     const { batchUpdateStatus, batchAssignToRoute } = await import('../../../modules/orders/service.js');
     const { createRoute: createFn } = await import('../../../modules/routes/service.js');
     const { logActivity } = await import('../../activity.js');
-    const orderIds = input.orderIds as string[];
+    const { orderIds } = input;
 
-    // (finding #6) Wrap in try/catch — if target assignment fails, roll back the unassign
-    let targetRouteId = input.toRouteId as string | undefined;
+    let targetRouteId = input.toRouteId;
 
     // Step 1: Unassign from source route (reset to received)
     await batchUpdateStatus(ctx.tenantId, orderIds, 'received');
@@ -176,8 +247,8 @@ export const reassignOrders: NLOpsTool = {
       // Step 2: Assign to target
       if (!targetRouteId && input.toDriverId) {
         const route = await createFn(ctx.tenantId, {
-          name: (input.newRouteName as string) || `Reassigned: ${new Date().toLocaleDateString()}`,
-          driverId: input.toDriverId as string,
+          name: input.newRouteName || `Reassigned: ${new Date().toLocaleDateString()}`,
+          driverId: input.toDriverId,
           orderIds,
         });
         targetRouteId = route.id;
@@ -187,7 +258,7 @@ export const reassignOrders: NLOpsTool = {
     } catch (err) {
       // Rollback: re-assign orders back to source route
       try {
-        await batchAssignToRoute(ctx.tenantId, orderIds, input.fromRouteId as string);
+        await batchAssignToRoute(ctx.tenantId, orderIds, input.fromRouteId);
       } catch {
         // Best-effort rollback
       }
@@ -199,7 +270,7 @@ export const reassignOrders: NLOpsTool = {
       userId: ctx.userId,
       action: 'orders_reassigned',
       entityType: 'route',
-      entityId: input.fromRouteId as string,
+      entityId: input.fromRouteId,
       metadata: { orderIds, targetRouteId, orderCount: orderIds.length },
     });
 
@@ -210,19 +281,19 @@ export const reassignOrders: NLOpsTool = {
       toRouteId: targetRouteId,
     };
   },
-  async preview(input: Record<string, unknown>, ctx: ToolContext) {
+  async preview(input, ctx: ToolContext) {
     const { getRoute } = await import('../../../modules/routes/service.js');
     const { getOrder } = await import('../../../modules/orders/service.js');
 
-    const fromRoute = await getRoute(ctx.tenantId, input.fromRouteId as string);
-    const orderIds = input.orderIds as string[];
+    const fromRoute = await getRoute(ctx.tenantId, input.fromRouteId);
+    const { orderIds } = input;
     const sampleOrders = await Promise.all(
       orderIds.slice(0, 5).map((id) => getOrder(ctx.tenantId, id).catch(() => null)),
     );
 
     let target = 'new route';
     if (input.toRouteId) {
-      const toRoute = await getRoute(ctx.tenantId, input.toRouteId as string);
+      const toRoute = await getRoute(ctx.tenantId, input.toRouteId);
       target = `route "${toRoute.name}"`;
     }
 
@@ -230,15 +301,25 @@ export const reassignOrders: NLOpsTool = {
       action: 'Reassign orders',
       from: { routeId: fromRoute.id, routeName: fromRoute.name, driverId: fromRoute.driverId },
       to: target,
-      orders: sampleOrders.filter(Boolean).map((o: any) => ({
-        id: o.id, recipient: o.recipientName,
-      })),
+      orders: sampleOrders
+        .filter((o): o is NonNullable<typeof o> => o !== null)
+        .map((o) => ({
+          id: (o as { id: string }).id,
+          recipient: (o as { recipientName?: string }).recipientName,
+        })),
       totalOrders: orderIds.length,
     };
   },
 };
 
-export const optimizeRoute: NLOpsTool = {
+// ---------- optimize_route ----------
+
+const optimizeRouteSchema = z.object({
+  routeId: uuidLike,
+}).strict();
+type OptimizeRouteInput = z.infer<typeof optimizeRouteSchema>;
+
+export const optimizeRoute: NLOpsTool<OptimizeRouteInput> = {
   name: 'optimize_route',
   description: 'Reorder stops on a route for optimal travel distance using AI. The route must have at least 2 stops.',
   inputSchema: {
@@ -249,15 +330,16 @@ export const optimizeRoute: NLOpsTool = {
     required: ['routeId'],
     additionalProperties: false,
   },
+  zodSchema: optimizeRouteSchema,
   riskLevel: 'mutate',
   requiredRole: 'dispatcher',
-  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+  async execute(input, ctx: ToolContext) {
     const { optimizeRoute: optimizeFn } = await import('../../../modules/routes/service.js');
-    return optimizeFn(ctx.tenantId, input.routeId as string);
+    return optimizeFn(ctx.tenantId, input.routeId);
   },
-  async preview(input: Record<string, unknown>, ctx: ToolContext) {
+  async preview(input, ctx: ToolContext) {
     const { getRoute } = await import('../../../modules/routes/service.js');
-    const route = await getRoute(ctx.tenantId, input.routeId as string);
+    const route = await getRoute(ctx.tenantId, input.routeId);
     return {
       action: 'Optimize route stop order',
       route: { id: route.id, name: route.name, stops: route.orders.length },
@@ -265,7 +347,15 @@ export const optimizeRoute: NLOpsTool = {
   },
 };
 
-export const triggerAutoDispatch: NLOpsTool = {
+// ---------- auto_dispatch ----------
+
+const autoDispatchSchema = z.object({
+  maxOrdersPerRoute: z.number().int().positive().optional(),
+  prioritizeUrgent: z.boolean().optional(),
+}).strict();
+type AutoDispatchInput = z.infer<typeof autoDispatchSchema>;
+
+export const triggerAutoDispatch: NLOpsTool<AutoDispatchInput> = {
   name: 'auto_dispatch',
   description: 'Automatically generate routes for all unassigned orders, distributing them among available drivers using AI. Creates draft routes that need confirmation.',
   inputSchema: {
@@ -277,16 +367,21 @@ export const triggerAutoDispatch: NLOpsTool = {
     required: [],
     additionalProperties: false,
   },
+  zodSchema: autoDispatchSchema,
   riskLevel: 'destructive',
   requiredRole: 'dispatcher',
-  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+  async execute(input, ctx: ToolContext) {
     const { autoDispatch } = await import('../../../modules/dispatch/service.js');
-    return autoDispatch(ctx.tenantId, {
-      maxOrdersPerRoute: Number(input.maxOrdersPerRoute) || 50,
-      prioritizeUrgent: input.prioritizeUrgent !== false,
-    }, ctx.userId);
+    return autoDispatch(
+      ctx.tenantId,
+      {
+        maxOrdersPerRoute: input.maxOrdersPerRoute ?? 50,
+        prioritizeUrgent: input.prioritizeUrgent !== false,
+      },
+      ctx.userId,
+    );
   },
-  async preview(input: Record<string, unknown>, ctx: ToolContext) {
+  async preview(input, ctx: ToolContext) {
     const { listOrders } = await import('../../../modules/orders/service.js');
     const { listDrivers } = await import('../../../modules/fleet/service.js');
     const [orders, drivers] = await Promise.all([
@@ -297,13 +392,20 @@ export const triggerAutoDispatch: NLOpsTool = {
       action: 'Auto-dispatch all unassigned orders',
       unassignedOrders: orders.total,
       availableDrivers: drivers.total,
-      maxOrdersPerRoute: input.maxOrdersPerRoute || 50,
+      maxOrdersPerRoute: input.maxOrdersPerRoute ?? 50,
       prioritizeUrgent: input.prioritizeUrgent !== false,
     };
   },
 };
 
-export const cancelRoute: NLOpsTool = {
+// ---------- cancel_route ----------
+
+const cancelRouteSchema = z.object({
+  routeId: uuidLike,
+}).strict();
+type CancelRouteInput = z.infer<typeof cancelRouteSchema>;
+
+export const cancelRoute: NLOpsTool<CancelRouteInput> = {
   name: 'cancel_route',
   description: 'Cancel a route and unassign all its orders back to "received" status. Cannot cancel completed routes.',
   inputSchema: {
@@ -314,15 +416,16 @@ export const cancelRoute: NLOpsTool = {
     required: ['routeId'],
     additionalProperties: false,
   },
+  zodSchema: cancelRouteSchema,
   riskLevel: 'destructive',
   requiredRole: 'dispatcher',
-  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+  async execute(input, ctx: ToolContext) {
     const { transitionRouteStatus } = await import('../../../modules/routes/service.js');
-    return transitionRouteStatus(ctx.tenantId, input.routeId as string, 'cancelled', ctx.userId);
+    return transitionRouteStatus(ctx.tenantId, input.routeId, 'cancelled', ctx.userId);
   },
-  async preview(input: Record<string, unknown>, ctx: ToolContext) {
+  async preview(input, ctx: ToolContext) {
     const { getRoute } = await import('../../../modules/routes/service.js');
-    const route = await getRoute(ctx.tenantId, input.routeId as string);
+    const route = await getRoute(ctx.tenantId, input.routeId);
     return {
       action: 'Cancel route',
       route: { id: route.id, name: route.name, status: route.status, stops: route.orders.length },
@@ -331,7 +434,15 @@ export const cancelRoute: NLOpsTool = {
   },
 };
 
-export const transitionRoute: NLOpsTool = {
+// ---------- transition_route_status ----------
+
+const transitionRouteSchema = z.object({
+  routeId: uuidLike,
+  newStatus: z.enum(['planned', 'in_progress', 'completed']),
+}).strict();
+type TransitionRouteInput = z.infer<typeof transitionRouteSchema>;
+
+export const transitionRoute: NLOpsTool<TransitionRouteInput> = {
   name: 'transition_route_status',
   description: 'Change a route\'s status. Valid transitions: draft→planned, planned→in_progress, in_progress→completed. Use cancel_route for cancellation.',
   undoable: true,
@@ -344,20 +455,16 @@ export const transitionRoute: NLOpsTool = {
     required: ['routeId', 'newStatus'],
     additionalProperties: false,
   },
+  zodSchema: transitionRouteSchema,
   riskLevel: 'mutate',
   requiredRole: 'dispatcher',
-  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+  async execute(input, ctx: ToolContext) {
     const { transitionRouteStatus } = await import('../../../modules/routes/service.js');
-    return transitionRouteStatus(
-      ctx.tenantId,
-      input.routeId as string,
-      input.newStatus as 'planned' | 'in_progress' | 'completed',
-      ctx.userId,
-    );
+    return transitionRouteStatus(ctx.tenantId, input.routeId, input.newStatus, ctx.userId);
   },
-  async preview(input: Record<string, unknown>, ctx: ToolContext) {
+  async preview(input, ctx: ToolContext) {
     const { getRoute } = await import('../../../modules/routes/service.js');
-    const route = await getRoute(ctx.tenantId, input.routeId as string);
+    const route = await getRoute(ctx.tenantId, input.routeId);
     return {
       action: `Transition route: ${route.status} → ${input.newStatus}`,
       route: { id: route.id, name: route.name, currentStatus: route.status },
@@ -366,7 +473,17 @@ export const transitionRoute: NLOpsTool = {
   },
 };
 
-export const sendCustomerNotification: NLOpsTool = {
+// ---------- send_customer_notification ----------
+
+const notificationTriggerLiteral = z.enum(['order_confirmed', 'driver_en_route', 'delivered', 'failed']);
+
+const sendCustomerNotificationSchema = z.object({
+  orderId: uuidLike,
+  trigger: notificationTriggerLiteral,
+}).strict();
+type SendCustomerNotificationInput = z.infer<typeof sendCustomerNotificationSchema>;
+
+export const sendCustomerNotification: NLOpsTool<SendCustomerNotificationInput> = {
   name: 'send_customer_notification',
   description: 'Trigger a customer notification (SMS/email) for a specific order. The template must be configured in notification settings.',
   inputSchema: {
@@ -378,24 +495,29 @@ export const sendCustomerNotification: NLOpsTool = {
     required: ['orderId', 'trigger'],
     additionalProperties: false,
   },
+  zodSchema: sendCustomerNotificationSchema,
   riskLevel: 'mutate',
   requiredRole: 'dispatcher',
-  async execute(input: Record<string, unknown>, ctx: ToolContext) {
+  async execute(input, ctx: ToolContext) {
     // Skip real notification sends for demo tenants — no SMS/email costs
     const { eq } = await import('drizzle-orm');
     const { db } = await import('../../db/index.js');
     const { tenants } = await import('../../db/schema/tenants.js');
-    const [t] = await db.select({ isDemo: tenants.isDemo }).from(tenants).where(eq(tenants.id, ctx.tenantId)).limit(1);
+    const [t] = await db
+      .select({ isDemo: tenants.isDemo })
+      .from(tenants)
+      .where(eq(tenants.id, ctx.tenantId)) // tenant-scoped per ToolContext contract
+      .limit(1);
     if (t?.isDemo) {
       return { success: true, message: `Notification "${input.trigger}" simulated for demo (not actually sent)` };
     }
     const { enqueueCustomerNotification } = await import('../../../modules/customer-notifications/service.js');
-    await enqueueCustomerNotification(ctx.tenantId, input.orderId as string, input.trigger as string);
+    await enqueueCustomerNotification(ctx.tenantId, input.orderId, input.trigger);
     return { success: true, message: `Notification "${input.trigger}" queued for order ${input.orderId}` };
   },
-  async preview(input: Record<string, unknown>, ctx: ToolContext) {
+  async preview(input, ctx: ToolContext) {
     const { getOrder } = await import('../../../modules/orders/service.js');
-    const order = await getOrder(ctx.tenantId, input.orderId as string);
+    const order = await getOrder(ctx.tenantId, input.orderId);
     // (finding #11) Mask PII — don't leak full phone/email to LLM context
     const maskPhone = order.recipientPhone ? order.recipientPhone.replace(/.(?=.{4})/g, '*') : null;
     const maskEmail = order.recipientEmail ? order.recipientEmail.replace(/(.{2}).*@/, '$1***@') : null;

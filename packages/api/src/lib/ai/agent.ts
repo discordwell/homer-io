@@ -2,7 +2,14 @@ import { randomUUID } from 'crypto';
 import { config } from '../../config.js';
 import { cacheGet, cacheSet, cacheDelete } from '../cache.js';
 import { getProvider, toProviderTools, type ProviderMessage, type ProviderContentBlock } from './providers.js';
-import { getToolsForRole, getTool, summarizeResult, type ToolContext } from './tools/index.js';
+import {
+  getToolsForRole,
+  getTool,
+  summarizeResult,
+  executeToolSafely,
+  previewToolSafely,
+  type ToolContext,
+} from './tools/index.js';
 import { saveMutationSnapshot } from './undo.js';
 import type { SSEEvent } from '@homer-io/shared';
 
@@ -128,7 +135,24 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
     yield { type: 'tool_start', toolCallId: pending.toolCallId, name: pending.toolName, input: pending.input };
     const start = Date.now();
     try {
-      const result = await tool.execute(pending.input, toolCtx);
+      // Run through the validation wrapper even on resume — the pending action was stored
+      // from the original (pre-validation) LLM payload. Reject malformed / oversized payloads
+      // with a structured error instead of throwing.
+      const safe = await executeToolSafely(tool, pending.input, toolCtx);
+      if (!safe.ok) {
+        const duration = Date.now() - start;
+        yield {
+          type: 'tool_result',
+          toolCallId: pending.toolCallId,
+          name: pending.toolName,
+          summary: `Invalid input: ${safe.error.message}`,
+          durationMs: duration,
+        };
+        yield { type: 'action_result', actionId: pending.actionId, success: false, summary: safe.error.message };
+        yield { type: 'done' };
+        return;
+      }
+      const result = safe.result;
       const duration = Date.now() - start;
       const resultSummary = summarizeResult(pending.toolName, result);
       yield { type: 'tool_result', toolCallId: pending.toolCallId, name: pending.toolName, summary: resultSummary, durationMs: duration };
