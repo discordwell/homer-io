@@ -18,6 +18,12 @@ const AI_NOT_CONFIGURED_MESSAGE =
 const NLOPS_MAX_CONCURRENT = 3;
 const NLOPS_MAX_PER_MINUTE = 20;
 
+// Per-user confirm rate limit (finding M1) — defends against
+// confirmation-token brute-force on a leaked actionId. A legitimate user
+// confirms far fewer than this many actions per minute; anything above this
+// is almost certainly an attack.
+const CONFIRM_MAX_PER_MINUTE = 10;
+
 async function checkTenantRateLimit(tenantId: string): Promise<{ allowed: boolean; reason?: string }> {
   // Atomic concurrency check: INCR first, then check limit
   const activeKey = `nlops:active:${tenantId}`;
@@ -36,6 +42,26 @@ async function checkTenantRateLimit(tenantId: string): Promise<{ allowed: boolea
     return { allowed: false, reason: `Rate limit exceeded (max ${NLOPS_MAX_PER_MINUTE}/minute). Please slow down.` };
   }
 
+  return { allowed: true };
+}
+
+/**
+ * Per-user confirmation rate limit (finding M1). Applied separately from
+ * the general NLOps quota so a leaked actionId can't be used to brute-force
+ * the 256-bit confirmation token in a window. Note: NLOPS_MAX_PER_MINUTE
+ * already bounds this too (since confirms are NLOps calls), but this is a
+ * tighter per-user bucket specifically for the confirm path.
+ */
+async function checkConfirmRateLimit(userId: string): Promise<{ allowed: boolean; reason?: string }> {
+  const minute = Math.floor(Date.now() / 60000);
+  const rateKey = `nlops:confirm:${userId}:${minute}`;
+  const count = await cacheIncr(rateKey, 60);
+  if (count > CONFIRM_MAX_PER_MINUTE) {
+    return {
+      allowed: false,
+      reason: `Too many confirmation attempts (max ${CONFIRM_MAX_PER_MINUTE}/minute). Please slow down.`,
+    };
+  }
   return { allowed: true };
 }
 
@@ -79,6 +105,18 @@ export async function aiRoutes(app: FastifyInstance) {
     if (!rateCheck.allowed) {
       reply.status(429);
       return { error: rateCheck.reason };
+    }
+
+    // Per-user confirmation rate limit (finding M1). Reject overly-frequent
+    // confirm attempts before we even look at the snapshot — this blocks
+    // token brute-force via a leaked actionId.
+    if (confirm) {
+      const confirmRateCheck = await checkConfirmRateLimit(request.user.id);
+      if (!confirmRateCheck.allowed) {
+        await releaseTenantConcurrency(request.user.tenantId);
+        reply.status(429);
+        return { error: confirmRateCheck.reason };
+      }
     }
 
     // Meter per-interaction (not per-tool-call) — skip for confirmations (already metered) and demo tenants
@@ -133,6 +171,7 @@ export async function aiRoutes(app: FastifyInstance) {
         message,
         history,
         confirm,
+        ipAddress: request.ip,
         signal: abortController.signal,
       });
 

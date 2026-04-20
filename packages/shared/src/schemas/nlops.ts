@@ -51,6 +51,12 @@ export const sseMessageEvent = z.object({
 export const sseConfirmationEvent = z.object({
   type: z.literal('confirmation'),
   actionId: z.string(),
+  /**
+   * Single-use confirmation token (32-byte hex). The client MUST echo this
+   * back in the confirm request or the server will reject with 400. Protects
+   * against replay of a leaked `{ actionId, confirm: true }` body.
+   */
+  confirmationToken: z.string(),
   toolName: z.string(),
   toolInput: z.record(z.unknown()),
   explanation: z.string(),
@@ -104,6 +110,11 @@ export const nlopsRequestSchema = z.object({
   })).max(50).default([]),
   confirm: z.object({
     actionId: z.string(),
+    /**
+     * Single-use confirmation token received in the `confirmation` SSE event.
+     * Required for resume. Missing token => 400 (legacy-client migration error).
+     */
+    confirmationToken: z.string(),
   }).optional(),
 });
 export type NLOpsRequest = z.infer<typeof nlopsRequestSchema>;

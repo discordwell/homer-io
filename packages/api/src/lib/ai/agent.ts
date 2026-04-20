@@ -1,6 +1,7 @@
-import { randomUUID } from 'crypto';
+import { randomBytes, randomUUID, createHash } from 'crypto';
 import { config } from '../../config.js';
-import { cacheGet, cacheSet, cacheDelete } from '../cache.js';
+import { cacheSet, cacheGetAndDelete } from '../cache.js';
+import { logActivity } from '../activity.js';
 import { getProvider, toProviderTools, type ProviderMessage, type ProviderContentBlock } from './providers.js';
 import {
   getToolsForRole,
@@ -25,7 +26,9 @@ export interface AgentParams {
   message: string;
   history: Array<{ role: 'user' | 'assistant'; content: string }>;
   /** Resume a confirmation — execute the pending action */
-  confirm?: { actionId: string };
+  confirm?: { actionId: string; confirmationToken: string };
+  /** Client IP for audit logging on confirm (finding M1) */
+  ipAddress?: string;
   /** Abort signal for client disconnect detection (finding #2) */
   signal?: AbortSignal;
 }
@@ -38,25 +41,43 @@ export interface PendingAction {
   toolCallId: string;
   input: Record<string, unknown>;
   preview: unknown;
+  /**
+   * SHA-256 hex of the single-use confirmation token. The raw token is only
+   * sent once (in the `confirmation` SSE event) and never persisted. Replay
+   * protection for finding M1.
+   */
+  confirmationTokenHash: string;
+  /**
+   * Iteration count at the moment the agent paused for confirmation. On
+   * resume we restore this counter so maxIterations spans the entire arc
+   * (finding M2 — confirm-act-confirm loops can no longer bypass the valve).
+   */
+  iterationCount: number;
   /** Serialized messages up to the confirmation point, for resumption */
   messages: ProviderMessage[];
   assistantContent: ProviderContentBlock[];
 }
 
-// Redis-backed pending confirmations (finding #4 / #10)
-const PENDING_KEY_PREFIX = 'nlops:pending:';
-const PENDING_TTL = 300; // 5 minutes
+// Redis-backed pending confirmations (finding #4 / #10 / M1)
+// TTL reduced from 15 min → 2 min (finding M1). Pending mutations should not
+// linger; users who wait longer should re-issue the request.
+export const PENDING_KEY_PREFIX = 'nlops:pending:';
+export const PENDING_TTL = 120; // 2 minutes
+
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
 
 async function storePendingAction(action: PendingAction): Promise<void> {
   await cacheSet(`${PENDING_KEY_PREFIX}${action.actionId}`, action, PENDING_TTL);
 }
 
-async function getPendingAction(actionId: string): Promise<PendingAction | null> {
-  return cacheGet<PendingAction>(`${PENDING_KEY_PREFIX}${actionId}`);
-}
-
-async function deletePendingAction(actionId: string): Promise<void> {
-  await cacheDelete(`${PENDING_KEY_PREFIX}${actionId}`);
+/**
+ * Atomically fetch + delete the pending action. Single-use by construction:
+ * a second concurrent caller observes null and is rejected (finding M1).
+ */
+async function consumePendingAction(actionId: string): Promise<PendingAction | null> {
+  return cacheGetAndDelete<PendingAction>(`${PENDING_KEY_PREFIX}${actionId}`);
 }
 
 function buildSystemPrompt(params: AgentParams): string {
@@ -106,11 +127,37 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
     userRole: params.userRole,
   };
 
+  const maxIterations = config.nlops.maxLoopIterations;
+  let iterations = 0;
+  let messages: ProviderMessage[];
+
   // --- Handle confirmation resume ---
   if (params.confirm) {
-    const pending = await getPendingAction(params.confirm.actionId);
+    const { actionId, confirmationToken } = params.confirm;
+
+    // (finding M1) Token is required. Schema already enforces this, but
+    // double-check defensively — helpful error for legacy clients that
+    // might bypass the shared schema.
+    if (!confirmationToken || typeof confirmationToken !== 'string') {
+      yield {
+        type: 'error',
+        message: 'Missing confirmationToken. The client must echo the token received in the confirmation event.',
+        code: 'CONFIRMATION_TOKEN_REQUIRED',
+      };
+      yield { type: 'done' };
+      return;
+    }
+
+    // (finding M1) Atomically fetch and delete — prevents concurrent replay.
+    // If two requests arrive simultaneously, only the first gets the
+    // snapshot; the second sees null and is rejected below.
+    const pending = await consumePendingAction(actionId);
     if (!pending) {
-      yield { type: 'error', message: 'Confirmation expired or not found. Please try the action again.' };
+      yield {
+        type: 'error',
+        message: 'Confirmation expired, already used, or not found. Please try the action again.',
+        code: 'CONFIRMATION_EXPIRED',
+      };
       yield { type: 'done' };
       return;
     }
@@ -122,7 +169,20 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
       return;
     }
 
-    await deletePendingAction(pending.actionId);
+    // (finding M1) Verify confirmation token. The raw token is only
+    // transmitted in the one-time SSE event; we store the SHA-256 hash.
+    // Attacker replaying only `{ actionId, confirm: true }` cannot fabricate
+    // a matching token.
+    const providedHash = hashToken(confirmationToken);
+    if (providedHash !== pending.confirmationTokenHash) {
+      yield {
+        type: 'error',
+        message: 'Invalid confirmation token. This action has been invalidated for security reasons.',
+        code: 'CONFIRMATION_TOKEN_MISMATCH',
+      };
+      yield { type: 'done' };
+      return;
+    }
 
     // Execute the confirmed tool
     const tool = getTool(pending.toolName);
@@ -132,8 +192,27 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
       return;
     }
 
+    // (finding M1) Audit: record every successful confirmation.
+    try {
+      await logActivity({
+        tenantId: params.tenantId,
+        userId: params.userId,
+        action: 'ai_mutation_confirmed',
+        entityType: 'ai',
+        entityId: pending.actionId,
+        metadata: {
+          toolName: pending.toolName,
+          ipAddress: params.ipAddress ?? null,
+        },
+      });
+    } catch {
+      // Non-fatal: audit log failure shouldn't block the tool execution.
+    }
+
     yield { type: 'tool_start', toolCallId: pending.toolCallId, name: pending.toolName, input: pending.input };
     const start = Date.now();
+    let executionSucceeded = false;
+    let executionResult: unknown = null;
     try {
       // Run through the validation wrapper even on resume — the pending action was stored
       // from the original (pre-validation) LLM payload. Reject malformed / oversized payloads
@@ -152,11 +231,12 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
         yield { type: 'done' };
         return;
       }
-      const result = safe.result;
+      executionResult = safe.result;
       const duration = Date.now() - start;
-      const resultSummary = summarizeResult(pending.toolName, result);
+      const resultSummary = summarizeResult(pending.toolName, executionResult);
       yield { type: 'tool_result', toolCallId: pending.toolCallId, name: pending.toolName, summary: resultSummary, durationMs: duration };
       yield { type: 'action_result', actionId: pending.actionId, success: true, summary: resultSummary };
+      executionSucceeded = true;
 
       // Save undo snapshot for undoable mutations
       if (tool.undoable && pending.preview) {
@@ -174,47 +254,44 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
           // Non-fatal: undo snapshot save failure shouldn't break the flow
         }
       }
-
-      // (finding #2) Check for client disconnect before making another LLM call
-      if (isAborted(params.signal)) return;
-
-      // Continue the conversation with tool result so the model can summarize
-      const resumeMessages: ProviderMessage[] = [
-        ...pending.messages,
-        { role: 'assistant', content: pending.assistantContent },
-        { role: 'user', content: [{ type: 'tool_result', tool_use_id: pending.toolCallId, content: truncateResult(JSON.stringify(result)) }] },
-      ];
-
-      const response = await provider.createMessage({
-        system: systemPrompt,
-        messages: resumeMessages,
-        tools: providerTools,
-        maxTokens: config.nlops.maxTokens,
-      });
-
-      for (const block of response.content) {
-        if (block.type === 'text' && block.text.trim()) {
-          yield { type: 'message', content: block.text };
-        }
-      }
     } catch (err) {
       yield { type: 'action_result', actionId: pending.actionId, success: false, summary: err instanceof Error ? err.message : 'Unknown error' };
+      yield { type: 'done' };
+      return;
     }
-    yield { type: 'done' };
-    return;
+
+    if (!executionSucceeded) {
+      yield { type: 'done' };
+      return;
+    }
+
+    // (finding #2) Check for client disconnect before continuing.
+    if (isAborted(params.signal)) return;
+
+    // (finding M2) Restore iteration counter from the pause point so the
+    // maxIterations safety valve spans the full conversational arc, not
+    // just the post-resume segment. A misbehaving model cannot drive an
+    // unbounded confirm-act-confirm chain anymore.
+    iterations = pending.iterationCount;
+
+    // Seed the conversation with the full pre-confirmation history plus
+    // the tool_result so the loop continues naturally and can trigger more
+    // confirmations (each of which will again persist the counter).
+    messages = [
+      ...pending.messages,
+      { role: 'assistant', content: pending.assistantContent },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: pending.toolCallId, content: truncateResult(JSON.stringify(executionResult)) }] },
+    ];
+  } else {
+    // --- Normal conversation flow ---
+
+    // Build messages from history
+    messages = params.history.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+    messages.push({ role: 'user', content: params.message });
   }
-
-  // --- Normal conversation flow ---
-
-  // Build messages from history
-  const messages: ProviderMessage[] = params.history.map((m) => ({
-    role: m.role,
-    content: m.content,
-  }));
-  messages.push({ role: 'user', content: params.message });
-
-  let iterations = 0;
-  const maxIterations = config.nlops.maxLoopIterations;
 
   while (iterations < maxIterations) {
     iterations++;
@@ -334,6 +411,11 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
       if (pendingMutation) {
         const { call, tool } = pendingMutation;
         const actionId = randomUUID();
+        // (finding M1) 32-byte single-use confirmation token. Raw token is
+        // transmitted once (in the SSE event) and never persisted. We store
+        // only the SHA-256 hash so a leaked snapshot/cache dump can't be
+        // turned into a replayable confirm body.
+        const confirmationToken = randomBytes(32).toString('hex');
         let preview: unknown = null;
         try {
           preview = tool!.preview ? await tool!.preview(call.input, toolCtx) : { tool: call.name, input: call.input };
@@ -342,6 +424,7 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
         }
 
         // (finding #1) Store tenant and user with pending action
+        // (finding M2) Persist the iteration counter so resume continues it
         await storePendingAction({
           actionId,
           tenantId: params.tenantId,
@@ -350,6 +433,8 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
           toolCallId: call.id,
           input: call.input,
           preview,
+          confirmationTokenHash: hashToken(confirmationToken),
+          iterationCount: iterations,
           messages: [...messages],
           assistantContent: response.content,
         });
@@ -360,6 +445,7 @@ export async function* runAgentLoop(params: AgentParams): AsyncGenerator<SSEEven
         yield {
           type: 'confirmation',
           actionId,
+          confirmationToken,
           toolName: call.name,
           toolInput: call.input,
           explanation,

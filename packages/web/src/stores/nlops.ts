@@ -18,6 +18,13 @@ export interface NLOpsToolActivity {
 
 export interface NLOpsConfirmation {
   actionId: string;
+  /**
+   * Single-use token received in the `confirmation` SSE event. Must be
+   * echoed back on confirm (finding M1 — replay protection). Never
+   * persisted, never logged — lives only in memory for the duration of
+   * the pending card.
+   */
+  confirmationToken: string;
   toolName: string;
   toolInput: Record<string, unknown>;
   explanation: string;
@@ -92,6 +99,23 @@ export const useNLOpsStore = create<NLOpsState>()((set, get) => ({
   },
 
   confirm: async (actionId: string) => {
+    // (finding M1) Look up the confirmation token captured from the SSE
+    // event. Without it the server rejects with 400 — we refuse to send
+    // the request at all to avoid a misleading "confirmed" UI state.
+    const currentMessages = get().messages;
+    const confirmationMsg = currentMessages.find((m) => m.confirmation?.actionId === actionId);
+    const confirmationToken = confirmationMsg?.confirmation?.confirmationToken;
+    if (!confirmationToken) {
+      set((s) => ({
+        messages: s.messages.map((m) =>
+          m.confirmation?.actionId === actionId
+            ? { ...m, confirmation: undefined, content: 'Cannot confirm: missing confirmation token. Please re-issue the action.' }
+            : m,
+        ),
+      }));
+      return;
+    }
+
     // (finding #13) Abort any in-flight request before confirming
     get().abortController?.abort();
     const controller = new AbortController();
@@ -104,7 +128,12 @@ export const useNLOpsStore = create<NLOpsState>()((set, get) => ({
           : m,
       ),
     }));
-    await streamOps(get, set, { message: '', history: get().history, confirm: { actionId } }, controller.signal);
+    await streamOps(
+      get,
+      set,
+      { message: '', history: get().history, confirm: { actionId, confirmationToken } },
+      controller.signal,
+    );
   },
 
   deny: (actionId: string) => {
@@ -142,7 +171,7 @@ export const useNLOpsStore = create<NLOpsState>()((set, get) => ({
 async function streamOps(
   get: () => NLOpsState,
   set: (partial: Partial<NLOpsState> | ((s: NLOpsState) => Partial<NLOpsState>)) => void,
-  body: { message: string; history: Array<{ role: 'user' | 'assistant'; content: string }>; confirm?: { actionId: string } },
+  body: { message: string; history: Array<{ role: 'user' | 'assistant'; content: string }>; confirm?: { actionId: string; confirmationToken: string } },
   signal?: AbortSignal,
 ) {
   const { accessToken } = useAuthStore.getState();
@@ -264,13 +293,16 @@ function handleSSEEvent(
       break;
 
     case 'confirmation':
-      // Add confirmation as a new system message
+      // Add confirmation as a new system message. (finding M1) Capture the
+      // single-use confirmation token in memory so the confirm() action
+      // can echo it back to the server. The token never touches storage.
       set((s) => ({
         messages: [...s.messages, {
           id: nextId(),
           role: 'system' as const,
           confirmation: {
             actionId: event.actionId,
+            confirmationToken: event.confirmationToken,
             toolName: event.toolName,
             toolInput: event.toolInput,
             explanation: event.explanation,

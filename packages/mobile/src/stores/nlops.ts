@@ -14,6 +14,8 @@ export interface NLOpsToolActivity {
 
 export interface NLOpsConfirmation {
   actionId: string;
+  /** Single-use token from the SSE event; echoed on confirm (finding M1). */
+  confirmationToken: string;
   toolName: string;
   toolInput: Record<string, unknown>;
   explanation: string;
@@ -65,6 +67,21 @@ export const useNLOpsStore = create<NLOpsState>()((set, get) => ({
   },
 
   confirm: async (actionId: string) => {
+    // (finding M1) Need the token captured from the SSE event — without it
+    // the server rejects the confirm request.
+    const confirmationMsg = get().messages.find((m) => m.confirmation?.actionId === actionId);
+    const confirmationToken = confirmationMsg?.confirmation?.confirmationToken;
+    if (!confirmationToken) {
+      set((s) => ({
+        messages: s.messages.map((m) =>
+          m.confirmation?.actionId === actionId
+            ? { ...m, confirmation: undefined, content: 'Cannot confirm: missing confirmation token. Please re-issue the action.' }
+            : m,
+        ),
+      }));
+      return;
+    }
+
     get().abortController?.abort();
     const controller = new AbortController();
     set({ loading: true, abortController: controller });
@@ -75,7 +92,12 @@ export const useNLOpsStore = create<NLOpsState>()((set, get) => ({
           : m,
       ),
     }));
-    await streamOps(get, set, { message: '', history: get().history, confirm: { actionId } }, controller.signal);
+    await streamOps(
+      get,
+      set,
+      { message: '', history: get().history, confirm: { actionId, confirmationToken } },
+      controller.signal,
+    );
   },
 
   deny: (actionId: string) => {
@@ -99,7 +121,7 @@ export const useNLOpsStore = create<NLOpsState>()((set, get) => ({
 async function streamOps(
   get: () => NLOpsState,
   set: (partial: Partial<NLOpsState> | ((s: NLOpsState) => Partial<NLOpsState>)) => void,
-  body: { message: string; history: Array<{ role: 'user' | 'assistant'; content: string }>; confirm?: { actionId: string } },
+  body: { message: string; history: Array<{ role: 'user' | 'assistant'; content: string }>; confirm?: { actionId: string; confirmationToken: string } },
   signal?: AbortSignal,
 ) {
   const { accessToken } = await getTokens();
@@ -209,12 +231,15 @@ function handleSSEEvent(
       updateAssistant(set, msgId, { content: event.content });
       break;
     case 'confirmation':
+      // (finding M1) Capture the single-use token in memory so confirm()
+      // can echo it back. Token never persists.
       set((s) => ({
         messages: [...s.messages, {
           id: nextId(),
           role: 'system' as const,
           confirmation: {
             actionId: event.actionId,
+            confirmationToken: event.confirmationToken,
             toolName: event.toolName,
             toolInput: event.toolInput,
             explanation: event.explanation,

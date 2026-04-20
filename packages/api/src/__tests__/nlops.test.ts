@@ -20,9 +20,19 @@ describe('NLOps - Request Schema', () => {
     const result = nlopsRequestSchema.parse({
       message: 'yes, confirm',
       history: [{ role: 'user', content: 'hi' }],
-      confirm: { actionId: 'abc-123' },
+      confirm: { actionId: 'abc-123', confirmationToken: 'tok-xyz' },
     });
     expect(result.confirm?.actionId).toBe('abc-123');
+    expect(result.confirm?.confirmationToken).toBe('tok-xyz');
+  });
+
+  it('rejects confirm without confirmationToken (finding M1)', () => {
+    expect(() =>
+      nlopsRequestSchema.parse({
+        message: '',
+        confirm: { actionId: 'abc-123' },
+      }),
+    ).toThrow();
   });
 
   it('rejects empty message', () => {
@@ -54,10 +64,19 @@ describe('NLOps - SSE Event Schema', () => {
 
   it('validates confirmation event', () => {
     const event = sseEvent.parse({
-      type: 'confirmation', actionId: 'a1', toolName: 'cancel_route',
+      type: 'confirmation', actionId: 'a1', confirmationToken: 'deadbeef', toolName: 'cancel_route',
       toolInput: { routeId: 'r1' }, explanation: 'Will cancel', preview: { stops: 5 },
     });
     expect(event.type).toBe('confirmation');
+  });
+
+  it('rejects confirmation event missing confirmationToken (finding M1)', () => {
+    expect(() =>
+      sseEvent.parse({
+        type: 'confirmation', actionId: 'a1', toolName: 'cancel_route',
+        toolInput: { routeId: 'r1' }, explanation: 'Will cancel', preview: {},
+      }),
+    ).toThrow();
   });
 
   it('validates done event', () => {

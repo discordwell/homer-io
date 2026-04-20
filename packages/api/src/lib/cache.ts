@@ -69,6 +69,26 @@ export async function cacheDelete(key: string): Promise<void> {
   }
 }
 
+/**
+ * Atomically GET and DELETE a cache key. Returns the prior value, or null if
+ * the key did not exist. Useful for single-use tokens / one-shot snapshots
+ * where a later concurrent caller must observe a null (so it can't replay).
+ */
+export async function cacheGetAndDelete<T>(key: string): Promise<T | null> {
+  try {
+    const r = getRedis();
+    const fullKey = `${KEY_PREFIX}${key}`;
+    // GETDEL is atomic — returns the old value and removes the key in one step.
+    // Available in Redis >= 6.2 and ioredis.
+    const raw = await (r as any).getdel(fullKey);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch (err) {
+    logger.error({ err, key }, '[cache] GETDEL error');
+    return null;
+  }
+}
+
 /** Atomic increment. Returns the new value. Sets TTL on first creation. */
 export async function cacheIncr(key: string, ttlSeconds: number): Promise<number> {
   try {
