@@ -88,7 +88,9 @@ describe('Finding H16: CI has lint/typecheck/audit', () => {
     const lintIdx = yml.indexOf('turbo lint');
     const typecheckIdx = yml.indexOf('turbo typecheck');
     const testIdx = yml.indexOf('turbo test');
-    const auditIdx = yml.indexOf('npm audit --audit-level=critical');
+    // Audit level is moderate now that the repo is at 0 vulns; was critical
+    // when there were still highs to clear.
+    const auditIdx = yml.indexOf('npm audit --audit-level=moderate');
     const buildIdx = yml.indexOf('turbo build');
 
     expect(lintIdx, 'deploy.yml missing lint step').toBeGreaterThan(0);

@@ -229,6 +229,7 @@ describe('M4 — resetPassword invalidates outstanding email-link tokens', () =>
 
     const userUpdateCalls: Array<Record<string, unknown>> = [];
     const resetTokenUpdateCalls: Array<Record<string, unknown>> = [];
+    const emailLinkTokenUpdateCalls: Array<Record<string, unknown>> = [];
     const refreshTokenDeleteCalls: Array<unknown> = [];
 
     const validResetToken = {
@@ -246,6 +247,8 @@ describe('M4 — resetPassword invalidates outstanding email-link tokens', () =>
           where: async () => {
             if (table === passwordResetTokensStub) {
               resetTokenUpdateCalls.push(values);
+            } else if (table === emailLinkTokensStub) {
+              emailLinkTokenUpdateCalls.push(values);
             } else {
               userUpdateCalls.push(values);
             }
@@ -277,6 +280,11 @@ describe('M4 — resetPassword invalidates outstanding email-link tokens', () =>
       tokenHash: 'token_hash',
       usedAt: 'used_at',
     };
+    const emailLinkTokensStub = {
+      id: 'id',
+      userId: 'user_id',
+      usedAt: 'used_at',
+    };
 
     vi.doMock('../lib/db/index.js', () => ({
       db: {
@@ -297,6 +305,9 @@ describe('M4 — resetPassword invalidates outstanding email-link tokens', () =>
     }));
     vi.doMock('../lib/db/schema/password-reset-tokens.js', () => ({
       passwordResetTokens: passwordResetTokensStub,
+    }));
+    vi.doMock('../lib/db/schema/email-link-tokens.js', () => ({
+      emailLinkTokens: emailLinkTokensStub,
     }));
     vi.doMock('../lib/db/schema/tenants.js', () => ({
       tenants: { id: 'id', isDemo: 'is_demo', industry: 'industry', settings: 'settings' },
@@ -336,9 +347,15 @@ describe('M4 — resetPassword invalidates outstanding email-link tokens', () =>
     // Refresh tokens were deleted.
     expect(refreshTokenDeleteCalls).toHaveLength(1);
 
+    // Email-link tokens (tenant-migration vector) were also invalidated —
+    // see C5 hardening. A reset must kill any pending migration token.
+    expect(emailLinkTokenUpdateCalls).toHaveLength(1);
+    expect(emailLinkTokenUpdateCalls[0]).toHaveProperty('usedAt');
+
     vi.doUnmock('../lib/db/index.js');
     vi.doUnmock('../lib/db/schema/users.js');
     vi.doUnmock('../lib/db/schema/password-reset-tokens.js');
+    vi.doUnmock('../lib/db/schema/email-link-tokens.js');
     vi.doUnmock('../lib/db/schema/tenants.js');
     vi.doUnmock('argon2');
     vi.doUnmock('../lib/email.js');

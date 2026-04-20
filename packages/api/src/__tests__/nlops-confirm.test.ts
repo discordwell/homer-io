@@ -7,6 +7,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createHash, randomBytes } from 'crypto';
+import { z } from 'zod';
+
+// Permissive Zod schema used by mock tools — the agent's executeToolSafely
+// wrapper requires every tool to expose `zodSchema`, so passthrough() lets
+// arbitrary test inputs flow through without rejection.
+const passthroughSchema = z.object({}).passthrough();
 
 // ── In-memory cache mock ─────────────────────────────────────────────────────
 // We want GET / SET / GETDEL semantics so we can assert single-use behaviour.
@@ -62,7 +68,12 @@ vi.mock('../lib/ai/providers.js', async () => {
 // tools/index.js transitively imports the DB, which fails to initialize in
 // the test env. Re-export just the helpers agent.ts uses.
 const mockTools = new Map<string, any>();
-function registerMockTool(tool: any) { mockTools.set(tool.name, tool); }
+function registerMockTool(tool: any) {
+  // Inject a permissive zodSchema if the test fixture didn't provide one;
+  // the production validation wrapper crashes on missing zodSchema.
+  if (!tool.zodSchema) tool.zodSchema = passthroughSchema;
+  mockTools.set(tool.name, tool);
+}
 
 function summarizeResult(_toolName: string, result: unknown): string {
   if (result === null || result === undefined) return 'No results';
@@ -78,6 +89,27 @@ vi.mock('../lib/ai/tools/index.js', () => ({
   getToolsForRole: () => Array.from(mockTools.values()),
   summarizeResult,
   TOTAL_TOOL_COUNT: 0,
+  // The agent's confirmation-resume path runs every input through the
+  // validation wrapper. Reproduce its shape here so test fixtures with
+  // a passthrough zodSchema flow through cleanly.
+  executeToolSafely: async (tool: any, input: any, ctx: any) => {
+    try {
+      const value = tool.zodSchema ? tool.zodSchema.parse(input ?? {}) : (input ?? {});
+      const result = await tool.execute(value, ctx);
+      return { ok: true, result };
+    } catch (err) {
+      return { ok: false, error: { error: 'invalid_input', message: err instanceof Error ? err.message : 'invalid' } };
+    }
+  },
+  previewToolSafely: async (tool: any, input: any, ctx: any) => {
+    try {
+      const value = tool.zodSchema ? tool.zodSchema.parse(input ?? {}) : (input ?? {});
+      const preview = tool.preview ? await tool.preview(value, ctx) : { tool: tool.name, input: value };
+      return { ok: true, preview };
+    } catch (err) {
+      return { ok: false, error: { error: 'invalid_input', message: err instanceof Error ? err.message : 'invalid' } };
+    }
+  },
 }));
 
 // ── Activity log mock (audit trail) ─────────────────────────────────────────
