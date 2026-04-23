@@ -43,6 +43,7 @@ const DemoAnalyticsPage = lazy(() => import('./pages/DemoAnalytics.js').then((mo
 const VerticalLanding = lazy(() => import('./components/landing-v2/VerticalLanding.js').then((module) => ({ default: module.VerticalLanding })));
 const PricingPage = lazy(() => import('./pages/Pricing.js').then((module) => ({ default: module.PricingPage })));
 const MessagesPage = lazy(() => import('./pages/Messages.js').then((module) => ({ default: module.MessagesPage })));
+const TelematicsCallbackPage = lazy(() => import('./pages/TelematicsCallback.js').then((module) => ({ default: module.TelematicsCallback })));
 
 function ProtectedRoute({
   children,
@@ -96,6 +97,9 @@ export function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/org-choice" element={<OrgChoicePage />} />
+        <Route path="/settings/telematics/callback" element={
+          <ProtectedRoute><TelematicsCallbackPage /></ProtectedRoute>
+        } />
         <Route path="/track/:orderId" element={<PublicTrackingPage />} />
         <Route path="/dashboard" element={
           <ProtectedRoute><DashboardLayout /></ProtectedRoute>

@@ -186,6 +186,24 @@ export const config = {
     encryptionKey: requireEnvAlways('INTEGRATION_ENCRYPTION_KEY', 32),
   },
 
+  telematics: {
+    samsara: {
+      clientId: process.env.SAMSARA_CLIENT_ID || '',
+      clientSecret: process.env.SAMSARA_CLIENT_SECRET || '',
+      webhookSigningSecret: process.env.SAMSARA_WEBHOOK_SIGNING_SECRET || '',
+    },
+    motive: {
+      clientId: process.env.MOTIVE_CLIENT_ID || '',
+      clientSecret: process.env.MOTIVE_CLIENT_SECRET || '',
+      webhookSigningSecret: process.env.MOTIVE_WEBHOOK_SIGNING_SECRET || '',
+    },
+    geotab: {
+      clientId: process.env.GEOTAB_CLIENT_ID || '',
+      clientSecret: process.env.GEOTAB_CLIENT_SECRET || '',
+      webhookSigningSecret: process.env.GEOTAB_WEBHOOK_SIGNING_SECRET || '',
+    },
+  },
+
   app: {
     frontendUrl,
     apiUrl,

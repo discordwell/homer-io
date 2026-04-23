@@ -7,6 +7,7 @@ import { useIntegrationsStore } from '../../stores/integrations.js';
 import { useSettingsStore } from '../../stores/settings.js';
 import { IntegrationConnectForm } from './IntegrationConnectForm.js';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel.js';
+import { TelematicsSection } from './TelematicsSection.js';
 import { C, F, alpha, primaryBtnStyle, secondaryBtnStyle } from '../../theme.js';
 import type { PlatformInfo, ConnectionResponse } from '@homer-io/shared';
 
@@ -105,9 +106,18 @@ export function IntegrationsTab() {
 
   if (loading && connections.length === 0 && platforms.length === 0) return <LoadingSpinner />;
 
+  // Fleet-tracking (telematics) is visible when the feature is enabled OR the
+  // tenant runs a vertical where trucks typically carry provider hardware.
+  const telematicsVisible = enabledFeatures.includes('fleet_tracking')
+    || tenantIndustry === 'furniture'
+    || tenantIndustry === 'grocery';
+
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
+        <h2 style={{ fontFamily: F.display, fontSize: 18, color: C.text, margin: 0, marginBottom: 4 }}>
+          Order sources
+        </h2>
         <span style={{ color: C.dim, fontSize: 14, fontFamily: F.body }}>
           Connect your e-commerce platforms to automatically import orders into HOMER.
         </span>
@@ -251,6 +261,8 @@ export function IntegrationsTab() {
         confirmLabel="Disconnect"
         variant="danger"
       />
+
+      {telematicsVisible && <TelematicsSection />}
     </div>
   );
 }

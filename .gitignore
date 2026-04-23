@@ -40,3 +40,6 @@ scripts/reboot-ovh2.sh
 
 # Audit artifacts
 .audit/
+
+# Claude Code tooling (brainstorm artifacts etc.)
+.superpowers/

@@ -31,6 +31,8 @@ export const FEATURE_KEYS = [
   'assembly_tracking',
   'haul_away',
   'wide_time_windows',
+  // Integrations
+  'fleet_tracking',
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -79,6 +81,9 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
   { key: 'assembly_tracking', label: 'Assembly Tracking', description: 'Track assembly-required deliveries with extended service times', category: 'operations' },
   { key: 'haul_away', label: 'Haul Away', description: 'Flag deliveries that include old item removal', category: 'operations' },
   { key: 'wide_time_windows', label: 'Wide Time Windows', description: '4-hour delivery windows with day-before notifications', category: 'customer_experience' },
+
+  // Integrations
+  { key: 'fleet_tracking', label: 'Fleet Telematics', description: 'Stream truck positions from Samsara / Motive / Geotab alongside driver-phone GPS', category: 'integrations' },
 ];
 
 // ---------------------------------------------------------------------------

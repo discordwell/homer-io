@@ -12,3 +12,9 @@ export class NotFoundError extends HttpError {
     super(404, message);
   }
 }
+
+export class BadRequestError extends HttpError {
+  constructor(message: string = 'Bad request') {
+    super(400, message);
+  }
+}

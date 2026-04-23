@@ -1,5 +1,6 @@
 import { pgTable, uuid, varchar, timestamp, numeric, integer, boolean, pgEnum, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
+import { locationSourceEnum } from './location-conflicts.js';
 
 export const vehicleTypeEnum = pgEnum('vehicle_type', [
   'car', 'van', 'truck', 'bike', 'motorcycle', 'cargo_bike',
@@ -22,6 +23,10 @@ export const vehicles = pgTable('vehicles', {
   evRange: numeric('ev_range', { precision: 10, scale: 2 }),
   externalId: varchar('external_id', { length: 255 }),
   isActive: boolean('is_active').default(true).notNull(),
+  lastLat: numeric('last_lat', { precision: 10, scale: 7 }),
+  lastLng: numeric('last_lng', { precision: 10, scale: 7 }),
+  lastLocationAt: timestamp('last_location_at', { withTimezone: true }),
+  lastLocationSource: locationSourceEnum('last_location_source'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [

@@ -4,6 +4,8 @@ import { api } from '../api/client.js';
 import { useDemoStore } from './demo.js';
 import { DEMO_DRIVERS } from '../data/demo-data.js';
 
+export type LocationSource = 'driver_app' | 'samsara' | 'motive' | 'geotab';
+
 export interface DriverLocation {
   driverId: string;
   driverName: string;
@@ -13,6 +15,13 @@ export interface DriverLocation {
   speed: number | null;
   heading: number | null;
   updatedAt: string;
+  /**
+   * Where this position came from. WS pushes carry the real source; the
+   * initial REST /tracking/drivers fetch doesn't yet — treat undefined as
+   * driver_app for backwards-compat display.
+   */
+  source?: LocationSource;
+  vehicleId?: string | null;
 }
 
 export interface RouteProgress {

@@ -31,6 +31,8 @@ import { webhookRoutes } from './modules/webhooks/routes.js';
 import { billingRoutes } from './modules/billing/routes.js';
 import { billingWebhookPlugin } from './modules/billing/webhook.js';
 import { integrationRoutes, integrationWebhookRoutes } from './modules/integrations/routes.js';
+import { telematicsRoutes, telematicsWebhookRoutes } from './modules/telematics/routes.js';
+import { startTelematicsPollScheduler } from './modules/telematics/scheduler.js';
 import { etaRoutes } from './modules/eta/routes.js';
 import { carbonRoutes } from './modules/carbon/routes.js';
 import { reportRoutes } from './modules/reports/routes.js';
@@ -169,6 +171,8 @@ await app.register(async (api) => {
   await api.register(billingRoutes, { prefix: '/billing' });
   await api.register(integrationRoutes, { prefix: '/integrations' });
   await api.register(integrationWebhookRoutes, { prefix: '/integrations/webhook' });
+  await api.register(telematicsRoutes, { prefix: '/telematics' });
+  await api.register(telematicsWebhookRoutes, { prefix: '/telematics/webhooks' });
   await api.register(etaRoutes);
   await api.register(carbonRoutes, { prefix: '/analytics' });
   await api.register(reportRoutes, { prefix: '/reports' });
@@ -203,6 +207,8 @@ try {
   initSocketIO(app.server);
   app.log.info(`HOMER.io API running at http://${config.host}:${config.port}`);
   app.log.info('Socket.IO attached to HTTP server on /fleet namespace');
+  // Kick off telematics poll scheduler (no-op on non-leader instances via PG advisory lock).
+  startTelematicsPollScheduler().catch((err) => app.log.warn({ err }, 'telematics scheduler failed to start'));
 } catch (err) {
   app.log.error(err);
   process.exit(1);
