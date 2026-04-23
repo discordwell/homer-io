@@ -1,5 +1,5 @@
 import type { Command } from 'commander';
-import { saveConfig, clearConfig, loadConfig, DEFAULT_SERVER_URL } from '../config.js';
+import { saveConfig, clearConfig, DEFAULT_SERVER_URL } from '../config.js';
 import { getApi } from '../api.js';
 import { success, error, info, output } from '../output.js';
 
