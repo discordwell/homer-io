@@ -1,3 +1,6 @@
+// CSV / external-migration payloads are schema-free by nature — we normalize
+// on the way in, but the intermediate shape is legitimately `any`.
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Job } from 'bullmq';
 import { eq, and, sql } from 'drizzle-orm';
 import { createHash, createDecipheriv } from 'crypto';

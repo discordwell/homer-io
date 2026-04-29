@@ -235,6 +235,7 @@ export function solveCVRPTW(input: CVRPTWInput): CVRPTWResult {
     });
 
   // Use depot or first driver's position as reference point
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- retained for future cluster-balancing variant
   const refIndex = depotIndex ?? drivers[0].matrixIndex;
 
   // Phase 1: Assign orders to nearest driver using savings-based approach

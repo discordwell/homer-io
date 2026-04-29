@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Mock all external routing to force haversine fallback, which exercises buildEtaResult directly
 vi.mock('../../lib/routing/osrm.js', () => ({

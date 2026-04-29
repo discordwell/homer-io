@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
 import { deviceTokens } from '../../lib/db/schema/index.js';
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Outlet, Link, useLocation, useSearchParams, NavLink } from 'react-router-dom';
+import { Outlet, Link, useLocation, NavLink } from 'react-router-dom';
 import { Sidebar } from './Sidebar.js';
 import { DemoBanner } from './DemoBanner.js';
 import { AIChatPanel } from './AIChatPanel.js';
@@ -9,14 +9,15 @@ import { useAuthStore } from '../stores/auth.js';
 import { C } from '../theme.js';
 
 function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false,
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia(`(max-width: ${breakpoint}px)`).matches
+      : false,
   );
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mql.addEventListener('change', handler);
-    setIsMobile(mql.matches);
     return () => mql.removeEventListener('change', handler);
   }, [breakpoint]);
   return isMobile;
@@ -39,10 +40,12 @@ export function DemoDashboardLayout() {
   const isMobile = useIsMobile();
   const location = useLocation();
 
-  // Close mobile sidebar on route change
-  useEffect(() => {
+  // Close mobile sidebar on route change — adjust state during render.
+  const [seenPath, setSeenPath] = useState(location.pathname);
+  if (seenPath !== location.pathname) {
+    setSeenPath(location.pathname);
     setMobileSidebarOpen(false);
-  }, [location.pathname]);
+  }
 
   // Close mobile sidebar on Escape
   useEffect(() => {

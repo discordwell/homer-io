@@ -270,7 +270,7 @@ export async function importOrdersCsv(tenantId: string, rows: Array<Record<strin
           })
           .returning();
         created.push(order);
-      } catch (err) {
+      } catch {
         errors.push({ row: i + 1, error: 'Failed to import row' });
       }
     }

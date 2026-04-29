@@ -104,7 +104,7 @@ async function runDomainOnce(connectionId: string, domain: 'vehicles' | 'drivers
   let result: unknown;
   try {
     result = await attempt();
-  } catch (err) {
+  } catch {
     // Serialize refresh per connection; two concurrent domains polling the
     // same connection must share one refresh call. Single-use refresh tokens
     // mean parallel refreshes burn each other.

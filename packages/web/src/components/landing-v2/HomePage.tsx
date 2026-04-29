@@ -39,9 +39,14 @@ function Nav() {
 function ChatPreview({ city = 'Oakland' }: { city?: string }) {
   const [cycle, setCycle] = useState(0);
   const [step, setStep] = useState(0);
+  // Reset `step` whenever the cycle advances — adjust state during render.
+  const [seenCycle, setSeenCycle] = useState(0);
+  if (seenCycle !== cycle) {
+    setSeenCycle(cycle);
+    setStep(0);
+  }
 
   useEffect(() => {
-    setStep(0);
     const delays = [800, 2400, 4000, 6800, 8500, 10200];
     const timers = delays.map((d, i) => setTimeout(() => setStep(i + 1), d));
     const reset = setTimeout(() => setCycle(c => c + 1), 15000);

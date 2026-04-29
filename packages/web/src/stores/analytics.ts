@@ -5,7 +5,7 @@ import type {
   EnhancedTrendPoint, HeatmapCell, Insight, DeliveryOutcomes,
 } from '@homer-io/shared';
 
-interface AnalyticsState {
+export interface AnalyticsState {
   // Enhanced
   enhancedOverview: EnhancedOverview | null;
   enhancedDrivers: EnhancedDriverPerformance[];

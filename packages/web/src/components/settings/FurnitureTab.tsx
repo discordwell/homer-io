@@ -39,25 +39,24 @@ export function FurnitureTab() {
   });
 
   useEffect(() => {
+    async function loadSettings() {
+      setLoading(true);
+      try {
+        const settings = await api.get<Partial<FurnitureSettings>>('/furniture/settings');
+        if (settings && Object.keys(settings).length > 0) {
+          setForm({
+            defaultCrewSize: String(settings.defaultCrewSize ?? 2),
+            assemblyService: settings.assemblyService ?? false,
+            haulAwayService: settings.haulAwayService ?? false,
+            defaultTimeWindowHours: String(settings.defaultTimeWindowHours ?? 3),
+            whiteGloveChecklist: settings.whiteGloveChecklist ?? false,
+          });
+        }
+      } catch { /* first time -- no settings yet */ }
+      setLoading(false);
+    }
     loadSettings();
   }, []);
-
-  async function loadSettings() {
-    setLoading(true);
-    try {
-      const settings = await api.get<Partial<FurnitureSettings>>('/furniture/settings');
-      if (settings && Object.keys(settings).length > 0) {
-        setForm({
-          defaultCrewSize: String(settings.defaultCrewSize ?? 2),
-          assemblyService: settings.assemblyService ?? false,
-          haulAwayService: settings.haulAwayService ?? false,
-          defaultTimeWindowHours: String(settings.defaultTimeWindowHours ?? 3),
-          whiteGloveChecklist: settings.whiteGloveChecklist ?? false,
-        });
-      }
-    } catch { /* first time -- no settings yet */ }
-    setLoading(false);
-  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

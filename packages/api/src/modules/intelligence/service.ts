@@ -2,7 +2,6 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
 import { addressIntelligence } from '../../lib/db/schema/address-intelligence.js';
 import { deliveryMetrics } from '../../lib/db/schema/delivery-metrics.js';
-import { orders } from '../../lib/db/schema/orders.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { scoreRouteRisk } from '../../lib/intelligence/risk-scorer.js';
 

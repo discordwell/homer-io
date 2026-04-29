@@ -55,8 +55,9 @@ export function WebhookDeliveryLog({ endpointId, onClose }: WebhookDeliveryLogPr
   const [totalPages, setTotalPages] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Caller is responsible for setting loading=true; this lets us avoid a
+  // sync setState during the initial-mount effect.
   async function fetchDeliveries(p: number) {
-    setLoading(true);
     try {
       const result = await api.get<DeliveryListResponse>(
         `/webhooks/${endpointId}/deliveries?page=${p}&limit=15`,
@@ -72,11 +73,17 @@ export function WebhookDeliveryLog({ endpointId, onClose }: WebhookDeliveryLogPr
   }
 
   useEffect(() => {
-    fetchDeliveries(1);
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      await fetchDeliveries(1);
+    })();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpointId]);
 
   function handlePageChange(newPage: number) {
+    setLoading(true);
     fetchDeliveries(newPage);
   }
 

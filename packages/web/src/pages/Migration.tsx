@@ -63,8 +63,10 @@ export function MigrationPage() {
   const platformSupportsApi = selectedPlatformInfo?.supportsApi ?? false;
   const platformSupportsVehicles = selectedPlatformInfo?.supportsVehicles ?? false;
 
-  // When platform changes, set mode accordingly
-  useEffect(() => {
+  // When platform changes, set mode accordingly — adjust state during render.
+  const [seenPlatform, setSeenPlatform] = useState<MigrationPlatform | null>(selectedPlatform);
+  if (seenPlatform !== selectedPlatform) {
+    setSeenPlatform(selectedPlatform);
     if (selectedPlatform) {
       const info = platformInfo.find(p => p.platform === selectedPlatform);
       setImportMode(info?.supportsApi ? 'api' : 'csv');
@@ -72,7 +74,7 @@ export function MigrationPage() {
       setValidationResult(null);
       setApiKey('');
     }
-  }, [selectedPlatform, platformInfo]);
+  }
 
   const parseFile = useCallback((file: File, setter: (rows: Record<string, string>[]) => void) => {
     setError('');

@@ -20,14 +20,25 @@ export function TelematicsVehicleLinker({ open, connectionId, onClose }: Props) 
   const [pendingMap, setPendingMap] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
+  // Reset on (open, connectionId) change — adjust state during render.
+  const fetchKey = open && connectionId ? connectionId : null;
+  const [lastKey, setLastKey] = useState<string | null>(fetchKey);
+  if (lastKey !== fetchKey) {
+    setLastKey(fetchKey);
+    setRows([]);
+    setPendingMap({});
+    setLoading(fetchKey !== null);
+  }
+
   useEffect(() => {
-    if (!open || !connectionId) { setRows([]); setPendingMap({}); return; }
-    setLoading(true);
+    if (!fetchKey) return;
+    let cancelled = false;
     Promise.all([
-      listVehicles(connectionId).then(setRows),
+      listVehicles(fetchKey).then((r) => { if (!cancelled) setRows(r); }),
       fetchVehicles(1),
-    ]).finally(() => setLoading(false));
-  }, [open, connectionId, listVehicles, fetchVehicles]);
+    ]).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [fetchKey, listVehicles, fetchVehicles]);
 
   function effectiveSelection(row: ExternalVehicleRow): string {
     if (pendingMap[row.externalVehicleId] !== undefined) return pendingMap[row.externalVehicleId];

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useCallback, useEffect } from 'react';
+import { lazy, Suspense, useState, useCallback } from 'react';
 import { BayAreaMap } from './BayAreaMap.js';
 import type { HeroGeoResult } from './useHeroGeolocation.js';
 import './heroMap.css';
@@ -52,14 +52,7 @@ export function HeroMap({ geo }: HeroMapProps) {
     setMapEnabled(false);
   }, []);
 
-  useEffect(() => {
-    if (!hasApiKey) {
-      setMapEnabled(false);
-      return;
-    }
-
-    setMapEnabled(supportsMapWebGL());
-  }, []);
+  // mapEnabled is initialised correctly above (line ~47) — no effect needed.
 
   // Determine map center: user location if granted, Bay Area otherwise
   const settled = status !== 'pending';

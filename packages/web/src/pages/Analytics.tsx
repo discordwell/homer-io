@@ -9,7 +9,7 @@ import { RouteAnalytics } from '../components/analytics/RouteAnalytics.js';
 import { DeliveryOutcomes } from '../components/analytics/DeliveryOutcomes.js';
 import { ReportDownload } from '../components/analytics/ReportDownload.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
-import { C, F, alpha } from '../theme.js';
+import { C, F } from '../theme.js';
 
 const ranges = ['7d', '30d', '90d'] as const;
 

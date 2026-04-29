@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createHash } from 'crypto';
 import { HttpError } from '../lib/errors.js';
 
 /**
@@ -118,10 +119,6 @@ vi.mock('drizzle-orm', async () => {
     sql: (strings: any, ..._vals: any[]) => ({ kind: 'sql', parts: [strings] }),
   };
 });
-
-function colEq(c: any, expected: { table: string; col: string }) {
-  return c && c.table === expected.table && c.col === expected.col;
-}
 
 function rowMatches(row: any, cond: Cond | undefined): boolean {
   if (!cond) return true;
@@ -310,7 +307,6 @@ async function seedOutstandingToken(user: UserRow, workEmail: string, tokenHash:
 
 function hashTokenForTest(token: string): string {
   // Match the module's hash (sha256 hex)
-  const { createHash } = require('crypto');
   return createHash('sha256').update(token).digest('hex');
 }
 

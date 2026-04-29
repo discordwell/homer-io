@@ -29,6 +29,7 @@ const advisoryLocks: Map<string, Promise<void>> = new Map();
 
 let txCounter = 0;
 let payAsYouGoEnabled = false;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- written by fixtures, not directly read in assertions
 let subscriptionPlan: 'free' | 'standard' | 'growth' | 'scale' | 'enterprise' = 'free';
 
 function resetState() {

@@ -74,6 +74,7 @@ export function TelematicsSection() {
         // Stash state so the callback page can forward it back to complete.
         sessionStorage.setItem('telematicsState', result.state);
         sessionStorage.setItem('telematicsProvider', provider.provider);
+        // eslint-disable-next-line react-hooks/immutability -- legitimate navigation in click-handler context
         window.location.href = result.redirectUrl;
       } else {
         toast('API-key providers not yet supported in this build', 'info');

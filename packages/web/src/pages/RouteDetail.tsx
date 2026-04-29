@@ -34,17 +34,25 @@ export function RouteDetailPage() {
   const [showMessages, setShowMessages] = useState(false);
   const [riskScores, setRiskScores] = useState<RiskScore[]>([]);
 
+  // Reset loading/error on id change — adjust state during render.
+  const [seenId, setSeenId] = useState(id);
+  if (seenId !== id) {
+    setSeenId(id);
+    setLoading(true);
+    setError(null);
+  }
+
   useEffect(() => {
-    if (id) {
-      setLoading(true);
-      setError(null);
-      fetchRoute(id)
-        .then(() => setLoading(false))
-        .catch((err) => {
-          setError(err instanceof Error ? err.message : 'Route not found');
-          setLoading(false);
-        });
-    }
+    if (!id) return;
+    let cancelled = false;
+    fetchRoute(id)
+      .then(() => { if (!cancelled) setLoading(false); })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'Route not found');
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [id, fetchRoute]);
 
   // Fetch risk scores for planned/in_progress routes

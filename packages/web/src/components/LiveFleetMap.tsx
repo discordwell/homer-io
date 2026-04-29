@@ -20,8 +20,10 @@ const MAP_DIM = '#6B7280';
 
 export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const [mapReady, setMapReady] = useState(false);
+  // The Leaflet map instance lives in state (not a ref) because we read it
+  // during render to pass into <DriverMarker />. The compiler rule
+  // `react-hooks/refs` rejects ref reads at render time.
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const driverLocations = useTrackingStore((s) => s.driverLocations);
   const isDemo = useDemoStore((s) => s.isDemoMode);
 
@@ -30,7 +32,7 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
 
   // Initialize map
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    if (!containerRef.current) return;
 
     const center: [number, number] = isDemo ? [37.65, -122.20] : [40.7128, -74.006];
     const zoom = isDemo ? 10 : 12;
@@ -43,21 +45,18 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
       attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
     }).addTo(map);
 
-    mapRef.current = map;
-    setMapReady(true);
+    setMapInstance(map);
 
     return () => {
       map.remove();
-      mapRef.current = null;
-      setMapReady(false);
+      setMapInstance(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-fit bounds when driver locations change (non-demo only)
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || driverLocations.size === 0 || isDemo) return;
+    if (!mapInstance || driverLocations.size === 0 || isDemo) return;
 
     const points: [number, number][] = [];
     driverLocations.forEach((d) => {
@@ -66,22 +65,21 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
 
     if (points.length > 0) {
       const bounds = L.latLngBounds(points);
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+      mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [driverLocations.size]);
+  }, [driverLocations.size, mapInstance]);
 
   // Demo: draw route paths, stop markers, completed portion
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !isDemo) return;
+    if (!mapInstance || !isDemo) return;
 
     // Clean up previous layers
     if (routeLayersRef.current) {
       routeLayersRef.current.remove();
     }
 
-    const group = L.layerGroup().addTo(map);
+    const group = L.layerGroup().addTo(mapInstance);
     routeLayersRef.current = group;
 
     for (const route of DEMO_ROUTE_PATHS) {
@@ -94,8 +92,7 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
         routeLayersRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDemo, mapReady, driverProgress]);
+  }, [isDemo, mapInstance, driverProgress]);
 
   const drivers = Array.from(driverLocations.values());
 
@@ -118,11 +115,11 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
         position: 'relative',
       }}
     >
-      {mapReady && mapRef.current && drivers.map((driver) => (
+      {mapInstance && drivers.map((driver) => (
         <DriverMarker
           key={driver.driverId}
           driver={driver}
-          map={mapRef.current!}
+          map={mapInstance}
         />
       ))}
 

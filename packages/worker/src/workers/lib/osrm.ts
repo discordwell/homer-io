@@ -36,6 +36,7 @@ export async function getDistanceMatrix(
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- OSRM response shape varies by endpoint; caller narrows.
 async function osrmFetch(url: string, retryCount = 0): Promise<any> {
   try {
     const res = await fetch(url, {

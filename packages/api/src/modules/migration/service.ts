@@ -19,10 +19,9 @@ const migrationQueue = new Queue('migration', {
 
 function formatJob(job: typeof migrationJobs.$inferSelect) {
   const cfg = job.config as Record<string, unknown>;
-  // Strip sensitive fields from response
-  const { apiKey, ...safeConfig } = cfg;
-  // Also strip csvData from list responses (can be large)
-  const { csvData, ...configWithoutCsv } = safeConfig;
+  // Strip sensitive fields (apiKey) and large blob (csvData) from list responses
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructure-and-omit pattern
+  const { apiKey, csvData, ...configWithoutCsv } = cfg;
   return {
     id: job.id,
     tenantId: job.tenantId,

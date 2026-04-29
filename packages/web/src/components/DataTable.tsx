@@ -69,6 +69,7 @@ export function DataTable<T extends Record<string, any>>({ columns, data, onRowC
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getColumnMinWidth<T extends Record<string, any>>(column: Column<T>): number {
   if (typeof column.width === 'number') return column.width;
   if (typeof column.width === 'string') {

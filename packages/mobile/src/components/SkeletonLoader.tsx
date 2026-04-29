@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
 import { C, Radius, Spacing } from '@/theme';
 
@@ -10,7 +10,9 @@ interface SkeletonProps {
 }
 
 function SkeletonBox({ width = '100%', height = 16, borderRadius = Radius.md, style }: SkeletonProps) {
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  // useState's lazy initializer keeps a single Animated.Value across renders
+  // without the refs-during-render hazard of `useRef(...).current`.
+  const [opacity] = useState(() => new Animated.Value(0.3));
 
   useEffect(() => {
     const animation = Animated.loop(

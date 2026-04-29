@@ -91,7 +91,12 @@ export function ReconciliationFlow({
   }, [kitId]);
 
   useEffect(() => {
-    fetchKit();
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      await fetchKit();
+    })();
+    return () => { cancelled = true; };
   }, [fetchKit]);
 
   const updateReturnedQty = (itemId: string, value: string) => {

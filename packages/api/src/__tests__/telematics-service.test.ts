@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { createHmac } from 'crypto';
 
 vi.mock('../config.js', () => ({
   config: {
@@ -49,7 +50,6 @@ describe('signState + verifyState', () => {
   it('rejects a state that was signed >15 minutes ago', () => {
     // Produce a state with an artificially old ts by injecting the same secret
     // via exported signState twice is hard; instead, manually craft + re-sign.
-    const { createHmac } = require('crypto') as typeof import('crypto');
     const payload = { tid: 't', prov: 'samsara', ts: Date.now() - 16 * 60_000, nonce: 'abcd' };
     const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
     const sig = createHmac('sha256', Buffer.from('a'.repeat(32))).update(body).digest('base64url');

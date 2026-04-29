@@ -77,41 +77,41 @@ export function CannabisTab() {
   });
 
   useEffect(() => {
+    async function loadSettings() {
+      setLoading(true);
+      try {
+        const settings = await api.get<Partial<CannabisSettings>>('/cannabis/settings');
+        if (settings && Object.keys(settings).length > 0) {
+          setForm({
+            licenseNumber: settings.licenseNumber || '',
+            state: settings.state || '',
+            maxVehicleValue: String(settings.maxVehicleValue ?? 5000),
+            maxVehicleWeight: settings.maxVehicleWeight ? String(settings.maxVehicleWeight) : '',
+            requireIdVerification: settings.requireIdVerification ?? true,
+            requireSignature: settings.requireSignature ?? true,
+            requirePhoto: settings.requirePhoto ?? true,
+            minimumAge: String(settings.minimumAge ?? 21),
+            allowCashOnDelivery: settings.allowCashOnDelivery ?? true,
+            manifestPrefix: settings.manifestPrefix || 'MAN',
+            deliveryRadiusMiles: settings.deliveryRadiusMiles ? String(settings.deliveryRadiusMiles) : '',
+            allowedZipCodes: (settings.allowedZipCodes ?? []).join(', '),
+            jurisdiction: settings.jurisdiction || '',
+          });
+        }
+      } catch { /* first time — no settings yet */ }
+      setLoading(false);
+    }
+
+    async function loadManifests() {
+      try {
+        const list = await api.get<ManifestRow[]>('/cannabis/manifests?limit=10');
+        setManifests(list);
+      } catch { /* no manifests yet */ }
+    }
+
     loadSettings();
     loadManifests();
   }, []);
-
-  async function loadSettings() {
-    setLoading(true);
-    try {
-      const settings = await api.get<Partial<CannabisSettings>>('/cannabis/settings');
-      if (settings && Object.keys(settings).length > 0) {
-        setForm({
-          licenseNumber: settings.licenseNumber || '',
-          state: settings.state || '',
-          maxVehicleValue: String(settings.maxVehicleValue ?? 5000),
-          maxVehicleWeight: settings.maxVehicleWeight ? String(settings.maxVehicleWeight) : '',
-          requireIdVerification: settings.requireIdVerification ?? true,
-          requireSignature: settings.requireSignature ?? true,
-          requirePhoto: settings.requirePhoto ?? true,
-          minimumAge: String(settings.minimumAge ?? 21),
-          allowCashOnDelivery: settings.allowCashOnDelivery ?? true,
-          manifestPrefix: settings.manifestPrefix || 'MAN',
-          deliveryRadiusMiles: settings.deliveryRadiusMiles ? String(settings.deliveryRadiusMiles) : '',
-          allowedZipCodes: (settings.allowedZipCodes ?? []).join(', '),
-          jurisdiction: settings.jurisdiction || '',
-        });
-      }
-    } catch { /* first time — no settings yet */ }
-    setLoading(false);
-  }
-
-  async function loadManifests() {
-    try {
-      const list = await api.get<ManifestRow[]>('/cannabis/manifests?limit=10');
-      setManifests(list);
-    } catch { /* no manifests yet */ }
-  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

@@ -22,23 +22,22 @@ export function RestaurantTab() {
   });
 
   useEffect(() => {
+    async function loadSettings() {
+      setLoading(true);
+      try {
+        const settings = await api.get<Partial<RestaurantSettings>>('/restaurant/settings');
+        if (settings && Object.keys(settings).length > 0) {
+          setForm({
+            defaultDeliveryWindowMinutes: String(settings.defaultDeliveryWindowMinutes ?? 30),
+            speedPriority: settings.speedPriority ?? false,
+            defaultOrderBatchSize: String(settings.defaultOrderBatchSize ?? 5),
+          });
+        }
+      } catch { /* first time -- no settings yet */ }
+      setLoading(false);
+    }
     loadSettings();
   }, []);
-
-  async function loadSettings() {
-    setLoading(true);
-    try {
-      const settings = await api.get<Partial<RestaurantSettings>>('/restaurant/settings');
-      if (settings && Object.keys(settings).length > 0) {
-        setForm({
-          defaultDeliveryWindowMinutes: String(settings.defaultDeliveryWindowMinutes ?? 30),
-          speedPriority: settings.speedPriority ?? false,
-          defaultOrderBatchSize: String(settings.defaultOrderBatchSize ?? 5),
-        });
-      }
-    } catch { /* first time -- no settings yet */ }
-    setLoading(false);
-  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

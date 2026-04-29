@@ -58,6 +58,7 @@ export type KanbanKbdEffect =
   | { kind: 'cancel' }
   | { kind: 'invalid-drop' };
 
+// eslint-disable-next-line react-refresh/only-export-components -- pure reducer co-located with its consumer + test
 export function kanbanKeyReducer(
   state: KanbanKbdState,
   key: string,
@@ -254,8 +255,9 @@ export function DispatchBoard() {
   const [liveMessage, setLiveMessage] = useState<string>('');
   const boardRef = useRef<HTMLDivElement>(null);
 
+  // Caller is responsible for setting loading=true; the mount-time effect
+  // relies on the initial state already being true.
   const fetchData = useCallback(async () => {
-    setLoading(true);
     try {
       const [ordersRes, driversRes, routesRes] = await Promise.all([
         api.get<{ items: Order[]; total: number }>('/orders?page=1&limit=200&status=received'),
@@ -293,7 +295,14 @@ export function DispatchBoard() {
     }
   }, [toast]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      await fetchData();
+    })();
+    return () => { cancelled = true; };
+  }, [fetchData]);
 
   const handleDragStart = useCallback((order: Order) => {
     setDraggedOrder(order);
@@ -329,6 +338,7 @@ export function DispatchBoard() {
       }
 
       toast(`Assigned "${order.recipientName}" to ${targetCol.driver.name}`, 'success');
+      setLoading(true);
       fetchData();
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Assignment failed', 'error');

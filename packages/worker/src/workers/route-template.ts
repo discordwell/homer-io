@@ -8,7 +8,7 @@ import { logger } from '../lib/logger.js';
 
 const log = logger.child({ worker: 'route-template' });
 
-export async function processRouteTemplate(job: Job) {
+export async function processRouteTemplate(_job: Job) {
   log.info('Checking for templates to generate');
 
   const now = new Date();

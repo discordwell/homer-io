@@ -34,7 +34,7 @@ interface TrackingState {
   unsubscribe: (socket: Socket) => void;
 }
 
-export const useTrackingStore = create<TrackingState>()((set, get) => ({
+export const useTrackingStore = create<TrackingState>()((set, _get) => ({
   driverLocations: new Map(),
   deliveryEvents: [],
   loading: false,

@@ -102,6 +102,7 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
       } else if (currentPlan === 'free') {
         // Upgrading from free — need checkout
         const url = await createCheckout(planId, interval);
+        // eslint-disable-next-line react-hooks/immutability -- legitimate navigation in click-handler context
         window.location.href = url;
       } else {
         // Changing between paid plans — direct change

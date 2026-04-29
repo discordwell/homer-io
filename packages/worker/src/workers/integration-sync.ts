@@ -1,3 +1,7 @@
+// Shopify / WooCommerce / etc. return arbitrarily-shaped JSON; we extract the
+// fields we care about and pass everything else through as `rawData`. `any` is
+// the intent here, not a lapse.
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Job } from 'bullmq';
 import { eq, and, sql } from 'drizzle-orm';
 import { createHash, createDecipheriv } from 'crypto';

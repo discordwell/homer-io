@@ -6,7 +6,6 @@ import { webhookEndpoints } from '../../lib/db/schema/webhook-endpoints.js';
 import { webhookDeliveries } from '../../lib/db/schema/webhook-deliveries.js';
 import { HttpError } from '../../lib/errors.js';
 import { logActivity } from '../../lib/activity.js';
-import { enqueueWebhook } from '../../lib/webhooks.js';
 import { assertUrlIsSafe } from '../../lib/safe-url.js';
 
 function formatEndpoint(ep: typeof webhookEndpoints.$inferSelect, showSecret = false) {

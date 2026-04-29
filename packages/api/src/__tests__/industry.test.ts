@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { generateIndustryOrders, INDUSTRY_ORDER_TEMPLATES, pickIndustryItem } from '../modules/auth/industry-data.js';
 import { BAY_AREA_LOCATIONS, generateDemoOrders } from '../modules/auth/demo-seed.js';
 

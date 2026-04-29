@@ -8,7 +8,6 @@ import {
   getTool,
   summarizeResult,
   executeToolSafely,
-  previewToolSafely,
   type ToolContext,
 } from './tools/index.js';
 import { saveMutationSnapshot } from './undo.js';

@@ -37,24 +37,23 @@ export function GroceryTab() {
   });
 
   useEffect(() => {
+    async function loadSettings() {
+      setLoading(true);
+      try {
+        const settings = await api.get<Partial<GrocerySettings>>('/grocery/settings');
+        if (settings && Object.keys(settings).length > 0) {
+          setForm({
+            defaultSubstitutionPolicy: settings.defaultSubstitutionPolicy ?? 'ask_first',
+            temperatureMonitoring: settings.temperatureMonitoring ?? false,
+            defaultTemperatureZones: settings.defaultTemperatureZones ?? ['ambient'],
+            deliveryBatchWindowMinutes: String(settings.deliveryBatchWindowMinutes ?? 30),
+          });
+        }
+      } catch { /* first time -- no settings yet */ }
+      setLoading(false);
+    }
     loadSettings();
   }, []);
-
-  async function loadSettings() {
-    setLoading(true);
-    try {
-      const settings = await api.get<Partial<GrocerySettings>>('/grocery/settings');
-      if (settings && Object.keys(settings).length > 0) {
-        setForm({
-          defaultSubstitutionPolicy: settings.defaultSubstitutionPolicy ?? 'ask_first',
-          temperatureMonitoring: settings.temperatureMonitoring ?? false,
-          defaultTemperatureZones: settings.defaultTemperatureZones ?? ['ambient'],
-          deliveryBatchWindowMinutes: String(settings.deliveryBatchWindowMinutes ?? 30),
-        });
-      }
-    } catch { /* first time -- no settings yet */ }
-    setLoading(false);
-  }
 
   function toggleZone(zone: string) {
     setForm(prev => {

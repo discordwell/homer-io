@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Modal } from '../Modal.js';
 import { FormField, inputStyle } from '../FormField.js';
 import { useToast } from '../Toast.js';
@@ -61,23 +61,26 @@ export function WebhookEndpointForm({ open, onClose, onSave, endpoint }: Webhook
 
   const isEdit = !!endpoint;
 
-  useEffect(() => {
-    if (open) {
-      if (endpoint) {
-        setUrl(endpoint.url);
-        setDescription(endpoint.description || '');
-        setSelectedEvents([...endpoint.events]);
-        setIsActive(endpoint.isActive);
-        setRevealedSecret(null);
-      } else {
-        setUrl('');
-        setDescription('');
-        setSelectedEvents([]);
-        setIsActive(true);
-        setRevealedSecret(null);
-      }
+  // Reset form whenever the modal opens or the endpoint we're editing
+  // changes — adjust state during render.
+  const formKey = open ? (endpoint?.id ?? '__new__') : null;
+  const [seenKey, setSeenKey] = useState<string | null>(formKey);
+  if (seenKey !== formKey) {
+    setSeenKey(formKey);
+    if (endpoint) {
+      setUrl(endpoint.url);
+      setDescription(endpoint.description || '');
+      setSelectedEvents([...endpoint.events]);
+      setIsActive(endpoint.isActive);
+      setRevealedSecret(null);
+    } else {
+      setUrl('');
+      setDescription('');
+      setSelectedEvents([]);
+      setIsActive(true);
+      setRevealedSecret(null);
     }
-  }, [open, endpoint]);
+  }
 
   function toggleEvent(event: string) {
     setSelectedEvents(prev =>

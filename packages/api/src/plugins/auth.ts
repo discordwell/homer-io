@@ -72,7 +72,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   // JWT auth (default)
   try {
     await request.jwtVerify();
-  } catch (err) {
+  } catch {
     return reply.unauthorized('Invalid or expired token');
   }
 }

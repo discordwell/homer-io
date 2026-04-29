@@ -1,4 +1,4 @@
-import { eq, and, ne, isNotNull, gt, desc, or, lt, sql, isNull } from 'drizzle-orm';
+import { eq, and, ne, isNotNull, desc, or, lt, isNull } from 'drizzle-orm';
 import type { LocationUpdate } from '@homer-io/shared';
 import { db } from '../../lib/db/index.js';
 import { drivers } from '../../lib/db/schema/drivers.js';

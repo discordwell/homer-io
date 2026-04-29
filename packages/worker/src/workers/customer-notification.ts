@@ -18,7 +18,7 @@ interface CustomerNotificationJobData {
 const log = logger.child({ worker: 'customer-notification' });
 
 export async function processCustomerNotification(job: Job<CustomerNotificationJobData>) {
-  const { tenantId, orderId, trigger, logId, templateId } = job.data;
+  const { tenantId, orderId, trigger, logId } = job.data;
   log.info('Processing customer notification', { trigger, orderId, logId });
 
   // Get the log entry — enforce tenant isolation

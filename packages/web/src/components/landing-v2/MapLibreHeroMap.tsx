@@ -23,8 +23,13 @@ export default function MapLibreHeroMap({ lat, lng, onReady, onError }: MapLibre
   const onReadyRef = useRef(onReady);
   const onErrorRef = useRef(onError);
   const readyFired = useRef(false);
-  onReadyRef.current = onReady;
-  onErrorRef.current = onError;
+
+  // Mirror callback props into refs so the init effect can call the latest
+  // versions without retriggering on every render.
+  useEffect(() => {
+    onReadyRef.current = onReady;
+    onErrorRef.current = onError;
+  });
 
   useEffect(() => {
     const container = containerRef.current;

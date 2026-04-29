@@ -48,8 +48,10 @@ export function RouteBuilderPage() {
 
     // Use real coordinates if available, otherwise generate approximate ones
     const orderRec = order as unknown as Record<string, unknown>;
+    /* eslint-disable react-hooks/purity -- Math.random fallback runs in a click handler, not during render */
     const lat = orderRec.deliveryLat ? Number(orderRec.deliveryLat) : 40.7128 + (Math.random() - 0.5) * 0.1;
     const lng = orderRec.deliveryLng ? Number(orderRec.deliveryLng) : -74.006 + (Math.random() - 0.5) * 0.1;
+    /* eslint-enable react-hooks/purity */
 
     setStops(prev => [...prev, {
       lat, lng,

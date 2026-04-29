@@ -65,14 +65,15 @@ function IndustryPicker({ onSelect, loading: isLoading }: { onSelect: (v: string
 }
 
 function useIsCompact(breakpoint = 720) {
-  const [isCompact, setIsCompact] = useState(
-    typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false,
+  const [isCompact, setIsCompact] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia(`(max-width: ${breakpoint}px)`).matches
+      : false,
   );
 
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
     const handler = (event: MediaQueryListEvent) => setIsCompact(event.matches);
-    setIsCompact(mql.matches);
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);
   }, [breakpoint]);

@@ -15,7 +15,7 @@ const POLICIES = [
 
 const log = logger.child({ worker: 'data-retention' });
 
-export async function processDataRetention(job: Job) {
+export async function processDataRetention(_job: Job) {
   log.info('Running data retention cleanup');
   const results: Record<string, number> = {};
 

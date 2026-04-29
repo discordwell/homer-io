@@ -35,10 +35,10 @@ export function AutoDispatchPanel() {
   const [result, setResult] = useState<DispatchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Caller is responsible for setting loadingStats=true (initial state is
+  // true, so the mount-time effect doesn't need to).
   async function fetchStats() {
-    setLoadingStats(true);
     try {
-      // Fetch unassigned orders count and available drivers count
       const [ordersRes, driversRes] = await Promise.all([
         api.get<{ items: unknown[]; total: number }>('/orders?page=1&limit=1&status=received&unassigned=true'),
         api.get<{ items: unknown[]; total: number }>('/fleet/drivers?page=1&limit=1&status=available'),
@@ -56,7 +56,13 @@ export function AutoDispatchPanel() {
   }
 
   useEffect(() => {
-    fetchStats();
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      await fetchStats();
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleRun() {
@@ -79,11 +85,13 @@ export function AutoDispatchPanel() {
   function handleReset() {
     setResult(null);
     setError(null);
+    setLoadingStats(true);
     fetchStats();
   }
 
   function handleConfirmed() {
     // Refresh stats after confirmation
+    setLoadingStats(true);
     fetchStats();
   }
 

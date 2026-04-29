@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { requestPasswordResetSchema, resetPasswordSchema, verifyEmailSchema } from '@homer-io/shared';
 import { HttpError } from '../lib/errors.js';
 

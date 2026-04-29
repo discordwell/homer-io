@@ -57,7 +57,7 @@ export default function StopDetailScreen() {
         minimumAge={features.includes('id_verification') ? 21 : undefined}
         isColdChain={features.includes('cold_chain') ? stop.isColdChain : undefined}
         requireDobVerification={features.includes('dob_verification') ? !!stop.patientDob : undefined}
-        patientDob={features.includes('dob_verification') ? stop.patientDob : undefined}
+        patientDob={features.includes('dob_verification') ? (stop.patientDob ?? undefined) : undefined}
         onComplete={() => {
           setShowPOD(false);
           router.back();

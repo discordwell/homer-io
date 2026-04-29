@@ -4,7 +4,7 @@
  *   Google Routes (customer ETAs) → OSRM → haversine fallback
  */
 
-import { getDistanceMatrix, getRoute, isOsrmAvailable } from './osrm.js';
+import { getDistanceMatrix, getRoute } from './osrm.js';
 import { solveTSP, solveCVRPTW, tourDuration } from './vrp-solver.js';
 import type { CVRPTWInput, CVRPTWResult, VehicleCapacity, OrderDemand, TimeWindow } from './vrp-solver.js';
 import { computeRouteETAs } from './google-routes.js';
@@ -467,7 +467,7 @@ function estimateTotalDistance(
   coords: [number, number][],
   tour: number[],
   depotIndex: number | undefined,
-  usedOsrm: boolean,
+  _usedOsrm: boolean,
 ): number {
   let total = 0;
   let prev = depotIndex ?? tour[0];

@@ -3,7 +3,7 @@ import { View, Text, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platf
 import { useMessagesStore, type ChatMessage } from '@/stores/messages';
 import { useAuthStore } from '@/stores/auth';
 import { useSocket } from '@/hooks/useSocket';
-import { C, Size, Spacing, Radius, alpha } from '@/theme';
+import { C, Size, Spacing, Radius } from '@/theme';
 
 interface DriverChatProps {
   routeId?: string;
@@ -11,7 +11,7 @@ interface DriverChatProps {
 }
 
 export function DriverChat({ routeId, onClose }: DriverChatProps) {
-  const { messages, loading, fetchMessages, sendMessage, addMessage } = useMessagesStore();
+  const { messages, fetchMessages, sendMessage, addMessage } = useMessagesStore();
   const { user } = useAuthStore();
   const socket = useSocket();
   const [input, setInput] = useState('');

@@ -106,7 +106,7 @@ export function RegisterPage() {
         <GoogleSignInButton
           onSuccess={handleGoogleSuccess}
           onError={setError}
-          text="signup_with"
+          label="Sign up with Google"
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0' }}>

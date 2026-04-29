@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { C, F } from '../theme.js';
 import { useSocket } from '../hooks/useSocket.js';
 import { useTrackingStore, type DeliveryEventItem } from '../stores/tracking.js';
-import { useAuthStore } from '../stores/auth.js';
 import { useDemoStore } from '../stores/demo.js';
 import { LiveFleetMap } from '../components/LiveFleetMap.js';
 import { DeliveryEventFeed } from '../components/DeliveryEventFeed.js';

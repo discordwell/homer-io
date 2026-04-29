@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { WS_URL, WS_NAMESPACE } from '@/constants';
 import { getTokens } from '@/api/client';
@@ -7,27 +7,38 @@ import { useAuthStore } from '@/stores/auth';
 let socketInstance: Socket | null = null;
 
 export function useSocket(): Socket | null {
-  const socketRef = useRef<Socket | null>(null);
+  // The connected socket lives in state (not a ref) so consumers re-render
+  // when it becomes available — the previous ref-based version returned a
+  // stale null on the render after connect.
+  const [socket, setSocket] = useState<Socket | null>(null);
   const { isAuthenticated } = useAuthStore();
+
+  // Drop the cached socket as soon as we lose auth — adjust state during render
+  // so the effect body itself doesn't have to call setState synchronously.
+  const [seenAuth, setSeenAuth] = useState(isAuthenticated);
+  if (seenAuth !== isAuthenticated) {
+    setSeenAuth(isAuthenticated);
+    if (!isAuthenticated && socket) setSocket(null);
+  }
 
   useEffect(() => {
     if (!isAuthenticated) {
       socketInstance?.disconnect();
       socketInstance = null;
-      socketRef.current = null;
       return;
     }
 
-    if (socketInstance?.connected) {
-      socketRef.current = socketInstance;
-      return;
-    }
-
+    let cancelled = false;
     (async () => {
-      const { accessToken } = await getTokens();
-      if (!accessToken) return;
+      if (socketInstance?.connected) {
+        if (!cancelled) setSocket(socketInstance);
+        return;
+      }
 
-      const socket = io(`${WS_URL}${WS_NAMESPACE}`, {
+      const { accessToken } = await getTokens();
+      if (!accessToken || cancelled) return;
+
+      const newSocket = io(`${WS_URL}${WS_NAMESPACE}`, {
         auth: { token: accessToken },
         transports: ['websocket', 'polling'],
         reconnection: true,
@@ -35,29 +46,30 @@ export function useSocket(): Socket | null {
         reconnectionDelayMax: 10000,
       });
 
-      socket.on('connect', () => {
+      newSocket.on('connect', () => {
         console.log('[Socket] Connected');
       });
 
-      socket.on('connect_error', async (err) => {
+      newSocket.on('connect_error', async (err) => {
         console.warn('[Socket] Connection error:', err.message);
         // Try refreshing token
         const { accessToken: newToken } = await getTokens();
         if (newToken) {
-          socket.auth = { token: newToken };
+          newSocket.auth = { token: newToken };
         }
       });
 
-      socketInstance = socket;
-      socketRef.current = socket;
+      socketInstance = newSocket;
+      if (!cancelled) setSocket(newSocket);
     })();
 
     return () => {
+      cancelled = true;
       socketInstance?.disconnect();
       socketInstance = null;
-      socketRef.current = null;
+      setSocket(null);
     };
   }, [isAuthenticated]);
 
-  return socketRef.current;
+  return socket;
 }

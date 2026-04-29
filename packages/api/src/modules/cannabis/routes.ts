@@ -25,7 +25,7 @@ const listManifestsQuery = z.object({
 async function requireCannabis(request: FastifyRequest, reply: FastifyReply) {
   try {
     await requireCannabisIndustry(request.user.tenantId);
-  } catch (err) {
+  } catch {
     return reply.forbidden('This feature requires the cannabis industry');
   }
 }

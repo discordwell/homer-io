@@ -10,7 +10,7 @@ interface CashCollectionProps {
 }
 
 export function CashCollection({
-  orderId,
+  orderId: _orderId,
   expectedAmount,
   onComplete,
   onSkip,

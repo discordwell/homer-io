@@ -14,13 +14,23 @@ export function TelematicsDetailPanel({ open, connectionId, onClose }: Props) {
   const [detail, setDetail] = useState<TelematicsConnectionDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Reset on (open, connectionId) change — adjust state during render.
+  const fetchKey = open && connectionId ? connectionId : null;
+  const [lastKey, setLastKey] = useState<string | null>(fetchKey);
+  if (lastKey !== fetchKey) {
+    setLastKey(fetchKey);
+    setDetail(null);
+    setLoading(fetchKey !== null);
+  }
+
   useEffect(() => {
-    if (!open || !connectionId) { setDetail(null); return; }
-    setLoading(true);
-    getConnection(connectionId)
-      .then(setDetail)
-      .finally(() => setLoading(false));
-  }, [open, connectionId, getConnection]);
+    if (!fetchKey) return;
+    let cancelled = false;
+    getConnection(fetchKey)
+      .then((d) => { if (!cancelled) setDetail(d); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [fetchKey, getConnection]);
 
   async function handleReconnect() {
     if (!detail) return;

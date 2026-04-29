@@ -59,18 +59,19 @@ export function OrganizationTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (orgSettings) {
-      const branding = orgSettings.branding as Record<string, string> || {};
-      setForm({
-        timezone: orgSettings.timezone,
-        units: orgSettings.units,
-        industry: orgSettings.industry || '',
-        companyName: branding.companyName || '',
-        primaryColor: branding.primaryColor || '#F59E0B',
-      });
-    }
-  }, [orgSettings]);
+  // Sync form from orgSettings whenever it (re)loads — adjust state during render.
+  const [seenSettings, setSeenSettings] = useState(orgSettings);
+  if (seenSettings !== orgSettings && orgSettings) {
+    setSeenSettings(orgSettings);
+    const branding = orgSettings.branding as Record<string, string> || {};
+    setForm({
+      timezone: orgSettings.timezone,
+      units: orgSettings.units,
+      industry: orgSettings.industry || '',
+      companyName: branding.companyName || '',
+      primaryColor: branding.primaryColor || '#F59E0B',
+    });
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -256,7 +257,7 @@ export function OrganizationTab() {
                         try {
                           await updateSettings({ enabledFeatures: updated });
                           toast(`${feat.label} ${e.target.checked ? 'enabled' : 'disabled'}`, 'success');
-                        } catch (err) {
+                        } catch {
                           toast('Failed to update feature', 'error');
                         }
                       }}

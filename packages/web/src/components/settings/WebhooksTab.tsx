@@ -57,7 +57,6 @@ export function WebhooksTab() {
   const [deliveryLogEndpointId, setDeliveryLogEndpointId] = useState<string | null>(null);
 
   async function fetchEndpoints() {
-    setLoading(true);
     try {
       const data = await api.get<WebhookEndpoint[]>('/webhooks');
       setEndpoints(data);
@@ -69,7 +68,13 @@ export function WebhooksTab() {
   }
 
   useEffect(() => {
-    fetchEndpoints();
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      await fetchEndpoints();
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleCreate(data: { url: string; events: string[]; description?: string; isActive?: boolean }) {

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, boolean, integer, pgEnum, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, boolean, integer, pgEnum, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 export const roleEnum = pgEnum('user_role', ['owner', 'admin', 'dispatcher', 'driver']);

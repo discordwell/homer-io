@@ -83,29 +83,28 @@ export function PharmacyTab() {
   });
 
   useEffect(() => {
+    async function loadSettings() {
+      setLoading(true);
+      try {
+        const settings = await api.get<Partial<typeof form>>('/pharmacy/settings');
+        if (settings && Object.keys(settings).length > 0) {
+          setForm({
+            pharmacyLicenseNumber: settings.pharmacyLicenseNumber || '',
+            npi: settings.npi || '',
+            state: settings.state || '',
+            requireSignature: settings.requireSignature ?? true,
+            requireDobVerification: settings.requireDobVerification ?? true,
+            requireDeliveryPhoto: settings.requireDeliveryPhoto ?? true,
+            hipaaSafeDriverDisplay: settings.hipaaSafeDriverDisplay ?? true,
+            coldChainAlerts: settings.coldChainAlerts ?? false,
+            controlledSubstanceDefault: settings.controlledSubstanceDefault || 'signature_required',
+          });
+        }
+      } catch { /* first time — no settings yet */ }
+      setLoading(false);
+    }
     loadSettings();
   }, []);
-
-  async function loadSettings() {
-    setLoading(true);
-    try {
-      const settings = await api.get<Partial<typeof form>>('/pharmacy/settings');
-      if (settings && Object.keys(settings).length > 0) {
-        setForm({
-          pharmacyLicenseNumber: settings.pharmacyLicenseNumber || '',
-          npi: settings.npi || '',
-          state: settings.state || '',
-          requireSignature: settings.requireSignature ?? true,
-          requireDobVerification: settings.requireDobVerification ?? true,
-          requireDeliveryPhoto: settings.requireDeliveryPhoto ?? true,
-          hipaaSafeDriverDisplay: settings.hipaaSafeDriverDisplay ?? true,
-          coldChainAlerts: settings.coldChainAlerts ?? false,
-          controlledSubstanceDefault: settings.controlledSubstanceDefault || 'signature_required',
-        });
-      }
-    } catch { /* first time — no settings yet */ }
-    setLoading(false);
-  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

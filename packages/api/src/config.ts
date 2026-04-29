@@ -1,5 +1,6 @@
 const isProduction = process.env.NODE_ENV === 'production';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept alongside requireEnvAlways for future use
 function requireEnv(name: string): string {
   const val = process.env[name];
   if (!val && isProduction) {

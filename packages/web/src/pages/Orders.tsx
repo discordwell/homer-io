@@ -58,14 +58,15 @@ const emptyForm = {
 };
 
 function useIsCondensedOrders(breakpoint = 1100) {
-  const [isCondensed, setIsCondensed] = useState(
-    typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false,
+  const [isCondensed, setIsCondensed] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia(`(max-width: ${breakpoint}px)`).matches
+      : false,
   );
 
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
     const handler = (event: MediaQueryListEvent) => setIsCondensed(event.matches);
-    setIsCondensed(mql.matches);
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);
   }, [breakpoint]);
@@ -107,7 +108,12 @@ export function OrdersPage() {
       void fetchSettings();
     }
   }, [fetchSettings, orgSettings]);
-  useEffect(() => { setSelectedIds(new Set()); }, [orders]);
+  // Clear selection whenever the orders list changes — adjust state during render.
+  const [seenOrders, setSeenOrders] = useState(orders);
+  if (seenOrders !== orders) {
+    setSeenOrders(orders);
+    setSelectedIds(new Set());
+  }
 
   const intelRequestRef = React.useRef(0);
 

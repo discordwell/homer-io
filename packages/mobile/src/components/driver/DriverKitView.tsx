@@ -67,7 +67,12 @@ export function DriverKitView({ routeId, onDismiss }: DriverKitViewProps) {
   }, [routeId]);
 
   useEffect(() => {
-    fetchKit();
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      await fetchKit();
+    })();
+    return () => { cancelled = true; };
   }, [fetchKit]);
 
   const handleMarkLoaded = async () => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Modal } from '../Modal.js';
 import { FormField, inputStyle } from '../FormField.js';
 import { SelectField } from '../SelectField.js';
@@ -68,10 +68,15 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
   const [recipientType, setRecipientType] = useState('recipient');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  // Reset form whenever the modal opens or the template we're editing
+  // changes — adjust state during render.
+  const formKey = open ? (template?.id ?? '__new__') : null;
+  const [seenKey, setSeenKey] = useState<string | null>(formKey);
+  if (seenKey !== formKey) {
+    setSeenKey(formKey);
     if (template) {
       setTrigger(template.trigger);
-      setRecipientType((template as Record<string, unknown>).recipientType as string || 'recipient');
+      setRecipientType((template as unknown as Record<string, unknown>).recipientType as string || 'recipient');
       setChannel(template.channel);
       setSubject(template.subject || '');
       setBodyTemplate(template.bodyTemplate);
@@ -83,7 +88,7 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
       setBodyTemplate('');
       setIsActive(true);
     }
-  }, [template, open]);
+  }
 
   const preview = useMemo(() => {
     let text = bodyTemplate;
@@ -115,7 +120,10 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
         subject: channel === 'email' ? subject : undefined,
         bodyTemplate,
         isActive,
-        recipientType: recipientType as 'recipient' | 'sender' | 'both',
+        // recipientType isn't yet in the shared CreateTemplateInput schema;
+        // backend accepts the extra field. Cast through unknown to silence
+        // the structural-mismatch error until the schema is updated.
+        ...({ recipientType } as unknown as Record<string, never>),
       });
       onClose();
     } finally {

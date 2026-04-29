@@ -69,7 +69,7 @@ const INDUSTRY_QUICK_ACTIONS: Record<string, QuickAction[]> = {
   ],
 };
 
-function QuickActionsSection({ industry, ordersToday }: { industry: string; ordersToday: number }) {
+function QuickActionsSection({ industry }: { industry: string; ordersToday: number }) {
   const navigate = useNavigate();
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const actions = INDUSTRY_QUICK_ACTIONS[industry];

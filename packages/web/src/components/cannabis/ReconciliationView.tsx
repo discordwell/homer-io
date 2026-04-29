@@ -51,26 +51,25 @@ export function ReconciliationView({ kitId, onClose }: Props) {
   const [result, setResult] = useState<ReconcileResponse | null>(null);
 
   useEffect(() => {
-    loadKit();
-  }, [kitId]);
-
-  async function loadKit() {
-    setLoading(true);
-    try {
-      const data = await api.get<Kit>(`/cannabis/kits/${kitId}`);
-      setKit(data);
-      // Initialize returned quantities to 0
-      const initial: Record<string, number> = {};
-      for (const item of data.items) {
-        initial[item.id] = 0;
+    async function loadKit() {
+      setLoading(true);
+      try {
+        const data = await api.get<Kit>(`/cannabis/kits/${kitId}`);
+        setKit(data);
+        // Initialize returned quantities to 0
+        const initial: Record<string, number> = {};
+        for (const item of data.items) {
+          initial[item.id] = 0;
+        }
+        setReturnedQtys(initial);
+      } catch (err) {
+        toast(err instanceof Error ? err.message : 'Failed to load kit', 'error');
+      } finally {
+        setLoading(false);
       }
-      setReturnedQtys(initial);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to load kit', 'error');
-    } finally {
-      setLoading(false);
     }
-  }
+    loadKit();
+  }, [kitId, toast]);
 
   function updateReturnedQty(itemId: string, value: string) {
     const num = parseInt(value, 10);

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { nlopsRequestSchema, sseEvent } from '@homer-io/shared';
 import { getToolsForRole, getTool, TOTAL_TOOL_COUNT } from '../lib/ai/tools/index.js';
 import { summarizeResult } from '../lib/ai/tools/types.js';

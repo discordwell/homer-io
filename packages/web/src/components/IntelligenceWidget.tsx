@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../api/client.js';
 import { KPICard } from './KPICard.js';
 import { C, F } from '../theme.js';
@@ -29,26 +29,24 @@ export function IntelligenceWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchInsights = useCallback(async (cancelled: () => boolean) => {
-    try {
-      const result = await api.get<InsightsData>('/intelligence/insights');
-      if (cancelled()) return;
-      setData(result);
-      setError(null);
-    } catch (err) {
-      if (cancelled()) return;
-      console.warn('IntelligenceWidget: failed to fetch insights', err);
-      setError(err instanceof Error ? err.message : 'Failed to load intelligence');
-    } finally {
-      if (!cancelled()) setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     let cancelled = false;
-    fetchInsights(() => cancelled);
+    (async () => {
+      try {
+        const result = await api.get<InsightsData>('/intelligence/insights');
+        if (cancelled) return;
+        setData(result);
+        setError(null);
+      } catch (err) {
+        if (cancelled) return;
+        console.warn('IntelligenceWidget: failed to fetch insights', err);
+        setError(err instanceof Error ? err.message : 'Failed to load intelligence');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
     return () => { cancelled = true; };
-  }, [fetchInsights]);
+  }, []);
 
   if (loading) {
     return (

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   createMigrationJobSchema,
-  migrationJobResponseSchema,
   migrationPlatformEnum,
   migrationCsvDataSchema,
   validateMigrationCredentialsSchema,

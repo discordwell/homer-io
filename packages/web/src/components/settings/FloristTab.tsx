@@ -24,24 +24,23 @@ export function FloristTab() {
   });
 
   useEffect(() => {
+    async function loadSettings() {
+      setLoading(true);
+      try {
+        const settings = await api.get<FloristSettings>('/florist/settings');
+        if (settings) {
+          setForm({
+            autoRequirePhoto: settings.autoRequirePhoto ?? true,
+            defaultGiftDelivery: settings.defaultGiftDelivery ?? false,
+            defaultGiftMessage: settings.defaultGiftMessage ?? '',
+            defaultDeliveryInstructions: settings.defaultDeliveryInstructions ?? '',
+          });
+        }
+      } catch { /* first time — no settings yet */ }
+      setLoading(false);
+    }
     loadSettings();
   }, []);
-
-  async function loadSettings() {
-    setLoading(true);
-    try {
-      const settings = await api.get<FloristSettings>('/florist/settings');
-      if (settings) {
-        setForm({
-          autoRequirePhoto: settings.autoRequirePhoto ?? true,
-          defaultGiftDelivery: settings.defaultGiftDelivery ?? false,
-          defaultGiftMessage: settings.defaultGiftMessage ?? '',
-          defaultDeliveryInstructions: settings.defaultDeliveryInstructions ?? '',
-        });
-      }
-    } catch { /* first time — no settings yet */ }
-    setLoading(false);
-  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

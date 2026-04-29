@@ -189,7 +189,6 @@ describe('OptimoRouteConnector', () => {
 
   it('maps orders with location data', async () => {
     const today = new Date();
-    const dateStr = today.toISOString().split('T')[0];
     mockFetch.mockReturnValueOnce(jsonResponse({
       orders: [{
         orderNo: 'OPT-001',

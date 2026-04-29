@@ -6,7 +6,7 @@ import { vehicles } from '../../lib/db/schema/vehicles.js';
 import { drivers } from '../../lib/db/schema/drivers.js';
 import { orders } from '../../lib/db/schema/orders.js';
 import { routes } from '../../lib/db/schema/routes.js';
-import { generateLocalAddresses, getNearestCity, type GeneratedAddress } from '../../lib/geocoding.js';
+import { generateLocalAddresses, type GeneratedAddress } from '../../lib/geocoding.js';
 import { generateIndustryOrders, pickIndustryItem } from './industry-data.js';
 import { notificationTemplates } from '../../lib/db/schema/notification-templates.js';
 

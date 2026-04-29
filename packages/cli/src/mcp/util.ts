@@ -47,7 +47,6 @@ export function registerTool(
   handler: (args: Record<string, string | undefined>) => Promise<CallToolResult>,
 ): void {
   if (inputSchema) {
-    // @ts-expect-error TS2589 - MCP SDK type depth issue with zod v4 + NodeNext
     server.tool(name, description, inputSchema, handler);
   } else {
     server.tool(name, description, handler as () => Promise<CallToolResult>);

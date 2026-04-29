@@ -125,7 +125,7 @@ export async function markAsRead(
 }
 
 export async function markAllAsRead(tenantId: string, userId: string) {
-  const result = await db
+  await db
     .update(notifications)
     .set({ readAt: new Date() })
     .where(

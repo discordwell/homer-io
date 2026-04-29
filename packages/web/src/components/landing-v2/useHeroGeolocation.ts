@@ -11,15 +11,16 @@ export interface HeroGeoResult {
 const TIMEOUT_MS = 3000;
 
 export function useHeroGeolocation(): HeroGeoResult {
-  const [result, setResult] = useState<HeroGeoResult>({
-    lat: null,
-    lng: null,
-    status: 'pending',
+  const [result, setResult] = useState<HeroGeoResult>(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      return { lat: null, lng: null, status: 'denied' };
+    }
+    return { lat: null, lng: null, status: 'pending' };
   });
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setResult({ lat: null, lng: null, status: 'denied' });
+      // already initialised to 'denied' above
       return;
     }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
 // We test the core logic by extracting and simulating the geolocation behavior
 // without needing a React renderer (the hook is thin enough to unit-test its logic)

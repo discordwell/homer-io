@@ -29,6 +29,9 @@ export interface OrderStop {
   timeWindowStart: string | null;
   timeWindowEnd: string | null;
   completedAt: string | null;
+  // Vertical-specific optional fields surfaced via feature flags
+  isColdChain?: boolean;
+  patientDob?: string | null;
 }
 
 export interface DriverRoute {

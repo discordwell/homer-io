@@ -63,7 +63,11 @@ export function PrivacyTab() {
   }
 
   useEffect(() => {
-    fetchData();
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      await fetchData();
+    })();
 
     // Check for deletion confirmation token in URL
     const params = new URLSearchParams(window.location.search);
@@ -71,15 +75,18 @@ export function PrivacyTab() {
     if (confirmToken) {
       api.post('/gdpr/delete-account/confirm', { token: confirmToken })
         .then(() => {
+          if (cancelled) return;
           toast('Account deletion confirmed', 'success');
-          fetchData();
+          setLoading(true);
+          return fetchData();
         })
-        .catch(() => toast('Invalid or expired confirmation link', 'error'));
+        .catch(() => { if (!cancelled) toast('Invalid or expired confirmation link', 'error'); });
       // Clean up URL
       const url = new URL(window.location.href);
       url.searchParams.delete('confirm-delete');
       window.history.replaceState({}, '', url.toString());
     }
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

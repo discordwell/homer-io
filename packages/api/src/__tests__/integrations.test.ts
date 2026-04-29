@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createConnectionSchema, integrationPlatformEnum, platformInfoSchema } from '@homer-io/shared';
+import { createConnectionSchema, integrationPlatformEnum } from '@homer-io/shared';
 
 describe('Integration schemas', () => {
   it('validates create connection input', () => {

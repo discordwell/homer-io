@@ -1,10 +1,9 @@
 import type { Job } from 'bullmq';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../lib/db.js';
-import { config } from '../lib/config.js';
 import { orders, routes } from '../lib/schema.js';
 import { logger } from '../lib/logger.js';
-import { solveTSP, tourDuration } from './lib/vrp-solver.js';
+import { solveTSP } from './lib/vrp-solver.js';
 import { getDistanceMatrix } from './lib/osrm.js';
 import { haversineDistance } from './lib/geo.js';
 

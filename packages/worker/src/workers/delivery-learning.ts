@@ -346,6 +346,7 @@ async function extractPodInsights(
   // Sanitize notes: truncate to 500 chars, strip control characters
   const sanitizedNotes = pod.notes
     .slice(0, 500)
+    // eslint-disable-next-line no-control-regex -- intentionally stripping control chars from user-submitted POD notes
     .replace(/[\x00-\x1f\x7f]/g, ' ')
     .trim();
 

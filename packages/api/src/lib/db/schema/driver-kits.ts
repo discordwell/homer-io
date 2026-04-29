@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, numeric, integer, text, jsonb, index, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, timestamp, numeric, integer, text, jsonb, index, pgEnum } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { routes } from './routes.js';
 import { drivers } from './drivers.js';

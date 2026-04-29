@@ -184,7 +184,7 @@ async function runInitialSync(connectionId: string): Promise<void> {
   const conn = await fetchConnectionById(connectionId);
   if (!conn) return;
   const adapter = getTelematicsAdapter(conn.provider);
-  let auth = decryptAuth(conn.authMaterial);
+  const auth = decryptAuth(conn.authMaterial);
 
   if (adapter.listVehicles) {
     let cursor: string | undefined;

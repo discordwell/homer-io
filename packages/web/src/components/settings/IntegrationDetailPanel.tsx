@@ -53,17 +53,28 @@ export function IntegrationDetailPanel({ open, onClose, connection }: Integratio
   const [ordersPagination, setOrdersPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [autoImport, setAutoImport] = useState(connection?.autoImport ?? true);
 
-  useEffect(() => {
+  // Sync `autoImport` from connection prop on connection.id change —
+  // adjust state during render.
+  const connectionId = connection?.id ?? null;
+  const [seenConnId, setSeenConnId] = useState<string | null>(connectionId);
+  if (seenConnId !== connectionId) {
+    setSeenConnId(connectionId);
     if (connection) {
       setAutoImport(connection.autoImport);
-      fetchOrders(1);
+      setOrdersLoading(true);
     }
+  }
+
+  useEffect(() => {
+    if (!connection) return;
+    void fetchOrders(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection?.id]);
 
+  // Caller is responsible for setting ordersLoading=true when needed; this
+  // keeps the effect free of synchronous setState.
   async function fetchOrders(page: number) {
     if (!connection) return;
-    setOrdersLoading(true);
     try {
       const result = await loadOrders(connection.id, page, 10);
       setOrders(result.data);
@@ -81,6 +92,7 @@ export function IntegrationDetailPanel({ open, onClose, connection }: Integratio
     try {
       const result = await syncConnection(connection.id);
       toast(`Synced: ${result.imported} imported, ${result.skipped} skipped, ${result.failed} failed`, 'success');
+      setOrdersLoading(true);
       await fetchOrders(1);
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Sync failed', 'error');
@@ -246,7 +258,7 @@ export function IntegrationDetailPanel({ open, onClose, connection }: Integratio
               {ordersPagination.totalPages > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
                   <button
-                    onClick={() => fetchOrders(ordersPagination.page - 1)}
+                    onClick={() => { setOrdersLoading(true); void fetchOrders(ordersPagination.page - 1); }}
                     disabled={ordersPagination.page <= 1}
                     style={{ ...paginationBtnStyle, opacity: ordersPagination.page <= 1 ? 0.3 : 1 }}
                   >
@@ -256,7 +268,7 @@ export function IntegrationDetailPanel({ open, onClose, connection }: Integratio
                     {ordersPagination.page} / {ordersPagination.totalPages}
                   </span>
                   <button
-                    onClick={() => fetchOrders(ordersPagination.page + 1)}
+                    onClick={() => { setOrdersLoading(true); void fetchOrders(ordersPagination.page + 1); }}
                     disabled={ordersPagination.page >= ordersPagination.totalPages}
                     style={{ ...paginationBtnStyle, opacity: ordersPagination.page >= ordersPagination.totalPages ? 0.3 : 1 }}
                   >
