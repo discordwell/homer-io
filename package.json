@@ -48,6 +48,16 @@
     "serialize-javascript": "^7.0.5",
     "@esbuild-kit/core-utils": {
       "esbuild": ">=0.25.0"
+    },
+    "@expo/metro-config": {
+      "postcss": "^8.5.10"
+    },
+    "@expo/cli": {
+      "postcss": "^8.5.10"
+    },
+    "postcss": "^8.5.10",
+    "xcode": {
+      "uuid": "^14.0.0"
     }
   }
 }
