@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
-    "test": "echo 'CLI tests not yet configured' && exit 0",
+    "test": "vitest run",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit"
   },
@@ -22,6 +22,7 @@
   "devDependencies": {
     "typescript": "^5.5.0",
     "tsx": "^4.0.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "vitest": "^3.2.0"
   }
 }
