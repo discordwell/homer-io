@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import chalk from 'chalk';
 import { printTable, printJson, output, info, success, error } from '../output.js';
 
-// chalk may or may not emit ANSI codes depending on TTY detection, so all
-// assertions strip escape sequences before comparing.
+// Force plain output regardless of TTY/FORCE_COLOR, and strip any escape
+// sequences as a second line of defense, so assertions compare bare strings.
+chalk.level = 0;
 // eslint-disable-next-line no-control-regex
-const stripAnsi = (s: string) => s.replace(/\[[0-9;]*m/g, '');
+const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '');
 
 describe('output', () => {
   let logSpy: ReturnType<typeof vi.spyOn>;

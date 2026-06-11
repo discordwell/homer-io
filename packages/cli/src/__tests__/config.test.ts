@@ -5,7 +5,7 @@ import { join } from 'node:path';
 // config.ts resolves the config path from homedir() at import time, so the
 // mock must be in place before the module loads.
 const mocked = vi.hoisted(() => ({
-  home: `${process.env.TMPDIR || '/tmp'}/homer-cli-config-test-${process.pid}`,
+  home: `${(process.env.TMPDIR || '/tmp').replace(/\/+$/, '')}/homer-cli-config-test-${process.pid}`,
 }));
 
 vi.mock('node:os', async (importOriginal) => {

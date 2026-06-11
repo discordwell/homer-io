@@ -15,6 +15,7 @@
     "build": "turbo build",
     "test": "turbo test",
     "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
     "audit:prep": "node scripts/audit/prepare.mjs",
     "audit:inventory": "node scripts/audit/inventory.mjs",
     "audit:cycle": "node scripts/audit/cycle.mjs",

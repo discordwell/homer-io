@@ -25,7 +25,7 @@ Node.js 22 · Fastify 5 · PostgreSQL 16 + PostGIS · Drizzle ORM · Redis 7 (ca
 
 ## Getting Started
 
-Prerequisites: Node.js 22+, PostgreSQL 16 with PostGIS, Redis 7. MinIO is optional (needed for proof-of-delivery file storage), as is a self-hosted OSRM instance (route optimization falls back to haversine distances without it).
+Prerequisites: Node.js 22.9+ (dev scripts use `--env-file-if-exists`), PostgreSQL 16 with PostGIS, Redis 7. MinIO is optional (needed for proof-of-delivery file storage), as is a self-hosted OSRM instance (route optimization falls back to haversine distances without it).
 
 ```bash
 npm install
@@ -36,7 +36,8 @@ npm install
 # production loads it via PM2's --env-file instead.
 cp .env.example .env
 
-# Apply committed SQL migrations (drizzle/*.sql, in order)
+# Apply committed SQL migrations (drizzle/*.sql, in order). Reads DATABASE_URL
+# from the shell, defaulting to the same localhost URL as .env.example.
 npm run -w @homer-io/api db:migrate:run
 
 # Run the stack (separate terminals)
@@ -53,7 +54,7 @@ API docs (Swagger) are served at `/api/docs` once the API is up.
 npm run build        # turbo build across all packages
 npm test             # turbo test (vitest) across all packages
 npm run lint         # eslint across all packages
-npx turbo typecheck  # tsc --noEmit across all packages
+npm run typecheck    # tsc --noEmit across all packages
 
 npm run db:generate  # generate Drizzle migration from schema changes
 npm run audit:cycle  # run the productionization audit harness (see docs/)

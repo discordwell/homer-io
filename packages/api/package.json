@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:migrate:run": "tsx --env-file-if-exists=../../.env src/lib/db/migrate.ts",
+    "db:migrate:run": "tsx src/lib/db/migrate.ts",
     "//db:push": "LOCAL DEV ONLY. Pushes schema directly; bypasses migration history. Production uses db:migrate:run (applies committed drizzle/*.sql files in order)."
   },
   "dependencies": {
