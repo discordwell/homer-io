@@ -1,9 +1,10 @@
-import type { Job } from 'bullmq';
+import { Queue, type Job } from 'bullmq';
 import { eq, and, sql } from 'drizzle-orm';
 import { createHmac } from 'crypto';
 import { db } from '../lib/db.js';
 import { webhookEndpoints, webhookDeliveries } from '../lib/schema.js';
 import { logger } from '../lib/logger.js';
+import { config } from '../lib/config.js';
 
 interface WebhookDeliveryJobData {
   deliveryId: string;
@@ -11,10 +12,30 @@ interface WebhookDeliveryJobData {
   tenantId: string;
 }
 
-// Retry delays: 30s, 2m, 15m, 1h, 4h
+// Retry backoff ladder. At WEBHOOK_MAX_ATTEMPTS = 5 (1 initial + 4 retries) the
+// reachable delays are 30s → 2m → 15m → 1h; the 4h tail is reserved headroom.
 const RETRY_DELAYS = [30_000, 120_000, 900_000, 3_600_000, 14_400_000];
 
+export const WEBHOOK_MAX_ATTEMPTS = 5;
+
+// Retries are driven here, not by BullMQ's `attempts` option: the API enqueues
+// each delivery with attempts:1, so on failure the worker re-enqueues a delayed
+// job through this queue. (A previous version threw "to let BullMQ retry" while
+// attempts was 1 — so a job that failed its single attempt was dead-lettered and
+// transient failures were silently never retried, the whole ladder dead code.)
+const webhookQueue = new Queue('webhook-delivery', { connection: { url: config.redis.url } });
+
 const log = logger.child({ worker: 'webhook-delivery' });
+
+/**
+ * Delay (ms) before the next delivery attempt, or null when the retry ladder is
+ * exhausted. `attempt` is the 1-based number of the attempt that just failed:
+ * 1 → 30s, 2 → 2m, 3 → 15m, 4 → 1h; attempt >= WEBHOOK_MAX_ATTEMPTS → null (give up).
+ */
+export function nextRetryDelayMs(attempt: number): number | null {
+  if (attempt >= WEBHOOK_MAX_ATTEMPTS) return null;
+  return RETRY_DELAYS[Math.min(attempt - 1, RETRY_DELAYS.length - 1)];
+}
 
 // Block SSRF at delivery time: defense-in-depth against DNS-rebinding between
 // create-time validation and the actual HTTP request. This is the sync /
@@ -102,9 +123,11 @@ export async function processWebhookDelivery(job: Job<WebhookDeliveryJobData>) {
   // SSRF protection: block internal/private URLs
   if (isBlockedUrl(endpoint.url)) {
     log.error('Blocked SSRF attempt', { url: endpoint.url, deliveryId });
+    // Terminal failure: a blocked target won't become deliverable on retry, so
+    // mark the ladder exhausted (attempts at the cap) and do not re-enqueue.
     await db.update(webhookDeliveries).set({
       status: 'failed',
-      attempts: 5,
+      attempts: WEBHOOK_MAX_ATTEMPTS,
       responseBody: 'Blocked: URL targets a private or internal address',
     }).where(eq(webhookDeliveries.id, deliveryId));
     return;
@@ -155,12 +178,15 @@ export async function processWebhookDelivery(job: Job<WebhookDeliveryJobData>) {
     const attempt = (delivery.attempts || 0) + 1;
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
 
-    // Calculate next retry
-    const retryIndex = Math.min(attempt - 1, RETRY_DELAYS.length - 1);
-    const nextRetryAt = attempt < 5 ? new Date(Date.now() + RETRY_DELAYS[retryIndex]) : null;
+    // Schedule the next attempt. delayMs is null once the ladder is exhausted,
+    // which both marks the delivery failed and stops re-enqueuing. Reusing the
+    // same delayMs for the persisted nextRetryAt and the BullMQ delay keeps the
+    // advertised retry time and the actual one identical.
+    const delayMs = nextRetryDelayMs(attempt);
+    const nextRetryAt = delayMs !== null ? new Date(Date.now() + delayMs) : null;
 
     await db.update(webhookDeliveries).set({
-      status: attempt >= 5 ? 'failed' : 'pending',
+      status: delayMs !== null ? 'pending' : 'failed',
       attempts: attempt,
       responseBody: errorMsg.slice(0, 1000),
       nextRetryAt,
@@ -178,12 +204,16 @@ export async function processWebhookDelivery(job: Job<WebhookDeliveryJobData>) {
       url: endpoint.url,
       error: errorMsg,
       attempt,
-      maxAttempts: 5,
+      maxAttempts: WEBHOOK_MAX_ATTEMPTS,
       deliveryId,
+      willRetryInMs: delayMs,
     });
 
-    if (attempt < 5) {
-      throw error; // Let BullMQ retry
+    if (delayMs !== null) {
+      // Re-enqueue as a delayed job to drive the retry ladder. We intentionally
+      // do NOT rethrow: with attempts:1 a throw dead-letters the job instead of
+      // retrying it.
+      await webhookQueue.add('deliver', { deliveryId, endpointId, tenantId }, { delay: delayMs });
     }
   }
 }

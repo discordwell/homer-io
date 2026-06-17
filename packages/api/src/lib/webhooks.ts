@@ -48,6 +48,10 @@ export async function enqueueWebhookDelivery(deliveryId: string, endpointId: str
     endpointId,
     tenantId,
   }, {
-    attempts: 1, // Worker handles its own retry logic internally
+    // One BullMQ attempt per job. On failure the worker re-enqueues a delayed
+    // retry itself (packages/worker .../webhook-delivery.ts), driving the
+    // 30s→1h backoff ladder, so BullMQ-level retries must stay disabled here —
+    // raising this would double-retry.
+    attempts: 1,
   });
 }

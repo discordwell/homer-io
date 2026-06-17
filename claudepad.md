@@ -2,6 +2,13 @@
 
 ## Session Summaries
 
+### 2026-06-17T20:30 UTC — Fix: webhook deliveries never retried on transient failure (landed WIP + tests)
+- **Bug**: The API enqueues each webhook delivery with BullMQ `attempts: 1`, but the worker's failure path threw `error` "to let BullMQ retry". With only one attempt a throw dead-letters the job — so transient endpoint failures (5xx, timeout, connection reset) were **never retried**, and the whole 30s→2m→15m→1h backoff ladder (`RETRY_DELAYS`, `nextRetryAt`) was dead code. Webhook reliability had silently degraded to single-shot.
+- **Fix** (uncommitted WIP, now completed): the worker catches the error and **re-enqueues a delayed job** through its own `Queue('webhook-delivery')` instance instead of rethrowing; extracted `WEBHOOK_MAX_ATTEMPTS = 5` + `nextRetryDelayMs(attempt)` (pure, exported, testable). One `delayMs` drives both the persisted `nextRetryAt` and the BullMQ `delay`, so advertised and actual retry time stay identical. The API-side `attempts: 1` is kept (a new comment explains it must stay 1, else retries double).
+- **Cleanup**: the SSRF-block path still hardcoded `attempts: 5` — migrated to `WEBHOOK_MAX_ATTEMPTS` (same value) to kill the last magic number and make "terminal, don't retry" explicit. Behavior unchanged.
+- **Tests**: new `packages/worker/src/workers/webhook-delivery.test.ts` (9 tests) — `nextRetryDelayMs` ladder + boundaries + monotonicity; and `processWebhookDelivery` behavior: a transient failure re-enqueues with the correct delay and does NOT throw (the regression guard for the bug), 2nd-attempt delay, exhaustion → `failed` + no re-enqueue, success → no re-enqueue, SSRF target → terminal + no fetch/re-enqueue. Mocks bullmq/db/logger via `vi.hoisted` (matches the telematics-service.test.ts pattern).
+- **Verification**: worker suite 18 (was 9) green; worker typecheck + lint clean; API typecheck + webhook tests (14) green. A 2-angle code-review subagent (correctness + cleanup/conventions) reviewed the staged diff — the correctness pass surfaced the hardcoded-5 straggler (applied), the cleanup pass came back clean. Committed on `main`; not pushed (orchestrator handles push).
+
 ### 2026-06-17T09:30 UTC — Fix: route-optimizer 2-opt was degrading routes
 - **Bug**: The in-house VRP/TSP optimizer's 2-opt local search computed each move's gain for reversing segment `[i..j]` but then reversed `[i+1..j]` — an off-by-one mismatch between the *evaluated* and *applied* move. Net effect: it frequently accepted non-improving moves and got stuck **worse than its own nearest-neighbor starting tour**. Measured over 3k random instances: cost rose vs. the NN start in **42%** of cases; **71%** were suboptimal vs. brute force (avg 23%, worst 126% over optimal). This is the product's headline "route optimization" feature silently producing worse routes.
 - **Root cause**: `twoOptDelta` used the `tour[i-1]→tour[i]` boundary edge while `reverse(result, i+1, j)` reversed a different segment; the gain never matched the change. The worker's duplicate copy (`packages/worker/.../lib/vrp-solver.ts`) was self-consistent but optimized a *closed*-tour objective (phantom return-to-depot leg) while `tourDuration` measures an *open* path — so it too raised real cost ~40% of the time.
@@ -202,17 +209,6 @@
 - **Backend additions**: device_tokens table, POST/DELETE /api/devices/(un)register, notification worker sends push via expo-server-sdk
 - **Bundle sizes**: iOS 3.2MB, Android 3.3MB. TypeScript clean. All 4 packages build clean.
 - **Next**: EAS project ID setup, app icons/splash, store assets, submission
-
-
-### 2026-03-20T23:30 UTC — Mobile App Phase 0+1: Expo/React Native Foundation + Driver Core
-- **New package**: `packages/mobile/` — Expo SDK 55, React Native 0.83, Expo Router (file-based navigation)
-- **Phase 0 (Foundation)**: app.config.ts (io.homer.mobile), metro.config.js (monorepo watchFolders), eas.json (3 build profiles), turbo.json (mobile tasks), theme.ts (raw hex tokens from web CSS vars), MMKV v4 Zustand adapter
-- **Phase 1 (Auth + Driver Core)**: API client with expo-secure-store JWT storage + token refresh, auth store (MMKV persist + secure tokens), driver store (identical shape to web), role-based auth gating in root layout
-- **Screens**: Login, Register, Driver Route (FlatList + StopCards + progress bar), Stop Detail (recipient info + navigate + POD/failure actions), Driver Profile (status toggle + break + sign out)
-- **Components**: StopCard, NavigateButton (platform-aware Maps link), PhotoCapture (expo-image-picker camera), SignaturePad (react-native-signature-canvas), PODFlow (4-step wizard), DeliveryFailureFlow (reason selector + photo + notes), Badge, LoadingSpinner, EmptyState
-- **Navigation**: 3 route groups — (auth) stack, (driver) bottom tabs (Route/Map/Profile), (dispatch) bottom tabs (Dashboard/Orders/Map/AI/More) with sub-screens
-- **40 source files** total. TypeScript compiles clean. iOS + Android bundles export successfully (2.8MB).
-- **Next**: Phase 2 (background GPS, push notifications, biometric, offline POD, live map)
 
 
 ---

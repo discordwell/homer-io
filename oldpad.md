@@ -2,6 +2,17 @@
 
 Older entries rotated out of claudepad.md (20-summary cap). Newest first.
 
+### 2026-03-20T23:30 UTC — Mobile App Phase 0+1: Expo/React Native Foundation + Driver Core
+- **New package**: `packages/mobile/` — Expo SDK 55, React Native 0.83, Expo Router (file-based navigation)
+- **Phase 0 (Foundation)**: app.config.ts (io.homer.mobile), metro.config.js (monorepo watchFolders), eas.json (3 build profiles), turbo.json (mobile tasks), theme.ts (raw hex tokens from web CSS vars), MMKV v4 Zustand adapter
+- **Phase 1 (Auth + Driver Core)**: API client with expo-secure-store JWT storage + token refresh, auth store (MMKV persist + secure tokens), driver store (identical shape to web), role-based auth gating in root layout
+- **Screens**: Login, Register, Driver Route (FlatList + StopCards + progress bar), Stop Detail (recipient info + navigate + POD/failure actions), Driver Profile (status toggle + break + sign out)
+- **Components**: StopCard, NavigateButton (platform-aware Maps link), PhotoCapture (expo-image-picker camera), SignaturePad (react-native-signature-canvas), PODFlow (4-step wizard), DeliveryFailureFlow (reason selector + photo + notes), Badge, LoadingSpinner, EmptyState
+- **Navigation**: 3 route groups — (auth) stack, (driver) bottom tabs (Route/Map/Profile), (dispatch) bottom tabs (Dashboard/Orders/Map/AI/More) with sub-screens
+- **40 source files** total. TypeScript compiles clean. iOS + Android bundles export successfully (2.8MB).
+- **Next**: Phase 2 (background GPS, push notifications, biometric, offline POD, live map)
+
+
 ### 2026-03-20T22:00 UTC — Fluid Responsive (Smooth Resize)
 - **Approach**: Replaced hard-snap breakpoints with fluid CSS inspired by Vercel/Linear patterns.
 - **CSS tokens**: Added `--page-pad`, `--page-heading`, `--card-gap`, `--section-gap` as `clamp()` values in `:root`.
