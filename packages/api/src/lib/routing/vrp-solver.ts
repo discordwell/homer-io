@@ -125,53 +125,64 @@ function nearestNeighbor(
   return tour;
 }
 
+/**
+ * Improve a tour with 2-opt local search over the OPEN delivery path
+ * (depot → stop → stop → … with no return leg) — exactly the objective that
+ * {@link tourDuration} measures. Each candidate reversal only changes its two
+ * boundary edges (the reversed interior keeps the same length for a symmetric
+ * matrix), so a move is evaluated in O(1); this assumes the (near-)symmetric
+ * duration matrices produced by haversine and OSRM driving times. The depot,
+ * when present, is a fixed anchor at the head of the path and is never reordered.
+ *
+ * For a symmetric matrix every accepted move strictly lowers the open-path cost,
+ * so the result is at least as good as the input tour. OSRM's slight directional
+ * asymmetry can, rarely, let a boundary-only gain hide a larger interior change —
+ * a sub-percent effect in practice, and never the gross regressions the previous
+ * off-by-one (gain computed for one segment, a different segment reversed) caused.
+ */
 function twoOpt(
   matrix: number[][],
   tour: number[],
   depotIndex?: number,
 ): number[] {
-  const n = tour.length;
-  if (n < 3) return tour;
+  if (tour.length < 2) return tour;
 
-  const result = [...tour];
+  // Operate on the full path including the depot so the depot→firstStop leg is
+  // optimized too. seq[0] is the fixed start; only seq[1..] gets reordered.
+  const seq = depotIndex !== undefined ? [depotIndex, ...tour] : [...tour];
+  const m = seq.length;
+  const EPS = 1e-9; // ignore floating-point-noise "improvements"
   let improved = true;
   let iterations = 0;
-  const maxIterations = 1000; // Safety bound
+  const maxIterations = 1000; // safety bound
 
   while (improved && iterations < maxIterations) {
     improved = false;
     iterations++;
 
-    for (let i = 0; i < n - 1; i++) {
-      for (let j = i + 2; j < n; j++) {
-        const delta = twoOptDelta(matrix, result, i, j, depotIndex);
-        if (delta < -0.001) { // numerical stability
-          // Reverse the segment between i+1 and j
-          reverse(result, i + 1, j);
+    // Reversing seq[p+1..q] swaps edges (p,p+1) & (q,q+1) for (p,q) & (p+1,q+1).
+    // When q is the last node there is no (q,q+1) edge (open path), so only the
+    // single left edge changes.
+    for (let p = 0; p < m - 2; p++) {
+      const anchor = seq[p];
+      for (let q = p + 2; q < m; q++) {
+        const segStart = seq[p + 1];
+        const segEnd = seq[q];
+        const hasTail = q < m - 1;
+        const tail = hasTail ? seq[q + 1] : -1;
+
+        const oldCost = matrix[anchor][segStart] + (hasTail ? matrix[segEnd][tail] : 0);
+        const newCost = matrix[anchor][segEnd] + (hasTail ? matrix[segStart][tail] : 0);
+
+        if (newCost - oldCost < -EPS) {
+          reverse(seq, p + 1, q);
           improved = true;
         }
       }
     }
   }
 
-  return result;
-}
-
-function twoOptDelta(
-  matrix: number[][],
-  tour: number[],
-  i: number,
-  j: number,
-  depotIndex?: number,
-): number {
-  const n = tour.length;
-  const beforeI = i === 0 && depotIndex !== undefined ? depotIndex : tour[i > 0 ? i - 1 : n - 1];
-  const afterJ = j < n - 1 ? tour[j + 1] : (depotIndex !== undefined ? depotIndex : tour[0]);
-
-  const oldCost = matrix[beforeI][tour[i]] + matrix[tour[j]][afterJ];
-  const newCost = matrix[beforeI][tour[j]] + matrix[tour[i]][afterJ];
-
-  return newCost - oldCost;
+  return depotIndex !== undefined ? seq.slice(1) : seq;
 }
 
 function reverse(arr: number[], from: number, to: number): void {

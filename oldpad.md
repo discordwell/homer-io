@@ -2,6 +2,18 @@
 
 Older entries rotated out of claudepad.md (20-summary cap). Newest first.
 
+### 2026-03-20T22:00 UTC — Fluid Responsive (Smooth Resize)
+- **Approach**: Replaced hard-snap breakpoints with fluid CSS inspired by Vercel/Linear patterns.
+- **CSS tokens**: Added `--page-pad`, `--page-heading`, `--card-gap`, `--section-gap` as `clamp()` values in `:root`.
+- **KPI grids**: Switched from `repeat(4, 1fr)` + breakpoint overrides to `auto-fit/minmax(min(180px, 100%), 1fr)` — cards flow naturally as viewport changes. Same for 6-column, intelligence, and migration grids.
+- **Two-column layouts**: Analytics chart grid uses `clamp(240px, 30vw, 320px)` for heatmap; Route builder uses `clamp(300px, 35vw, 400px)` for controls. Both stack below 900px.
+- **Typography**: Page heading `h2` elements scale via `var(--page-heading)` = `clamp(18px, 2.5vw, 24px)`.
+- **Spacing**: Main content padding uses `var(--page-pad)` = `clamp(16px, 3vw, 32px)`. Gap uses `var(--card-gap)`.
+- **Fixed widths removed**: DispatchBoard columns (was 280px → `clamp(220px, 25vw, 280px)`), LiveMap feed minWidth (was 240px → 0), Dispatch AI panel (was 480px → `min(480px, 100%)`).
+- **Form grids**: `auto-fit/minmax` instead of hard 1fr at 640px.
+- **10 files modified**. Deployed as commit a631ade.
+
+
 ### 2026-03-20T21:15 UTC — Comprehensive Mobile Responsive Support
 - **Scope**: All pages and layouts now work at mobile/tablet widths (375px–1024px).
 - **CSS foundation** (`app.css`): Added 13 new responsive media query blocks for: analytics chart grids, route builder grid, route detail header/stops, form grids in modals, bulk action bar, intelligence widget KPIs, migration page, dispatch board, 6-column KPI variant, demo main layout, search rows, driver leaderboard rows, public tracking.

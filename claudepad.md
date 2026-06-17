@@ -2,6 +2,13 @@
 
 ## Session Summaries
 
+### 2026-06-17T09:30 UTC — Fix: route-optimizer 2-opt was degrading routes
+- **Bug**: The in-house VRP/TSP optimizer's 2-opt local search computed each move's gain for reversing segment `[i..j]` but then reversed `[i+1..j]` — an off-by-one mismatch between the *evaluated* and *applied* move. Net effect: it frequently accepted non-improving moves and got stuck **worse than its own nearest-neighbor starting tour**. Measured over 3k random instances: cost rose vs. the NN start in **42%** of cases; **71%** were suboptimal vs. brute force (avg 23%, worst 126% over optimal). This is the product's headline "route optimization" feature silently producing worse routes.
+- **Root cause**: `twoOptDelta` used the `tour[i-1]→tour[i]` boundary edge while `reverse(result, i+1, j)` reversed a different segment; the gain never matched the change. The worker's duplicate copy (`packages/worker/.../lib/vrp-solver.ts`) was self-consistent but optimized a *closed*-tour objective (phantom return-to-depot leg) while `tourDuration` measures an *open* path — so it too raised real cost ~40% of the time.
+- **Fix**: Rewrote `twoOpt` in both copies as a correct **open-path** 2-opt over `seq = [depot, ...stops]` with the depot as a fixed head anchor. The delta now exactly matches the reversed segment; the tail case (no return edge) is handled so the last stop can move and the depot→firstStop leg is optimized. Verified: **0** cost increases vs. NN over 5k instances; suboptimality gap drops to 5.3% avg / 30% worst. O(1)-per-move retained; symmetric-matrix assumption (haversine exact, OSRM near) documented.
+- **Tests**: +4 API tests and a new 3-test worker suite — a concrete NN-zigzag→optimal case (1547→1344) plus property-based 2-opt **local-optimality** checks over hundreds of seeded random instances (with/without depot). Confirmed these guards *fail* on the old code (176/300 instances) and pass on the new.
+- **Verification**: Full monorepo suite green — API 903 (was 899), worker 9 (was 6); typecheck clean; lint 0 errors. A code-review subagent confirmed delta↔segment consistency, loop bounds, tail handling, edge cases, and API/worker parity; its one nit (scope the "never worse" guarantee to symmetric matrices) was applied to both docstrings.
+
 ### 2026-06-11T05:20 UTC — Maintenance Pass: CVE Sweep, CLI Tests, Real README
 - **Security**: `npm audit fix` cleared all 17 advisories (2 critical: shell-quote, vitest; 5 high incl. fast-uri path traversal in Fastify's URI stack, react-router DoS; moderates incl. ws, hono, qs, turbo). Lockfile-only change; full build/test/typecheck/lint verified green after.
 - **CLI tests**: packages/cli had `test: echo 'not yet configured'`. Added vitest (same config conventions as siblings) + 38 tests: output.ts (table sizing/padding, JSON mode, stderr/stdout split), config.ts (~/.homer round-trip with homedir mocked to a tmp dir, malformed JSON / missing apiKey → null, clearConfig idempotent), api.ts (URL normalization, Bearer header, Content-Type rules, error-message extraction with statusText fallback, empty body → undefined), mcp/util.ts (result builders, safeGetApi returns error instead of process.exit).
@@ -206,18 +213,6 @@
 - **Navigation**: 3 route groups — (auth) stack, (driver) bottom tabs (Route/Map/Profile), (dispatch) bottom tabs (Dashboard/Orders/Map/AI/More) with sub-screens
 - **40 source files** total. TypeScript compiles clean. iOS + Android bundles export successfully (2.8MB).
 - **Next**: Phase 2 (background GPS, push notifications, biometric, offline POD, live map)
-
-
-### 2026-03-20T22:00 UTC — Fluid Responsive (Smooth Resize)
-- **Approach**: Replaced hard-snap breakpoints with fluid CSS inspired by Vercel/Linear patterns.
-- **CSS tokens**: Added `--page-pad`, `--page-heading`, `--card-gap`, `--section-gap` as `clamp()` values in `:root`.
-- **KPI grids**: Switched from `repeat(4, 1fr)` + breakpoint overrides to `auto-fit/minmax(min(180px, 100%), 1fr)` — cards flow naturally as viewport changes. Same for 6-column, intelligence, and migration grids.
-- **Two-column layouts**: Analytics chart grid uses `clamp(240px, 30vw, 320px)` for heatmap; Route builder uses `clamp(300px, 35vw, 400px)` for controls. Both stack below 900px.
-- **Typography**: Page heading `h2` elements scale via `var(--page-heading)` = `clamp(18px, 2.5vw, 24px)`.
-- **Spacing**: Main content padding uses `var(--page-pad)` = `clamp(16px, 3vw, 32px)`. Gap uses `var(--card-gap)`.
-- **Fixed widths removed**: DispatchBoard columns (was 280px → `clamp(220px, 25vw, 280px)`), LiveMap feed minWidth (was 240px → 0), Dispatch AI panel (was 480px → `min(480px, 100%)`).
-- **Form grids**: `auto-fit/minmax` instead of hard 1fr at 640px.
-- **10 files modified**. Deployed as commit a631ade.
 
 
 ---

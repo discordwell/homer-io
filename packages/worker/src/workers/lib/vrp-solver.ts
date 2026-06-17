@@ -70,15 +70,23 @@ function nearestNeighbor(
   return tour;
 }
 
+// Open-path 2-opt: optimizes the depot → stop → … path with no return leg,
+// matching tourDuration. Reversing seq[p+1..q] only changes its boundary edges
+// (interior length is preserved for a symmetric matrix), so each move is O(1).
+// The depot, when present, is a fixed anchor at the head and never reordered.
+// For a symmetric matrix every accepted move strictly lowers cost, so the result
+// is at least as good as the input tour (OSRM's slight asymmetry can rarely make
+// a counted gain marginally non-improving). Keep this identical to packages/api.
 function twoOpt(
   matrix: number[][],
   tour: number[],
   depotIndex?: number,
 ): number[] {
-  const n = tour.length;
-  if (n < 3) return tour;
+  if (tour.length < 2) return tour;
 
-  const result = [...tour];
+  const seq = depotIndex !== undefined ? [depotIndex, ...tour] : [...tour];
+  const m = seq.length;
+  const EPS = 1e-9;
   let improved = true;
   let iterations = 0;
 
@@ -86,21 +94,24 @@ function twoOpt(
     improved = false;
     iterations++;
 
-    for (let i = 0; i < n - 1; i++) {
-      for (let j = i + 2; j < n; j++) {
-        const beforeI = i === 0 && depotIndex !== undefined ? depotIndex : result[i > 0 ? i - 1 : n - 1];
-        const afterJ = j < n - 1 ? result[j + 1] : (depotIndex !== undefined ? depotIndex : result[0]);
+    for (let p = 0; p < m - 2; p++) {
+      const anchor = seq[p];
+      for (let q = p + 2; q < m; q++) {
+        const segStart = seq[p + 1];
+        const segEnd = seq[q];
+        const hasTail = q < m - 1;
+        const tail = hasTail ? seq[q + 1] : -1;
 
-        const oldCost = matrix[beforeI][result[i]] + matrix[result[j]][afterJ];
-        const newCost = matrix[beforeI][result[j]] + matrix[result[i]][afterJ];
+        const oldCost = matrix[anchor][segStart] + (hasTail ? matrix[segEnd][tail] : 0);
+        const newCost = matrix[anchor][segEnd] + (hasTail ? matrix[segStart][tail] : 0);
 
-        if (newCost - oldCost < -0.001) {
-          let left = i;
-          let right = j;
+        if (newCost - oldCost < -EPS) {
+          let left = p + 1;
+          let right = q;
           while (left < right) {
-            const tmp = result[left];
-            result[left] = result[right];
-            result[right] = tmp;
+            const tmp = seq[left];
+            seq[left] = seq[right];
+            seq[right] = tmp;
             left++;
             right--;
           }
@@ -110,5 +121,5 @@ function twoOpt(
     }
   }
 
-  return result;
+  return depotIndex !== undefined ? seq.slice(1) : seq;
 }
