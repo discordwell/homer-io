@@ -74,30 +74,42 @@ describe('Delivery Learning - Failure Classification', () => {
 });
 
 describe('Delivery Learning - Address Intelligence Running Averages', () => {
-  // Test the incremental average formula used in the worker
-  function incrementalAverage(oldAvg: number, oldCount: number, newValue: number): number {
-    return ((oldAvg * oldCount) + newValue) / (oldCount + 1);
+  // The worker recomputes avg_service_time_seconds from the recorded
+  // delivery_metrics samples (see worker `averageServiceTimeSeconds`) rather
+  // than nudging a running average. The mean is therefore over the number of
+  // deliveries that recorded a service time — NOT successful_deliveries, which
+  // the old incremental update wrongly used as the divisor.
+  function meanOverSamples(samples: number[]): number | null {
+    if (samples.length === 0) return null;
+    const sum = samples.reduce((a, b) => a + b, 0);
+    return Math.round((sum / samples.length) * 100) / 100;
   }
 
-  it('computes correct incremental average from zero', () => {
-    const avg = incrementalAverage(0, 0, 120);
-    expect(avg).toBe(120);
+  it('averages over the recorded samples', () => {
+    expect(meanOverSamples([120])).toBe(120);
+    expect(meanOverSamples([100, 200])).toBe(150);
   });
 
-  it('computes correct incremental average with history', () => {
-    // 3 deliveries averaging 100s, new delivery at 140s
-    const avg = incrementalAverage(100, 3, 140);
-    expect(avg).toBe(110); // (100*3 + 140) / 4 = 110
+  it('returns null when no service time was ever recorded', () => {
+    expect(meanOverSamples([])).toBeNull();
   });
 
-  it('converges to true mean over many samples', () => {
+  it('equals the true mean of the recorded samples', () => {
     const values = [60, 80, 120, 90, 100, 110, 70, 130, 85, 95];
-    let avg = 0;
-    for (let i = 0; i < values.length; i++) {
-      avg = incrementalAverage(avg, i, values[i]);
-    }
     const trueMean = values.reduce((a, b) => a + b, 0) / values.length;
-    expect(avg).toBeCloseTo(trueMean, 10);
+    expect(meanOverSamples(values)).toBeCloseTo(trueMean, 10);
+  });
+
+  it('does not divide by successful_deliveries (the divisor bug)', () => {
+    // Samples [100, 200] recorded across deliveries where successful_deliveries
+    // reached 3 (e.g. one successful delivery had no GPS breadcrumb). The mean
+    // is 150, not 100 — the old code divided by successful_deliveries and drifted.
+    const samples = [100, 200];
+    const successfulDeliveries = 3;
+    expect(meanOverSamples(samples)).toBe(150);
+    expect(meanOverSamples(samples)).not.toBe(
+      samples.reduce((a, b) => a + b, 0) / successfulDeliveries,
+    );
   });
 
   // Test hourly pattern tracking

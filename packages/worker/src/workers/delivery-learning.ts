@@ -26,6 +26,27 @@ export interface DeliveryLearningJobData {
   completedAt: string;
 }
 
+/**
+ * Mean service time (seconds) over the recorded per-delivery samples, or null
+ * when there are none.
+ *
+ * `sampleCount` is the number of deliveries that actually recorded a service
+ * time (`delivery_metrics.service_time_seconds IS NOT NULL`). This is NOT the
+ * same as `successful_deliveries`: a *failed* delivery can record a service
+ * time (the driver reached the door, GPS shows the arrival) and a *successful*
+ * delivery can record none (no GPS breadcrumb within the arrival radius).
+ * Dividing the running average by `successful_deliveries` — as the previous
+ * incremental update did — therefore skewed the learned average whenever those
+ * two counts diverged, and the error compounded with every later delivery.
+ */
+export function averageServiceTimeSeconds(
+  sumSeconds: number | null,
+  sampleCount: number,
+): number | null {
+  if (sampleCount <= 0 || sumSeconds == null) return null;
+  return Math.round((sumSeconds / sampleCount) * 100) / 100;
+}
+
 // ─── Main worker processor ───
 
 export async function processDeliveryLearning(job: Job<DeliveryLearningJobData>) {
@@ -57,8 +78,7 @@ export async function processDeliveryLearning(job: Job<DeliveryLearningJobData>)
   const addrHash = hashAddress(deliveryAddr);
   const normalized = normalizeAddress(deliveryAddr);
   const addressIntelId = await upsertAddressIntelligence(
-    tenantId, addrHash, normalized, order, status, metrics.serviceTimeSeconds, completedAtDate,
-    failureReason,
+    tenantId, addrHash, normalized, order, status, completedAtDate, failureReason,
   );
 
   // 4. Record delivery metrics
@@ -93,14 +113,19 @@ export async function processDeliveryLearning(job: Job<DeliveryLearningJobData>)
     completedAt: completedAtDate,
   });
 
-  // 5. Update order failure_category if failed
+  // 5. Refresh the address's cached average service time from the metric rows
+  // we just added to. Recomputing from delivery_metrics keeps the cache exact
+  // (and self-heals historical drift) — see averageServiceTimeSeconds.
+  await recomputeAddressAvgServiceTime(tenantId, addressIntelId);
+
+  // 6. Update order failure_category if failed
   if (failureCat) {
     await db.update(orders)
       .set({ failureCategory: failureCat })
       .where(and(eq(orders.id, orderId), eq(orders.tenantId, tenantId)));
   }
 
-  // 6. LLM extraction from POD notes (fire-and-forget, non-blocking)
+  // 7. LLM extraction from POD notes (fire-and-forget, non-blocking)
   extractPodInsights(tenantId, orderId, addressIntelId).catch(err =>
     log.error('POD insight extraction failed', { orderId, error: err instanceof Error ? err.message : String(err) }),
   );
@@ -210,8 +235,7 @@ async function computeMetrics(
 async function upsertAddressIntelligence(
   tenantId: string, addrHash: string, normalized: ReturnType<typeof normalizeAddress>,
   order: typeof orders.$inferSelect, status: 'delivered' | 'failed',
-  serviceTimeSeconds: number | undefined, completedAt: Date,
-  failureReason: string | undefined,
+  completedAt: Date, failureReason: string | undefined,
 ): Promise<string> {
   const deliveryLat = order.deliveryLat;
   const deliveryLng = order.deliveryLng;
@@ -234,14 +258,12 @@ async function upsertAddressIntelligence(
     INSERT INTO address_intelligence (
       tenant_id, address_hash, address_normalized,
       delivery_lat, delivery_lng,
-      avg_service_time_seconds,
       successful_deliveries, failed_deliveries, total_deliveries,
       best_delivery_hours, common_failure_reasons,
       last_delivery_at, created_at, updated_at
     ) VALUES (
       ${tenantId}, ${addrHash}, ${JSON.stringify(normalized)}::jsonb,
       ${deliveryLat}, ${deliveryLng},
-      ${serviceTimeSeconds != null ? String(serviceTimeSeconds) : null},
       ${isSuccess ? 1 : 0}, ${isSuccess ? 0 : 1}, 1,
       ${initialHourlyPattern}::jsonb, ${initialFailureReasons}::jsonb,
       ${completedAt.toISOString()}::timestamptz, now(), now()
@@ -251,17 +273,6 @@ async function upsertAddressIntelligence(
       total_deliveries = address_intelligence.total_deliveries + 1,
       successful_deliveries = address_intelligence.successful_deliveries + ${isSuccess ? 1 : 0},
       failed_deliveries = address_intelligence.failed_deliveries + ${isSuccess ? 0 : 1},
-      avg_service_time_seconds = CASE
-        WHEN ${serviceTimeSeconds ?? null}::numeric IS NOT NULL THEN
-          CASE
-            WHEN address_intelligence.avg_service_time_seconds IS NULL THEN ${serviceTimeSeconds ?? null}::numeric
-            ELSE (
-              address_intelligence.avg_service_time_seconds * address_intelligence.successful_deliveries
-              + ${serviceTimeSeconds ?? 0}::numeric
-            ) / (address_intelligence.successful_deliveries + 1)
-          END
-        ELSE address_intelligence.avg_service_time_seconds
-      END,
       last_delivery_at = ${completedAt.toISOString()}::timestamptz,
       updated_at = now()
     RETURNING id
@@ -303,6 +314,40 @@ async function upsertAddressIntelligence(
   }
 
   return addressIntelId;
+}
+
+// ─── Average Service Time (recomputed from authoritative samples) ───
+
+/**
+ * Refresh the cached avg_service_time_seconds on address_intelligence from the
+ * per-delivery samples in delivery_metrics. `delivery_metrics` is the source of
+ * truth (one row per delivery, never pruned for real tenants), so averaging
+ * over it is exact and self-heals any address whose cache the old incremental
+ * update had already skewed. count(service_time_seconds) ignores NULL samples,
+ * giving the true sample count as the divisor.
+ */
+export async function recomputeAddressAvgServiceTime(
+  tenantId: string,
+  addressIntelId: string,
+): Promise<void> {
+  const [agg] = await db.select({
+    sum: sql<string | null>`sum(${deliveryMetrics.serviceTimeSeconds})`,
+    count: sql<string>`count(${deliveryMetrics.serviceTimeSeconds})`,
+  })
+    .from(deliveryMetrics)
+    .where(and(
+      eq(deliveryMetrics.tenantId, tenantId),
+      eq(deliveryMetrics.addressIntelligenceId, addressIntelId),
+    ));
+
+  const avg = averageServiceTimeSeconds(
+    agg?.sum != null ? Number(agg.sum) : null,
+    agg?.count != null ? Number(agg.count) : 0,
+  );
+
+  await db.update(addressIntelligence)
+    .set({ avgServiceTimeSeconds: avg != null ? avg.toString() : null, updatedAt: new Date() })
+    .where(eq(addressIntelligence.id, addressIntelId));
 }
 
 // ─── Failure Classification ───
