@@ -2,6 +2,13 @@
 
 ## Session Summaries
 
+### 2026-06-17T21:00 UTC — Fix: haversine-fallback ETAs double-counted dwell time (compounding per stop)
+- **Bug**: The customer-facing ETA path (`lib/routing/index.ts`) falls back to haversine when both Google Routes and OSRM are unavailable — and the README documents OSRM as optional, so any deploy without OSRM runs this path for *every* ETA. Both fallbacks (`getTrafficAwareETAs` + `getOsrmETAs`) set each leg's `durationSeconds = estimateEtaMinutes(...) * 60`, but `estimateEtaMinutes` returns **travel + dwell**, while `buildEtaResult` then adds the stop's dwell *again*. Dwell was counted twice, and because ETAs are cumulative the error compounds: stop N was inflated by N × dwell (e.g. a 10-stop car route over-promised the last stop by ~30 min).
+- **Why it hid**: the OSRM/Google paths feed real travel-only durations into the same `buildEtaResult`, so only the haversine fallback was wrong. The existing tests asserted only *relative* gaps (`diff >= 3`) and *differences of two buggy results* — both survive the double-count.
+- **Fix**: extracted a travel-only `estimateTravelMinutes(...)` in `lib/geo.ts` (no dwell) and used it in both haversine loops, so legs carry travel only and `buildEtaResult` stays the single place dwell is applied. `estimateEtaMinutes` now calls the new helper + adds dwell — value-preserving for the integer dwell values in `dwellTimesMinutes` (verified by sweep). Added a comment at both call sites against re-introducing the double-count.
+- **Tests**: +3 in `__tests__/routing/eta-service-duration.test.ts` pinning **absolute** ETAs — stop1 = travel + exactly one dwell, stop2 = cumulative travel + exactly two dwells (catches compounding), and per-stop `serviceDurationMinutes` applied once. Confirmed they *fail* on the old code (stop1 9.7 vs correct 6.7) and pass on the new; both fallback paths covered independently.
+- **Verification**: API suite 906 (was 903), monorepo typecheck 8/8, lint 0 errors. A code-review subagent independently reproduced the bug to prove the tests are discriminating, swept 1.2M inputs to confirm `estimateEtaMinutes` output is unchanged, and confirmed no other leg-builder feeding `buildEtaResult` was affected. Committed on `main`; not pushed (orchestrator handles push).
+
 ### 2026-06-17T20:30 UTC — Fix: webhook deliveries never retried on transient failure (landed WIP + tests)
 - **Bug**: The API enqueues each webhook delivery with BullMQ `attempts: 1`, but the worker's failure path threw `error` "to let BullMQ retry". With only one attempt a throw dead-letters the job — so transient endpoint failures (5xx, timeout, connection reset) were **never retried**, and the whole 30s→2m→15m→1h backoff ladder (`RETRY_DELAYS`, `nextRetryAt`) was dead code. Webhook reliability had silently degraded to single-shot.
 - **Fix** (uncommitted WIP, now completed): the worker catches the error and **re-enqueues a delayed job** through its own `Queue('webhook-delivery')` instance instead of rethrowing; extracted `WEBHOOK_MAX_ATTEMPTS = 5` + `nextRetryDelayMs(attempt)` (pure, exported, testable). One `delayMs` drives both the persisted `nextRetryAt` and the BullMQ `delay`, so advertised and actual retry time stay identical. The API-side `attempts: 1` is kept (a new comment explains it must stay 1, else retries double).
@@ -196,19 +203,6 @@
 - **tempPassword leak**: Removed plaintext temp password from team invite API response; frontend updated to show "invitation email sent" instead of displaying credentials
 - **Tests**: 7 new tests covering checkIsDemo cache/DB behavior, denyDemo 403/passthrough/no-user, and tempPassword removal
 - **All 463 existing tests + 7 new pass. TypeScript clean.**
-
-
-### 2026-03-21T01:00 UTC — Mobile App Phases 0–5 Complete
-- **Full mobile app** built across 5 phases: 65 source files in `packages/mobile/`
-- **Phase 0**: Expo SDK 55 scaffold, metro/turbo config, theme tokens, EAS profiles
-- **Phase 1**: API client (JWT refresh mutex + expo-secure-store), auth store, login/register, driver route/stop detail/POD flow/profile — all functional
-- **Phase 2**: Background GPS (TaskManager), push notifications (expo-notifications + backend device_tokens + expo-server-sdk), biometric auth, offline POD queue (MMKV + NetInfo auto-sync), driver live map
-- **Phase 3**: Dispatcher dashboard (KPI cards), orders list (filter+search), live fleet map (Socket.IO driver positions), routes, fleet, notifications (unread+mark read), dispatcher profile
-- **Phase 4**: Messages store + DriverChat (Socket.IO live), NLOps AI copilot (full SSE streaming, tool indicators, confirmation cards), useSocket hook
-- **Phase 5**: SkeletonLoader, ErrorBoundary, haptic feedback (POD success, failure error, filter selection), image compression (expo-image-manipulator 1200px/0.7), OfflineBanner, ARCHITECTURE.md updated
-- **Backend additions**: device_tokens table, POST/DELETE /api/devices/(un)register, notification worker sends push via expo-server-sdk
-- **Bundle sizes**: iOS 3.2MB, Android 3.3MB. TypeScript clean. All 4 packages build clean.
-- **Next**: EAS project ID setup, app icons/splash, store assets, submission
 
 
 ---

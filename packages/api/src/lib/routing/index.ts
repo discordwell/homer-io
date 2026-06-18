@@ -8,7 +8,7 @@ import { getDistanceMatrix, getRoute } from './osrm.js';
 import { solveTSP, solveCVRPTW, tourDuration } from './vrp-solver.js';
 import type { CVRPTWInput, CVRPTWResult, VehicleCapacity, OrderDemand, TimeWindow } from './vrp-solver.js';
 import { computeRouteETAs } from './google-routes.js';
-import { haversineDistance, estimateEtaMinutes } from '../geo.js';
+import { haversineDistance, estimateTravelMinutes } from '../geo.js';
 import { dwellTimesMinutes } from '@homer-io/shared';
 import { cacheGet, cacheSet } from '../cache.js';
 import { logger } from '../logger.js';
@@ -329,16 +329,18 @@ export async function getTrafficAwareETAs(
     await trackFallback('getTrafficAwareETAs/osrm', err);
   }
 
-  // Haversine fallback
+  // Haversine fallback. Legs carry travel time ONLY; buildEtaResult adds each
+  // stop's dwell. Using estimateEtaMinutes here would fold dwell into the leg
+  // too and double-count it (compounding by stop).
   const legs = [];
   let prevLat = origin[0];
   let prevLng = origin[1];
 
   for (const stop of stops) {
     const dist = haversineDistance(prevLat, prevLng, stop.lat, stop.lng);
-    const etaMin = estimateEtaMinutes(prevLat, prevLng, stop.lat, stop.lng, vehicleType);
+    const travelMin = estimateTravelMinutes(prevLat, prevLng, stop.lat, stop.lng, vehicleType);
     legs.push({
-      durationSeconds: etaMin * 60,
+      durationSeconds: travelMin * 60,
       distanceMeters: dist * 1000,
     });
     prevLat = stop.lat;
@@ -380,15 +382,17 @@ export async function getOsrmETAs(
     return buildEtaResult(routeId, stops, legs, dwell, now, 'osrm');
   } catch (err) {
     await trackFallback('getOsrmETAs', err);
+    // Legs carry travel time ONLY; buildEtaResult adds each stop's dwell.
+    // estimateEtaMinutes would fold dwell into the leg too and double-count it.
     const legs = [];
     let prevLat = origin[0];
     let prevLng = origin[1];
 
     for (const stop of stops) {
       const dist = haversineDistance(prevLat, prevLng, stop.lat, stop.lng);
-      const etaMin = estimateEtaMinutes(prevLat, prevLng, stop.lat, stop.lng, vehicleType);
+      const travelMin = estimateTravelMinutes(prevLat, prevLng, stop.lat, stop.lng, vehicleType);
       legs.push({
-        durationSeconds: etaMin * 60,
+        durationSeconds: travelMin * 60,
         distanceMeters: dist * 1000,
       });
       prevLat = stop.lat;
