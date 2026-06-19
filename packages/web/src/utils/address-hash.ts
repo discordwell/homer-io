@@ -7,9 +7,13 @@ function normalizeAddressBrowser(addr: AddressComponents) {
   const zip = addr.zip?.trim() ?? '';
   const country = addr.country?.trim().toLowerCase() || 'us';
 
+  // Keep this in lockstep with normalizeAddress in @homer-io/shared/address.
+  // Commas are treated as separators so connector-imported "123 Main St, Apt 4"
+  // and manually-typed "123 Main St Apt 4" hash to the same building.
   const building = street
     .replace(/\b(apt|apartment|suite|ste|unit|room|rm|fl|floor|dept|department)\b\.?\s*\S*/gi, '')
     .replace(/#\s*\S*/g, '')
+    .replace(/,/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 

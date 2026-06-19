@@ -68,6 +68,25 @@ describe('Address utilities', () => {
       expect(result.building).toBe('555 elm drive');
     });
 
+    it('strips a unit joined with a comma without leaving a trailing comma', () => {
+      // Connectors join address line1/line2 with ", " — the unit must be removed
+      // cleanly so this matches the space-separated form, not "123 main st,".
+      const result = normalizeAddress({
+        street: '123 Main St, Apt 4',
+        city: 'Portland',
+        state: 'OR',
+        zip: '97201',
+      });
+      expect(result.building).toBe('123 main st');
+    });
+
+    it('normalizes comma-joined and space-separated forms to the same building', () => {
+      const comma = normalizeAddress({ street: '789 Pine Rd, #12', city: 'Seattle', state: 'WA', zip: '98101' });
+      const space = normalizeAddress({ street: '789 Pine Rd #12', city: 'Seattle', state: 'WA', zip: '98101' });
+      expect(comma.building).toBe('789 pine rd');
+      expect(comma.building).toBe(space.building);
+    });
+
     it('defaults country to us', () => {
       const result = normalizeAddress({
         street: '123 Main St',
@@ -89,6 +108,14 @@ describe('Address utilities', () => {
       const apt4 = { street: '123 Main St Apt 4', city: 'Portland', state: 'OR', zip: '97201' };
       const apt7 = { street: '123 Main St Apt 7', city: 'Portland', state: 'OR', zip: '97201' };
       expect(hashAddress(apt4)).toBe(hashAddress(apt7));
+    });
+
+    it('produces same hash for a connector comma-joined unit and the manual form', () => {
+      // The form every e-commerce/POS connector emits ("123 Main St, Apt 4")
+      // must dedup to the same building as the manually-typed "123 Main St Apt 4".
+      const connector = { street: '123 Main St, Apt 4', city: 'Portland', state: 'OR', zip: '97201' };
+      const manual = { street: '123 Main St Apt 4', city: 'Portland', state: 'OR', zip: '97201' };
+      expect(hashAddress(connector)).toBe(hashAddress(manual));
     });
 
     it('produces different hash for different buildings', () => {

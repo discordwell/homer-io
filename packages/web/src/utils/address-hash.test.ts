@@ -20,6 +20,16 @@ describe('hashAddressBrowser', () => {
     expect(hash1).toBe(hashAddress(addr1));
   });
 
+  it('hashes a comma-joined unit the same as the space form (and matches server)', async () => {
+    const connector = { street: '123 Main St, Apt 4', city: 'Denver', state: 'CO', zip: '80203' };
+    const manual = { street: '123 Main St Apt 4', city: 'Denver', state: 'CO', zip: '80203' };
+    const connectorHash = await hashAddressBrowser(connector);
+    expect(connectorHash).toBe(await hashAddressBrowser(manual));
+    // Browser and server normalization must stay in lockstep.
+    expect(connectorHash).toBe(hashAddress(manual));
+    expect(connectorHash).toBe(hashAddress(connector));
+  });
+
   it('is case-insensitive', async () => {
     const addr1 = { street: '123 Main St', city: 'Denver', state: 'CO', zip: '80202' };
     const addr2 = { street: '123 MAIN ST', city: 'DENVER', state: 'co', zip: '80202' };

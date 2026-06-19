@@ -29,10 +29,16 @@ export function normalizeAddress(addr: AddressComponents): NormalizedAddress {
   const zip = addr.zip?.trim() ?? '';
   const country = addr.country?.trim().toLowerCase() || 'us';
 
-  // Strip apartment/unit/suite designators for building-level grouping
+  // Strip apartment/unit/suite designators for building-level grouping.
+  // Connectors (Shopify/WooCommerce/Square/Toast) join address line1/line2 with
+  // ", ", so stripping a unit from "123 Main St, Apt 4" would otherwise leave a
+  // dangling comma ("123 main st,"), hashing differently from the manually-typed
+  // "123 Main St Apt 4" ("123 main st") and fragmenting per-building dedup.
+  // Treat commas as separators so both forms collapse to the same building.
   const building = street
     .replace(/\b(apt|apartment|suite|ste|unit|room|rm|fl|floor|dept|department)\b\.?\s*\S*/gi, '')
     .replace(/#\s*\S*/g, '')
+    .replace(/,/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
