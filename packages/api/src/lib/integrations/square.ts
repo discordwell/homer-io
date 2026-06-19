@@ -99,8 +99,10 @@ export class SquareConnector implements EcommerceConnector {
     const raw = externalOrder.rawData as unknown as SquareOrder;
     const totalItems = externalOrder.lineItems.reduce((sum, li) => sum + li.quantity, 0);
 
+    // li.price is already in dollars (toExternal converts Square's cents → dollars);
+    // do NOT divide by 100 again here.
     const itemSummary = externalOrder.lineItems
-      .map(li => `${li.quantity}x ${li.name}${li.price ? ` ($${(li.price / 100).toFixed(2)})` : ''}`)
+      .map(li => `${li.quantity}x ${li.name}${li.price ? ` ($${li.price.toFixed(2)})` : ''}`)
       .join(', ');
 
     // Extract delivery notes from fulfillment
