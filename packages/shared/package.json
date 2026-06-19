@@ -13,6 +13,10 @@
     "./address": {
       "types": "./dist/utils/address.d.ts",
       "import": "./dist/utils/address.js"
+    },
+    "./integration-sync": {
+      "types": "./dist/utils/integration-sync.d.ts",
+      "import": "./dist/utils/integration-sync.js"
     }
   },
   "scripts": {

@@ -8,6 +8,7 @@ import { createHash, createDecipheriv } from 'crypto';
 import { db } from '../lib/db.js';
 import { logger } from '../lib/logger.js';
 import { integrationConnections, integrationOrders, orders } from '../lib/schema.js';
+import { collectImportedExternalIds } from '@homer-io/shared/integration-sync';
 
 // ─── Crypto helpers (duplicated from API to avoid cross-package import) ──────
 
@@ -234,20 +235,20 @@ export async function processIntegrationSync(job: Job<IntegrationSyncJobData>) {
     let skipped = 0;
     let failed = 0;
 
-    // Batch-fetch existing external IDs to avoid N+1 dedup queries
-    const existingIds = new Set<string>();
+    // Batch-fetch already-imported external IDs to avoid N+1 dedup queries.
+    // Only rows linked to a real order count as "synced" — prior FAILED rows
+    // (orderId null) must be retried, not skipped forever.
+    let existingIds = new Set<string>();
     if (externalOrders.length > 0) {
       const extIds = externalOrders.map(o => o.externalId);
       const existing = await db
-        .select({ externalOrderId: integrationOrders.externalOrderId })
+        .select({ externalOrderId: integrationOrders.externalOrderId, orderId: integrationOrders.orderId })
         .from(integrationOrders)
         .where(and(
           eq(integrationOrders.connectionId, connectionId),
           sql`${integrationOrders.externalOrderId} = ANY(${extIds})`,
         ));
-      for (const e of existing) {
-        existingIds.add(e.externalOrderId);
-      }
+      existingIds = collectImportedExternalIds(existing);
     }
 
     for (const ext of externalOrders) {
@@ -260,31 +261,45 @@ export async function processIntegrationSync(job: Job<IntegrationSyncJobData>) {
 
         const mapped = mapToHomer(conn.platform, ext, tenantId);
 
-        const [newOrder] = await db.insert(orders).values({
-          tenantId: mapped.tenantId,
-          externalId: mapped.externalId,
-          recipientName: mapped.recipientName,
-          recipientPhone: mapped.recipientPhone,
-          recipientEmail: mapped.recipientEmail,
-          deliveryAddress: mapped.deliveryAddress,
-          deliveryLat: mapped.deliveryAddress.coords?.lat?.toString() ?? null,
-          deliveryLng: mapped.deliveryAddress.coords?.lng?.toString() ?? null,
-          packageCount: mapped.packageCount,
-          weight: mapped.weight,
-          notes: mapped.notes,
-        }).returning();
+        // Create the order + mapping atomically, so a failure can't leave an
+        // orphan order with no integration_orders row.
+        await db.transaction(async (tx) => {
+          const [newOrder] = await tx.insert(orders).values({
+            tenantId: mapped.tenantId,
+            externalId: mapped.externalId,
+            recipientName: mapped.recipientName,
+            recipientPhone: mapped.recipientPhone,
+            recipientEmail: mapped.recipientEmail,
+            deliveryAddress: mapped.deliveryAddress,
+            deliveryLat: mapped.deliveryAddress.coords?.lat?.toString() ?? null,
+            deliveryLng: mapped.deliveryAddress.coords?.lng?.toString() ?? null,
+            packageCount: mapped.packageCount,
+            weight: mapped.weight,
+            notes: mapped.notes,
+          }).returning();
 
-        await db.insert(integrationOrders).values({
-          tenantId,
-          connectionId,
-          orderId: newOrder.id,
-          externalOrderId: ext.externalId,
-          platform: conn.platform,
-          rawData: ext.rawData,
-          syncStatus: 'synced',
+          // Record (or repair) the integration order mapping. onConflictDoUpdate
+          // flips a prior failed row for this external order to synced and links
+          // the new order, instead of throwing on the unique-dedup index.
+          await tx.insert(integrationOrders).values({
+            tenantId,
+            connectionId,
+            orderId: newOrder.id,
+            externalOrderId: ext.externalId,
+            platform: conn.platform,
+            rawData: ext.rawData,
+            syncStatus: 'synced',
+          }).onConflictDoUpdate({
+            target: [integrationOrders.connectionId, integrationOrders.externalOrderId],
+            set: { orderId: newOrder.id, syncStatus: 'synced', syncError: null, rawData: ext.rawData },
+          });
         });
 
         imported++;
+        // Guard against the same externalId appearing twice in one fetch batch
+        // (overlapping poll windows / pagination dupes): orders.externalId has no
+        // unique constraint, so a second occurrence would create an orphan order.
+        existingIds.add(ext.externalId);
       } catch (err) {
         try {
           await db.insert(integrationOrders).values({

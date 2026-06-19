@@ -34,3 +34,4 @@ export * from './schemas/features.js';
 export * from './types/roles.js';
 export type { AddressComponents, NormalizedAddress, FailureCategory } from './utils/address.js';
 export * from './utils/geo.js';
+export * from './utils/integration-sync.js';
