@@ -34,6 +34,11 @@ export async function createTemplate(tenantId: string, input: CreateNotification
       subject: input.subject ?? null,
       bodyTemplate: input.bodyTemplate,
       isActive: input.isActive ?? true,
+      // Must be persisted — drives who gets notified (recipient/sender/both) in
+      // enqueueCustomerNotification. Omitting it forces the column default
+      // ('recipient') and silently breaks sender/both templates (e.g. florist
+      // gift senders never hear their delivery landed).
+      recipientType: input.recipientType ?? 'recipient',
     })
     .returning();
 
