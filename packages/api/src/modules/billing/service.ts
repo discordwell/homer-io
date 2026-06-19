@@ -402,6 +402,26 @@ export async function recordMeteredUsage(
 }
 
 // --- getMeteredUsage ---
+/**
+ * Compute over-quota cost (in cents) for each metered feature.
+ *
+ * Quotas and rates share the same unit for every feature EXCEPT podStorageMb,
+ * which is metered in megabytes while its rate is priced per gigabyte
+ * (`meteredRates.podStorageMb` = 10¢ / 1024 MB). The overage must therefore be
+ * converted MB→GB before applying the rate — otherwise storage is billed 1024×.
+ */
+export function computeOverageCosts(
+  usage: Record<MeteredFeature, number>,
+): Record<MeteredFeature, number> {
+  const overageCosts = {} as Record<MeteredFeature, number>;
+  for (const key of Object.keys(usage) as MeteredFeature[]) {
+    const overageUnits = Math.max(0, usage[key] - meteredQuotas[key]);
+    const billableUnits = key === 'podStorageMb' ? overageUnits / 1024 : overageUnits;
+    overageCosts[key] = billableUnits * meteredRates[key]; // in cents
+  }
+  return overageCosts;
+}
+
 export async function getMeteredUsage(tenantId: string) {
   const period = new Date().toISOString().slice(0, 7);
 
@@ -420,16 +440,7 @@ export async function getMeteredUsage(tenantId: string) {
     podStorageMb: metered?.podStorageMb ?? 0,
   };
 
-  // Calculate overage costs
-  const overageCosts: Record<string, number> = {};
-  for (const [key, used] of Object.entries(usage)) {
-    const quota = meteredQuotas[key as MeteredFeature];
-    const rate = meteredRates[key as MeteredFeature];
-    const overage = Math.max(0, used - quota);
-    overageCosts[key] = overage * rate; // in cents
-  }
-
-  return { usage, quotas: meteredQuotas, rates: meteredRates, overageCosts };
+  return { usage, quotas: meteredQuotas, rates: meteredRates, overageCosts: computeOverageCosts(usage) };
 }
 
 // --- getOrderCount (for middleware) ---
