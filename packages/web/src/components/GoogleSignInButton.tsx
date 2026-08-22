@@ -34,7 +34,7 @@ export function GoogleSignInButton({ onSuccess, onError, label = 'Continue with 
           gap: 10,
           width: '100%',
           padding: '11px 16px',
-          border: `1px solid ${C.muted}`,
+          border: `1px solid ${C.borderStrong}`,
           borderRadius: 8,
           background: 'transparent',
           color: C.text,

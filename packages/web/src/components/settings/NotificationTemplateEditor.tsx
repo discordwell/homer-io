@@ -210,7 +210,7 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
                 style={{
                   padding: '4px 10px', borderRadius: 6,
                   background: alpha(C.accent, 0.08), border: `1px solid ${alpha(C.accent, 0.19)}`,
-                  color: C.accent, cursor: 'pointer', fontSize: 12,
+                  color: C.accentText, cursor: 'pointer', fontSize: 12,
                   fontFamily: F.mono,
                 }}
               >
@@ -228,7 +228,7 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
             </span>
             <div style={{
               background: C.bg, borderRadius: 8, padding: 16,
-              border: `1px solid ${C.muted}`,
+              border: `1px solid ${C.borderStrong}`,
             }}>
               {channel === 'email' && subjectPreview && (
                 <div style={{ marginBottom: 8 }}>
@@ -276,5 +276,5 @@ export function NotificationTemplateEditor({ open, onClose, template, onSave }: 
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
+  border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
 };

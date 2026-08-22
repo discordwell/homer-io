@@ -55,15 +55,15 @@
       0deg,
       transparent,
       transparent 39px,
-      rgba(24,37,64,0.2) 39px,
-      rgba(24,37,64,0.2) 40px
+      var(--hero-grid) 39px,
+      var(--hero-grid) 40px
     ),
     repeating-linear-gradient(
       90deg,
       transparent,
       transparent 39px,
-      rgba(24,37,64,0.2) 39px,
-      rgba(24,37,64,0.2) 40px
+      var(--hero-grid) 39px,
+      var(--hero-grid) 40px
     );
 }
 
@@ -83,15 +83,15 @@
         0deg,
         transparent,
         transparent 59px,
-        rgba(24,37,64,0.15) 59px,
-        rgba(24,37,64,0.15) 60px
+        var(--hero-grid-soft) 59px,
+        var(--hero-grid-soft) 60px
       ),
       repeating-linear-gradient(
         90deg,
         transparent,
         transparent 59px,
-        rgba(24,37,64,0.15) 59px,
-        rgba(24,37,64,0.15) 60px
+        var(--hero-grid-soft) 59px,
+        var(--hero-grid-soft) 60px
       );
   }
 }

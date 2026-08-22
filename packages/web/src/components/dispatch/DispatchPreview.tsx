@@ -201,8 +201,8 @@ export function DispatchPreview({
               key={route.id}
               onClick={() => toggleRoute(route.id)}
               style={{
-                background: selected ? `${color}11` : C.bg3,
-                border: `1px solid ${selected ? color : C.muted}`,
+                background: selected ? alpha(color, 0.07) : C.bg3,
+                border: `1px solid ${selected ? color : C.borderStrong}`,
                 borderRadius: 10,
                 padding: '14px 16px',
                 cursor: 'pointer',
@@ -240,7 +240,7 @@ export function DispatchPreview({
                   width: 20,
                   height: 20,
                   borderRadius: 4,
-                  border: `2px solid ${selected ? color : C.muted}`,
+                  border: `2px solid ${selected ? color : C.borderStrong}`,
                   background: selected ? color : 'transparent',
                   display: 'flex',
                   alignItems: 'center',
@@ -259,7 +259,7 @@ export function DispatchPreview({
                 <div style={{
                   marginTop: 10,
                   paddingTop: 10,
-                  borderTop: `1px solid ${C.muted}`,
+                  borderTop: `1px solid ${C.borderStrong}`,
                   fontSize: 12,
                   color: C.dim,
                   lineHeight: 1.5,
@@ -311,7 +311,7 @@ export function DispatchPreview({
 
 const containerStyle: React.CSSProperties = {
   background: C.bg2,
-  border: `1px solid ${C.muted}`,
+  border: `1px solid ${C.borderStrong}`,
   borderRadius: 12,
   padding: 20,
 };
@@ -320,7 +320,7 @@ const smallBtnStyle: React.CSSProperties = {
   padding: '5px 12px',
   borderRadius: 6,
   background: 'transparent',
-  border: `1px solid ${C.muted}`,
+  border: `1px solid ${C.borderStrong}`,
   color: C.dim,
   cursor: 'pointer',
   fontFamily: F.body,

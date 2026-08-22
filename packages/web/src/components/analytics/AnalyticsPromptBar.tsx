@@ -24,17 +24,17 @@ export function AnalyticsPromptBar() {
   return (
     <div style={{
       background: `linear-gradient(135deg, ${alpha(C.accent, 0.06)} 0%, ${alpha(C.purple, 0.04)} 100%)`,
-      borderRadius: 12, border: `1px solid ${C.muted}`,
+      borderRadius: 12, border: `1px solid ${C.borderStrong}`,
       padding: '14px 18px', marginBottom: 20,
     }}>
       {/* Input */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center',
-          background: C.bg, borderRadius: 8, border: `1px solid ${C.muted}`,
+          background: C.bg, borderRadius: 8, border: `1px solid ${C.borderStrong}`,
           padding: '0 14px',
         }}>
-          <span style={{ color: C.accent, fontSize: 14, marginRight: 8 }}>H</span>
+          <span style={{ color: C.accentText, fontSize: 14, marginRight: 8 }}>H</span>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -65,7 +65,7 @@ export function AnalyticsPromptBar() {
             key={s}
             onClick={() => handleSubmit(s)}
             style={{
-              padding: '5px 12px', borderRadius: 20, border: `1px solid ${C.muted}`,
+              padding: '5px 12px', borderRadius: 20, border: `1px solid ${C.borderStrong}`,
               background: 'transparent', color: C.dim, cursor: 'pointer',
               fontFamily: F.body, fontSize: 11,
               transition: 'all 0.15s ease',

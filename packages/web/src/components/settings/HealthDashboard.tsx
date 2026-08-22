@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { api } from '../../api/client.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { usePollingWithBackoff } from '../../hooks/usePollingWithBackoff.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 
 interface HealthStatus {
   status: 'healthy' | 'degraded' | 'down';
@@ -74,7 +74,7 @@ export function HealthDashboard() {
       <div style={{
         background: C.bg2,
         borderRadius: 12,
-        border: `1px solid ${C.muted}`,
+        border: `1px solid ${C.borderStrong}`,
         padding: 24,
         marginBottom: 24,
       }}>
@@ -83,7 +83,7 @@ export function HealthDashboard() {
             <div style={{
               width: 12, height: 12, borderRadius: '50%',
               background: overallColor,
-              boxShadow: `0 0 8px ${overallColor}60`,
+              boxShadow: `0 0 8px ${alpha(overallColor, 0.38)}`,
             }} />
             <h3 style={{ fontFamily: F.display, fontSize: 20, color: C.text, margin: 0 }}>
               System {health.status.charAt(0).toUpperCase() + health.status.slice(1)}
@@ -133,7 +133,7 @@ export function HealthDashboard() {
       <div style={{
         background: C.bg2,
         borderRadius: 12,
-        border: `1px solid ${C.muted}`,
+        border: `1px solid ${C.borderStrong}`,
         padding: 24,
       }}>
         <h3 style={{ fontFamily: F.display, fontSize: 18, color: C.text, margin: '0 0 16px' }}>
@@ -201,7 +201,7 @@ function StatusCard({ label, status, detail }: { label: string; status: string; 
         <div style={{
           width: 8, height: 8, borderRadius: '50%',
           background: color,
-          boxShadow: `0 0 6px ${color}60`,
+          boxShadow: `0 0 6px ${alpha(color, 0.38)}`,
         }} />
         <span style={{ fontFamily: F.display, fontSize: 18, color: C.text, fontWeight: 700 }}>
           {detail}

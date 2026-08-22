@@ -15,7 +15,7 @@ export function DemoAnalyticsPage() {
         </div>
         <div style={{
           display: 'flex', background: C.bg3, borderRadius: 8,
-          border: `1px solid ${C.muted}`, overflow: 'hidden',
+          border: `1px solid ${C.borderStrong}`, overflow: 'hidden',
         }}>
           {['7d', '30d', '90d'].map(r => (
             <button
@@ -44,7 +44,7 @@ export function DemoAnalyticsPage() {
       </div>
 
       {/* Driver Performance */}
-      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 24, marginBottom: 24 }}>
+      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 24, marginBottom: 24 }}>
         <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 16 }}>Driver Leaderboard</h3>
         <div style={{ display: 'grid', gap: 12 }}>
           {[
@@ -57,7 +57,7 @@ export function DemoAnalyticsPage() {
             <div key={d.name} className="driver-leaderboard-row" style={{
               display: 'grid',
               alignItems: 'center', padding: '12px 16px',
-              background: C.bg3, borderRadius: 8, border: `1px solid ${C.muted}`,
+              background: C.bg3, borderRadius: 8, border: `1px solid ${C.borderStrong}`,
               gap: 16,
             }}>
               <span style={{ fontFamily: F.mono, fontSize: 14, color: C.dim, textAlign: 'center' }}>#{d.rank}</span>
@@ -72,7 +72,7 @@ export function DemoAnalyticsPage() {
 
       {/* Delivery Outcomes Breakdown */}
       <div className="analytics-chart-grid" style={{ display: 'grid', gap: 24, marginBottom: 24 }}>
-        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 24 }}>
+        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 24 }}>
           <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 16 }}>Delivery Outcomes</h3>
           <div style={{ display: 'grid', gap: 10 }}>
             {[
@@ -92,7 +92,7 @@ export function DemoAnalyticsPage() {
           </div>
         </div>
 
-        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 24 }}>
+        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 24 }}>
           <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 16 }}>Volume Trend (30d)</h3>
           {/* Simple text-based volume display */}
           <div style={{ display: 'grid', gap: 6 }}>
@@ -125,11 +125,11 @@ export function DemoAnalyticsPage() {
       </div>
 
       {/* Intelligence Summary */}
-      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 24 }}>
+      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 24 }}>
         <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 16 }}>Address Intelligence</h3>
         <div className="intel-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 28, fontFamily: F.display, color: C.accent }}>847</div>
+            <div style={{ fontSize: 28, fontFamily: F.display, color: C.accentText }}>847</div>
             <div style={{ color: C.dim, fontSize: 13 }}>Addresses Learned</div>
           </div>
           <div style={{ textAlign: 'center' }}>

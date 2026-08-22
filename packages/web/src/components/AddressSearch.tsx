@@ -13,7 +13,7 @@ export function AddressSearch({ value, onChange, placeholder = 'Enter address...
       placeholder={placeholder}
       style={{
         width: '100%', padding: 12, borderRadius: 8,
-        background: C.bg, border: `1px solid ${C.muted}`,
+        background: C.bg, border: `1px solid ${C.borderStrong}`,
         color: C.text, fontSize: 14, outline: 'none',
         fontFamily: F.body, boxSizing: 'border-box',
       }}

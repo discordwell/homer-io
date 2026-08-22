@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { C } from '../../theme.js';
+import { useMapPalette, CARTO_ATTRIBUTION } from '../../map-theme.js';
 
 interface TrackingMapProps {
   driverLat?: number;
@@ -13,6 +14,17 @@ interface TrackingMapProps {
 export function TrackingMap({ driverLat, driverLng, destLat, destLng }: TrackingMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const palette = useMapPalette();
+  const paletteRef = useRef(palette);
+  // See RouteMap: re-fitting on a theme change would discard the user's view.
+  const fittedRef = useRef<string>('');
+  useEffect(() => { paletteRef.current = palette; });
+
+  // Swap basemap tiles in place when the theme changes.
+  useEffect(() => {
+    tileLayerRef.current?.setUrl(palette.tileUrl);
+  }, [palette.tileUrl]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -27,8 +39,8 @@ export function TrackingMap({ driverLat, driverLng, destLat, destLng }: Tracking
       attributionControl: false,
     }).setView(center, 13);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+    tileLayerRef.current = L.tileLayer(paletteRef.current.tileUrl, {
+      attribution: CARTO_ATTRIBUTION,
     }).addTo(map);
 
     // Add attribution control in bottom-right
@@ -61,9 +73,9 @@ export function TrackingMap({ driverLat, driverLng, destLat, destLng }: Tracking
       // Outer pulse ring
       L.circleMarker([driverLat, driverLng], {
         radius: 16,
-        fillColor: C.accent,
+        fillColor: palette.accent,
         fillOpacity: 0.2,
-        color: C.accent,
+        color: palette.accent,
         weight: 1,
         opacity: 0.4,
         className: 'driver-pulse',
@@ -72,9 +84,9 @@ export function TrackingMap({ driverLat, driverLng, destLat, destLng }: Tracking
       // Inner dot
       L.circleMarker([driverLat, driverLng], {
         radius: 7,
-        fillColor: C.accent,
+        fillColor: palette.accent,
         fillOpacity: 1,
-        color: '#fff',
+        color: palette.markerStroke,
         weight: 2,
       })
         .bindTooltip('Driver', { permanent: false })
@@ -87,9 +99,9 @@ export function TrackingMap({ driverLat, driverLng, destLat, destLng }: Tracking
     if (destLat != null && destLng != null) {
       L.circleMarker([destLat, destLng], {
         radius: 9,
-        fillColor: C.red,
+        fillColor: palette.red,
         fillOpacity: 1,
-        color: '#fff',
+        color: palette.markerStroke,
         weight: 2,
       })
         .bindTooltip('Destination', { permanent: false })
@@ -98,13 +110,16 @@ export function TrackingMap({ driverLat, driverLng, destLat, destLng }: Tracking
       bounds.push([destLat, destLng]);
     }
 
-    // Fit bounds if we have multiple points
-    if (bounds.length > 1) {
-      map.fitBounds(L.latLngBounds(bounds), { padding: [60, 60] });
-    } else if (bounds.length === 1) {
-      map.setView(bounds[0], 14);
+    const fitKey = bounds.map(([a, b]) => `${a},${b}`).join('|');
+    if (fitKey !== fittedRef.current) {
+      fittedRef.current = fitKey;
+      if (bounds.length > 1) {
+        map.fitBounds(L.latLngBounds(bounds), { padding: [60, 60] });
+      } else if (bounds.length === 1) {
+        map.setView(bounds[0], 14);
+      }
     }
-  }, [driverLat, driverLng, destLat, destLng]);
+  }, [driverLat, driverLng, destLat, destLng, palette]);
 
   return (
     <>
@@ -114,7 +129,7 @@ export function TrackingMap({ driverLat, driverLng, destLat, destLng }: Tracking
           height: 300,
           borderRadius: 12,
           overflow: 'hidden',
-          border: `1px solid ${C.muted}`,
+          border: `1px solid ${C.borderStrong}`,
         }}
       />
       <style>{`

@@ -104,7 +104,7 @@ export function SettingsPage() {
               border: 'none',
               borderBottom: activeTab === tab.id ? `2px solid ${C.accent}` : '2px solid transparent',
               background: activeTab === tab.id ? C.bg3 : 'transparent',
-              color: activeTab === tab.id ? C.accent : C.dim,
+              color: activeTab === tab.id ? C.accentText : C.dim,
               cursor: 'pointer',
               fontFamily: F.body,
               fontSize: 14,

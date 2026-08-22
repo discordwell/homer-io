@@ -239,7 +239,7 @@ export function AutoDispatchPanel() {
 
 const panelStyle: React.CSSProperties = {
   background: C.bg2,
-  border: `1px solid ${C.muted}`,
+  border: `1px solid ${C.borderStrong}`,
   borderRadius: 12,
   padding: 20,
 };
@@ -264,7 +264,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px 12px',
   borderRadius: 6,
-  border: `1px solid ${C.muted}`,
+  border: `1px solid ${C.borderStrong}`,
   background: C.bg3,
   color: C.text,
   fontSize: 14,
@@ -290,8 +290,8 @@ const spinnerStyle: React.CSSProperties = {
   display: 'inline-block',
   width: 14,
   height: 14,
-  border: '2px solid rgba(255,255,255,0.3)',
-  borderTopColor: '#fff',
+  border: `2px solid ${alpha(C.onAccent, 0.3)}`,
+  borderTopColor: C.onAccent,
   borderRadius: '50%',
   animation: 'spin 0.8s linear infinite',
 };

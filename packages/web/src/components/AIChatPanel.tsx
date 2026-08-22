@@ -81,18 +81,18 @@ export function AIChatPanel() {
   const thoughtOverlay = showThought && (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
-      background: 'rgba(3,8,15,0.95)', backdropFilter: 'blur(8px)',
+      background: C.chrome, backdropFilter: 'blur(8px)',
       display: 'flex', flexDirection: 'column',
     }}>
       <div style={{
-        padding: '16px 24px', borderBottom: `1px solid ${C.muted}`,
+        padding: '16px 24px', borderBottom: `1px solid ${C.borderStrong}`,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <div style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, color: C.text }}>
           HOMER — Agent Thought Process
         </div>
         <button onClick={toggleThought} style={{
-          background: C.bg3, border: `1px solid ${C.muted}`, color: C.text,
+          background: C.bg3, border: `1px solid ${C.borderStrong}`, color: C.text,
           padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontFamily: F.body, fontSize: 13,
         }}>
           Close
@@ -131,12 +131,12 @@ export function AIChatPanel() {
       {isOpen && (
         <div className="ai-chat-panel" style={{
           position: 'fixed', top: 0, right: 0, bottom: 0,
-          width: 400, background: C.bg2, borderLeft: `1px solid ${C.muted}`,
+          width: 400, background: C.bg2, borderLeft: `1px solid ${C.borderStrong}`,
           display: 'flex', flexDirection: 'column', flexShrink: 0, zIndex: 999,
         }}>
           {/* Header */}
           <div style={{
-            padding: '12px 16px', borderBottom: `1px solid ${C.muted}`,
+            padding: '12px 16px', borderBottom: `1px solid ${C.borderStrong}`,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div>
@@ -147,7 +147,7 @@ export function AIChatPanel() {
               <UndoDropdown undoableActions={undoableActions} onUndo={undo} />
               {voice.supported && (
                 <button onClick={toggleVoiceMode} title={voiceMode ? 'Disable auto-speak' : 'Enable auto-speak'} style={{
-                  background: voiceMode ? C.accent : 'none', border: `1px solid ${voiceMode ? C.accent : C.muted}`,
+                  background: voiceMode ? C.accent : 'none', border: `1px solid ${voiceMode ? C.accent : C.borderStrong}`,
                   color: voiceMode ? '#000' : C.dim, cursor: 'pointer',
                   padding: '4px 8px', borderRadius: 4, fontSize: 14,
                   display: 'flex', alignItems: 'center',
@@ -163,7 +163,7 @@ export function AIChatPanel() {
                 </button>
               )}
               <button onClick={toggleThought} title="Toggle thought process" style={{
-                background: showThought ? C.accent : 'none', border: `1px solid ${showThought ? C.accent : C.muted}`,
+                background: showThought ? C.accent : 'none', border: `1px solid ${showThought ? C.accent : C.borderStrong}`,
                 color: showThought ? '#000' : C.dim, cursor: 'pointer',
                 padding: '4px 8px', borderRadius: 4, fontSize: 12, fontFamily: F.mono,
               }}>
@@ -196,7 +196,7 @@ export function AIChatPanel() {
                   AI unavailable in this session
                 </p>
                 <p>
-                  <a href="/register" style={{ color: C.accent, textDecoration: 'none', fontWeight: 600 }}>
+                  <a href="/register" style={{ color: C.accentText, textDecoration: 'none', fontWeight: 600 }}>
                     Sign up for full access
                   </a>
                 </p>
@@ -251,7 +251,7 @@ export function AIChatPanel() {
 
           {/* Input */}
           <div style={{
-            padding: 12, borderTop: `1px solid ${C.muted}`,
+            padding: 12, borderTop: `1px solid ${C.borderStrong}`,
             display: 'flex', gap: 8, alignItems: 'center',
           }}>
             {voice.supported && (
@@ -270,7 +270,7 @@ export function AIChatPanel() {
               disabled={demoBlocked || voice.isRecording}
               style={{
                 flex: 1, padding: '10px 14px', borderRadius: 8,
-                background: C.bg, border: `1px solid ${voice.isRecording ? '#ff3b30' : C.muted}`,
+                background: C.bg, border: `1px solid ${voice.isRecording ? '#ff3b30' : C.borderStrong}`,
                 color: C.text, fontSize: 14, outline: 'none', fontFamily: F.body,
                 opacity: demoBlocked ? 0.5 : 1,
               }}
@@ -436,7 +436,7 @@ function ConfirmationCard({ conf, onConfirm, onDeny }: {
       }}>
         <div style={{
           fontFamily: F.display, fontSize: 13, fontWeight: 600,
-          color: isDestructive ? C.orange : C.accent,
+          color: isDestructive ? C.orange : C.accentText,
         }}>
           {isDestructive ? 'Confirm Action' : 'Confirm'}
         </div>
@@ -459,7 +459,7 @@ function ConfirmationCard({ conf, onConfirm, onDeny }: {
       }}>
         <button onClick={() => onDeny(conf.actionId)} style={{
           padding: '6px 16px', borderRadius: 6,
-          background: 'none', border: `1px solid ${C.muted}`,
+          background: 'none', border: `1px solid ${C.borderStrong}`,
           color: C.dim, cursor: 'pointer', fontSize: 13, fontFamily: F.body,
         }}>
           Cancel
@@ -467,7 +467,7 @@ function ConfirmationCard({ conf, onConfirm, onDeny }: {
         <button onClick={() => onConfirm(conf.actionId)} style={{
           padding: '6px 16px', borderRadius: 6,
           background: isDestructive ? C.orange : C.accent,
-          border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13,
+          border: 'none', color: isDestructive ? '#fff' : C.onAccent, cursor: 'pointer', fontSize: 13,
           fontFamily: F.body, fontWeight: 600,
         }}>
           Confirm
@@ -584,7 +584,7 @@ function Spinner() {
   return (
     <span style={{
       display: 'inline-block', width: 10, height: 10,
-      border: `2px solid ${C.muted}`, borderTopColor: C.accent,
+      border: `2px solid ${C.borderStrong}`, borderTopColor: C.accent,
       borderRadius: '50%', animation: 'spin 0.8s linear infinite',
     }} />
   );

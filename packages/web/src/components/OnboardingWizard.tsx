@@ -51,7 +51,7 @@ function IndustryPicker({ onSelect, loading: isLoading }: { onSelect: (v: string
             display: 'flex', flexDirection: 'column', alignItems: 'center',
             gap: 4, padding: '14px 8px', borderRadius: 10,
             background: hovered === opt.value ? alpha(C.accent, 0.1) : C.bg2,
-            border: `1px solid ${hovered === opt.value ? C.accent : C.muted}`,
+            border: `1px solid ${hovered === opt.value ? C.accent : C.borderStrong}`,
             cursor: 'pointer', transition: 'all 0.15s ease',
           }}
         >
@@ -145,7 +145,7 @@ export function OnboardingWizard() {
       background: `linear-gradient(180deg, ${alpha(C.surface, 0.94)} 0%, ${alpha(C.bg3, 0.98)} 100%)`,
       borderRadius: 16,
       border: `1px solid ${alpha(C.muted, 0.35)}`,
-      boxShadow: '0 18px 42px rgba(0, 0, 0, 0.24)',
+      boxShadow: 'var(--shadow-lg)',
       padding: isCompact ? 18 : 22,
       margin: '0 0 20px',
     }}>
@@ -163,7 +163,7 @@ export function OnboardingWizard() {
             fontSize: 11,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            color: C.accent,
+            color: C.accentText,
             marginBottom: 8,
           }}>
             {progressLabel}

@@ -87,7 +87,7 @@ export function GroceryTab() {
   return (
     <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
       <div style={{
-        background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
+        background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`,
         padding: 24, maxWidth: 520, flex: '1 1 400px',
       }}>
         <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 20, color: C.text }}>

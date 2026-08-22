@@ -148,7 +148,7 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
               style={{
                 ...toggleBtnStyle,
                 background: interval === 'monthly' ? C.accent : 'transparent',
-                color: interval === 'monthly' ? '#fff' : C.dim,
+                color: interval === 'monthly' ? C.onAccent : C.dim,
               }}
             >
               Monthly
@@ -158,7 +158,7 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
               style={{
                 ...toggleBtnStyle,
                 background: interval === 'annual' ? C.accent : 'transparent',
-                color: interval === 'annual' ? '#fff' : C.dim,
+                color: interval === 'annual' ? C.onAccent : C.dim,
               }}
             >
               Annual
@@ -263,7 +263,7 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
                     width: '100%',
                     padding: '10px 0',
                     borderRadius: 8,
-                    border: isCurrent ? `1px solid ${C.muted}` : 'none',
+                    border: isCurrent ? `1px solid ${C.borderStrong}` : 'none',
                     background: isCurrent ? 'transparent' : plan.id === 'free' ? C.bg2 : C.accent,
                     color: isCurrent ? C.dim : plan.id === 'free' ? C.text : '#fff',
                     cursor: isCurrent ? 'default' : 'pointer',
@@ -287,7 +287,7 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
         </div>
 
         <p style={{ color: C.dim, fontSize: 12, fontFamily: F.body, textAlign: 'center', marginTop: 16, marginBottom: 0 }}>
-          Need more than 15,000 orders/month? <a href="mailto:sales@homer.io" style={{ color: C.accent }}>Contact us</a> for Enterprise pricing.
+          Need more than 15,000 orders/month? <a href="mailto:sales@homer.io" style={{ color: C.accentText }}>Contact us</a> for Enterprise pricing.
         </p>
       </div>
     </div>
@@ -297,7 +297,7 @@ export function PlanSelector({ open, onClose, currentPlan }: PlanSelectorProps) 
 const overlayStyle: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  background: 'rgba(0,0,0,0.7)',
+  background: C.overlay,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -312,7 +312,7 @@ const modalStyle: React.CSSProperties = {
   width: '95vw',
   maxHeight: '90vh',
   overflowY: 'auto',
-  border: `1px solid ${C.muted}`,
+  border: `1px solid ${C.borderStrong}`,
 };
 
 const closeBtnStyle: React.CSSProperties = {

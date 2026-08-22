@@ -3,7 +3,7 @@ import { useMessagesStore } from '../../stores/messages.js';
 import { useDriverStore } from '../../stores/driver.js';
 import { useAuthStore } from '../../stores/auth.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
-import { C, F } from '../../theme.js';
+import { C, F, alpha } from '../../theme.js';
 
 interface DriverChatProps {
   onClose: () => void;
@@ -85,17 +85,17 @@ export function DriverChat({ onClose }: DriverChatProps) {
                 <div style={{
                   maxWidth: '80%', padding: '8px 12px', borderRadius: 10,
                   background: isMine ? C.accent : C.bg3,
-                  color: isMine ? '#fff' : C.text,
+                  color: isMine ? C.onAccent : C.text,
                 }}>
                   {!isMine && (
-                    <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, marginBottom: 2 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: C.accentText, marginBottom: 2 }}>
                       {msg.senderName || 'Dispatch'}
                     </div>
                   )}
                   <div style={{ fontSize: 13, lineHeight: 1.4, wordBreak: 'break-word' }}>{msg.body}</div>
                   <div style={{
                     fontSize: 10, marginTop: 4, textAlign: 'right',
-                    color: isMine ? 'rgba(255,255,255,0.5)' : C.dim,
+                    color: isMine ? alpha(C.onAccent, 0.6) : C.dim,
                   }}>
                     {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
@@ -133,7 +133,7 @@ const panelStyle: React.CSSProperties = {
   background: C.bg2, borderTop: `2px solid ${C.accent}`,
   borderRadius: '16px 16px 0 0',
   zIndex: 100,
-  boxShadow: '0 -4px 24px rgba(0,0,0,0.4)',
+  boxShadow: 'var(--shadow-lg)',
 };
 
 const headerStyle: React.CSSProperties = {
@@ -157,7 +157,7 @@ const inputBarStyle: React.CSSProperties = {
 
 const inputStyle: React.CSSProperties = {
   flex: 1, padding: '10px 14px', borderRadius: 10,
-  background: C.bg3, border: `1px solid ${C.muted}`,
+  background: C.bg3, border: `1px solid ${C.borderStrong}`,
   color: C.text, fontSize: 14, fontFamily: F.body, outline: 'none',
 };
 

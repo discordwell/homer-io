@@ -197,7 +197,7 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
                 <img
                   src={signatureBase64}
                   alt="Signature"
-                  style={{ height: 60, borderRadius: 6, border: `1px solid ${C.muted}` }}
+                  style={{ height: 60, borderRadius: 6, border: `1px solid ${C.borderStrong}` }}
                 />
                 <p style={{ fontSize: 12, color: C.green, margin: '4px 0 0' }}>Signature captured</p>
               </div>
@@ -220,7 +220,7 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
                 minHeight: 120,
                 padding: 12,
                 background: C.bg3,
-                border: `1px solid ${C.muted}`,
+                border: `1px solid ${C.borderStrong}`,
                 borderRadius: 8,
                 color: C.text,
                 fontSize: 14,
@@ -288,7 +288,7 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
               flex: 1,
               padding: '14px 16px',
               background: 'transparent',
-              border: `1px solid ${C.muted}`,
+              border: `1px solid ${C.borderStrong}`,
               borderRadius: 8,
               color: C.dim,
               fontSize: 14,
@@ -310,7 +310,7 @@ export function PODFlow({ orderId, routeId, recipientName, onComplete, onCancel 
                 flex: 1,
                 padding: '14px 16px',
                 background: 'transparent',
-                border: `1px solid ${C.muted}`,
+                border: `1px solid ${C.borderStrong}`,
                 borderRadius: 8,
                 color: C.dim,
                 fontSize: 14,

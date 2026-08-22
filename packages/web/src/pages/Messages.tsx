@@ -71,7 +71,7 @@ export function MessagesPage() {
                         fontSize: 11,
                         fontWeight: 600,
                         background: alpha(C.accent, 0.14),
-                        color: C.accent,
+                        color: C.accentText,
                       }}
                     >
                       Route thread

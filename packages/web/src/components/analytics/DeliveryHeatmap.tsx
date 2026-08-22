@@ -21,7 +21,7 @@ export function DeliveryHeatmap({ data }: DeliveryHeatmapProps) {
 
   return (
     <div style={{
-      background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
+      background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`,
       padding: 20, position: 'relative',
     }}>
       <h3 style={{ fontFamily: F.display, fontSize: 16, margin: '0 0 16px 0', color: C.text }}>
@@ -90,7 +90,7 @@ export function DeliveryHeatmap({ data }: DeliveryHeatmapProps) {
       {tooltip && (
         <div style={{
           position: 'fixed', left: tooltip.x - 40, top: tooltip.y - 44,
-          background: C.bg, border: `1px solid ${C.muted}`, borderRadius: 6,
+          background: C.bg, border: `1px solid ${C.borderStrong}`, borderRadius: 6,
           padding: '4px 10px', fontSize: 11, fontFamily: F.body, color: C.text,
           pointerEvents: 'none', zIndex: 100, whiteSpace: 'nowrap',
           boxShadow: `0 4px 12px ${alpha(C.text, 0.1)}`,

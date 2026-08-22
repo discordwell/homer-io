@@ -4,6 +4,7 @@ import { HeroMap } from './HeroMap.js';
 import { useHeroGeolocation } from './useHeroGeolocation.js';
 import { getNearestCity } from './nearestCity.js';
 import './home.css';
+import { ThemeToggle } from '../ThemeToggle.js';
 
 /* ---- Scroll reveal ---- */
 
@@ -29,6 +30,7 @@ function Nav() {
         <li><a href="#pricing">Pricing</a></li>
         <li><Link to="/login">Log in</Link></li>
       </ul>
+      <ThemeToggle compact className="hp-nav-theme" />
       <Link to="/register" className="hp-nav-cta">Start free</Link>
     </nav>
   );
@@ -390,7 +392,7 @@ function PricingSection() {
 
   return (
     <div className="hp-section-full" id="pricing" style={{
-      background: 'linear-gradient(180deg, #06090F 0%, #0A1018 50%, #06090F 100%)',
+      background: 'var(--section-fade)',
     }}>
       <div style={{ maxWidth: 1320, margin: '0 auto' }}>
         <Reveal>

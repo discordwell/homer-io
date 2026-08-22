@@ -5,17 +5,30 @@ import { useDriverStore } from '../../stores/driver.js';
 import { useGeoLocation } from '../../hooks/useGeoLocation.js';
 import { LoadingSpinner } from '../../components/LoadingSpinner.js';
 import { C, alpha } from '../../theme.js';
+import { useMapPalette, CARTO_ATTRIBUTION } from '../../map-theme.js';
 
 export function DriverMapPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const driverMarkerRef = useRef<L.CircleMarker | null>(null);
+  const palette = useMapPalette();
+  const paletteRef = useRef(palette);
+  // See RouteMap: re-fitting on a theme change would discard the user's view.
+  const fittedRef = useRef<string>('');
   const { currentRoute, loading, fetchCurrentRoute } = useDriverStore();
   const geo = useGeoLocation();
+
+  useEffect(() => { paletteRef.current = palette; });
 
   useEffect(() => {
     if (!currentRoute) fetchCurrentRoute();
   }, [currentRoute, fetchCurrentRoute]);
+
+  // Swap basemap tiles in place when the theme changes.
+  useEffect(() => {
+    tileLayerRef.current?.setUrl(palette.tileUrl);
+  }, [palette.tileUrl]);
 
   // Initialize the map once
   useEffect(() => {
@@ -26,8 +39,8 @@ export function DriverMapPage() {
       : [40.7128, -74.006];
 
     const map = L.map(containerRef.current, { zoomControl: false }).setView(defaultCenter, 13);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+    tileLayerRef.current = L.tileLayer(paletteRef.current.tileUrl, {
+      attribution: CARTO_ATTRIBUTION,
     }).addTo(map);
 
     // Add zoom control on the right side
@@ -52,14 +65,23 @@ export function DriverMapPage() {
     } else {
       driverMarkerRef.current = L.circleMarker([geo.lat, geo.lng], {
         radius: 10,
-        fillColor: C.accent,
+        fillColor: paletteRef.current.accent,
         fillOpacity: 1,
-        color: '#fff',
+        color: paletteRef.current.markerStroke,
         weight: 3,
       }).addTo(map);
       driverMarkerRef.current.bindTooltip('You', { permanent: true, direction: 'top', offset: [0, -12] });
     }
   }, [geo?.lat, geo?.lng]);
+
+  // The marker above is created once and then only repositioned, so a theme
+  // change has to restyle it explicitly or it keeps the old palette's colors.
+  useEffect(() => {
+    driverMarkerRef.current?.setStyle({
+      fillColor: palette.accent,
+      color: palette.markerStroke,
+    });
+  }, [palette.accent, palette.markerStroke]);
 
   // Draw stops and route line
   useEffect(() => {
@@ -99,11 +121,11 @@ export function DriverMapPage() {
         className: '',
         html: `<div style="
           width: 26px; height: 26px; border-radius: 50%;
-          background: ${fillColor}; color: #000;
+          background: ${fillColor}; color: ${palette.onAccent};
           display: flex; align-items: center; justify-content: center;
           font-size: 12px; font-weight: 700;
-          border: 2px solid #fff;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          border: 2px solid ${palette.markerStroke};
+          box-shadow: 0 2px 4px ${palette.markerShadow};
         ">${stop.stopSequence ?? '?'}</div>`,
         iconSize: [26, 26],
         iconAnchor: [13, 13],
@@ -117,7 +139,7 @@ export function DriverMapPage() {
     // Draw route line
     if (latLngs.length > 1) {
       L.polyline(latLngs, {
-        color: C.accent,
+        color: palette.accent,
         weight: 3,
         opacity: 0.7,
         dashArray: '8, 8',
@@ -129,12 +151,13 @@ export function DriverMapPage() {
     if (geo?.lat && geo?.lng) {
       allPoints.push([geo.lat, geo.lng]);
     }
-    if (allPoints.length > 0) {
-      const bounds = L.latLngBounds(allPoints);
-      map.fitBounds(bounds, { padding: [50, 50] });
+    const fitKey = allPoints.map(([a, b]) => `${a},${b}`).join('|');
+    if (allPoints.length > 0 && fitKey !== fittedRef.current) {
+      fittedRef.current = fitKey;
+      map.fitBounds(L.latLngBounds(allPoints), { padding: [50, 50] });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentRoute?.orders]);
+  }, [currentRoute?.orders, palette]);
 
   if (loading && !currentRoute) {
     return (

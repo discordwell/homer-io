@@ -74,7 +74,7 @@ function buildPopupContent(driver: DriverLocation, color: string): string {
       color: ${C.text};
       padding: 10px 14px;
       border-radius: 8px;
-      border: 1px solid ${C.muted};
+      border: 1px solid ${C.borderStrong};
       font-family: Inter, sans-serif;
       font-size: 13px;
       min-width: 160px;

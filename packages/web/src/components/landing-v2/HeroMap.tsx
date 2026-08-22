@@ -1,5 +1,7 @@
 import { lazy, Suspense, useState, useCallback } from 'react';
 import { BayAreaMap } from './BayAreaMap.js';
+import { useThemeStore } from '../../stores/theme.js';
+import { getMapPalette } from '../../map-theme.js';
 import type { HeroGeoResult } from './useHeroGeolocation.js';
 import './heroMap.css';
 
@@ -45,6 +47,9 @@ export function HeroMap({ geo }: HeroMapProps) {
   const { lat, lng, status } = geo;
   const [mapReady, setMapReady] = useState(false);
   const [mapEnabled, setMapEnabled] = useState(() => hasApiKey && supportsMapWebGL());
+  // Literal hex so the rings match the MapLibre hero's bridge accent exactly;
+  // that style spec cannot read tokens, so map-theme.ts is the shared source.
+  const ringColor = useThemeStore((s) => getMapPalette(s.resolved).accent);
 
   const onReady = useCallback(() => setMapReady(true), []);
   const onError = useCallback(() => {
@@ -80,9 +85,9 @@ export function HeroMap({ geo }: HeroMapProps) {
 
       {/* SVG range rings */}
       <svg className="hero-map-rings" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
-        <circle cx="50" cy="50" r="15" fill="none" stroke="#F59E0B" strokeWidth="0.08" opacity="0.05" />
-        <circle cx="50" cy="50" r="30" fill="none" stroke="#F59E0B" strokeWidth="0.08" opacity="0.035" />
-        <circle cx="50" cy="50" r="45" fill="none" stroke="#F59E0B" strokeWidth="0.08" opacity="0.025" />
+        <circle cx="50" cy="50" r="15" fill="none" stroke={ringColor} strokeWidth="0.08" opacity="0.05" />
+        <circle cx="50" cy="50" r="30" fill="none" stroke={ringColor} strokeWidth="0.08" opacity="0.035" />
+        <circle cx="50" cy="50" r="45" fill="none" stroke={ringColor} strokeWidth="0.08" opacity="0.025" />
       </svg>
     </div>
   );

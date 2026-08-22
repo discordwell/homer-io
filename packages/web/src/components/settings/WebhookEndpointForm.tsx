@@ -151,7 +151,7 @@ export function WebhookEndpointForm({ open, onClose, onSave, endpoint }: Webhook
         </div>
         <div style={{
           background: C.bg, borderRadius: 8, padding: 16,
-          border: `1px solid ${C.muted}`, marginBottom: 16,
+          border: `1px solid ${C.borderStrong}`, marginBottom: 16,
         }}>
           <span style={{ color: C.dim, fontSize: 12, display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Signing Secret
@@ -169,7 +169,7 @@ export function WebhookEndpointForm({ open, onClose, onSave, endpoint }: Webhook
                 toast('Secret copied to clipboard', 'info');
               }}
               style={{
-                background: C.bg3, border: `1px solid ${C.muted}`, color: C.accent,
+                background: C.bg3, border: `1px solid ${C.borderStrong}`, color: C.accentText,
                 padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
                 fontSize: 13, fontFamily: F.body, fontWeight: 600,
                 whiteSpace: 'nowrap',
@@ -308,5 +308,5 @@ export function WebhookEndpointForm({ open, onClose, onSave, endpoint }: Webhook
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
+  border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
 };

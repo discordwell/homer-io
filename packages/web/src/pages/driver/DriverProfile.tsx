@@ -4,6 +4,7 @@ import { useDriverStore } from '../../stores/driver.js';
 import { useAuthStore } from '../../stores/auth.js';
 import { LoadingSpinner } from '../../components/LoadingSpinner.js';
 import { C, F } from '../../theme.js';
+import { ThemeModeSelector } from '../../components/ThemeToggle.js';
 
 export function DriverProfilePage() {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ export function DriverProfilePage() {
           width: 72, height: 72, borderRadius: '50%',
           background: C.accent, margin: '0 auto 12px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 28, fontWeight: 700, color: '#000',
+          fontSize: 28, fontWeight: 700, color: C.onAccent,
         }}>
           {(profile?.name || user?.name || 'D')[0].toUpperCase()}
         </div>
@@ -93,7 +94,7 @@ export function DriverProfilePage() {
             borderRadius: '50%',
             background: '#fff',
             transition: 'left 0.2s',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+            boxShadow: 'var(--shadow-sm)',
           }} />
         </button>
       </div>
@@ -145,6 +146,16 @@ export function DriverProfilePage() {
           {profile?.status === 'on_break' ? 'End Break' : 'Take a Break'}
         </button>
       )}
+
+      {/* Appearance — the driver shell has no topnav, so the full selector
+          lives here rather than a compact cycling toggle. */}
+      <div style={{
+        background: C.bg2, borderRadius: 12, padding: '16px 20px',
+        border: `1px solid ${C.border}`,
+      }}>
+        <div style={{ fontSize: 13, color: C.dim, marginBottom: 12 }}>Appearance</div>
+        <ThemeModeSelector />
+      </div>
 
       {/* Sign out */}
       <button

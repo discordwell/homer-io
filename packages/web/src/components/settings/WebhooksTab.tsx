@@ -235,7 +235,7 @@ export function WebhooksTab() {
         </button>
       </div>
 
-      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
         <DataTable columns={columns} data={endpoints} />
       </div>
 
@@ -270,6 +270,6 @@ export function WebhooksTab() {
 }
 
 const actionBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none', color: C.accent, cursor: 'pointer',
+  background: 'none', border: 'none', color: C.accentText, cursor: 'pointer',
   fontSize: 13, fontFamily: F.body, padding: '2px 4px',
 };

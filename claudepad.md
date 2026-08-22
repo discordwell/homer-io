@@ -2,6 +2,25 @@
 
 ## Session Summaries
 
+### 2026-08-21T19:15 UTC — Feature: light mode (light / dark / system) across the whole web surface
+
+- **Ask**: user wanted a light mode alongside the default dark, switchable night/dark/system. Scoped via AskUserQuestion to **everything including the marketing landing**, with the switcher in **topnav + Settings**.
+- **Shape**: `app.css` was already fully tokenized, so the core is a token swap. Dark stays on bare `:root`; light overrides only what changes under `html[data-theme='light']`. Dark is the product default — absent attribute means dark.
+- **Pre-paint**: `public/theme-init.js` (render-blocking, external) stamps `data-theme` before first paint. It **cannot** be inline: the CSP in `index.html` is `script-src 'self'` with no `'unsafe-inline'`. Its resolution logic is deliberately duplicated from `stores/theme.ts`; `theme.test.ts` runs the real file via `new Function` against a fake window and asserts parity over every (stored × OS-pref) combination, including the no-`matchMedia` case where the two originally diverged.
+- **No `prefers-color-scheme` fallback in CSS, on purpose**: this is a React SPA (no JS ⇒ blank page anyway), and a media fallback would flash *light* at a dark-mode user whenever `theme-init.js` is slow or 404s.
+- **Store**: `stores/theme.ts` is zustand but does **not** use `persist` — it writes a bare string to `localStorage['homer-theme']` so the dependency-free init script can read the same value. `initTheme()` in `main.tsx` re-applies and subscribes to `prefers-color-scheme`.
+- **Three token roles that can't be one value**: `--accent` (fill) vs `--accent-text` (foreground; bright amber is 2.2:1 on white) vs `--on-accent` (text on an accent fill; white-on-amber fails AA in *both* themes). Plus `--border-strong` (the app's de-facto border in ~170 places; equals `--t3` in dark so dark is unchanged) and `--field-bg`/`--field-border` (in light the card and the field are both white).
+- **Colors outside CSS**: empirically probed — browsers **do** resolve `var()` in SVG presentation attributes (so recharts and inline SVG were never broken), but **Canvas 2D does not** (`fillStyle` rejects it and paints black), and neither do MapLibre style specs. `map-theme.ts` / `maplibreStyle.ts` / `BayAreaMap.tsx` / `driverAnimator.ts` carry theme-keyed literal hex. Leaflet tiles swap via `setUrl()`, and `fitBounds` is guarded by a geometry signature so a theme toggle never discards the user's pan/zoom.
+- **Bugs found and fixed along the way** (all pre-existing except where noted):
+  - **Production build rendered a blank page.** Rollup inlined zustand into the entry chunk; lazily-loaded store chunks imported `create` back *from* the entry, so they evaluated first and every `create(...)` at module scope threw "is not a function". Dev never reproduces (unbundled) and `vite build` exits 0. Fixed with a `manualChunks` rule; `build-chunks.test.ts` walks `dist/assets` for static-import cycles and was verified to fail on the unfixed build (`index → auth → index`).
+  - **Hex-alpha concatenation on CSS vars** — `` `${C.green}18` `` yields the literal `var(--green)18`, invalid CSS, dropped silently. 10 sites (Badge, RiskBadge, Toast, KPICard, SubscriptionBanner, HealthDashboard, DispatchPreview, PublicTracking). Badges had been rendering with no background and no border. **Note: fixing this visibly changes dark mode** — badges now have their intended tint.
+  - **`alpha()` returned the color opaque for unmapped tokens**, warning only in DEV. Regressed the dispatch spinner (track and head the same color) once I introduced `alpha(C.onAccent, …)`. Now throws outside prod, with `theme.test.ts` pinning every token.
+  - White-on-amber in ConfirmDialog / AIChatPanel / chat bubbles / PlanSelector / Migration (2.1:1 dark, 3.0:1 light).
+  - `--t3-rgb` was `101,116,139` for `#64748B` — off by one on red.
+- **Known shortfall, pinned not fixed**: dark `--t3` on `--bg-card` is 3.73:1 (fails AA for small text). Pre-existing; fixing it means darkening every muted label in dark, which is a deliberate visual change and not part of adding light mode. `theme-tokens.test.ts` asserts it can't get worse.
+- **Flagged, deliberately not fixed** (pre-existing, out of scope): the hero MapLibre map **never loads** — `loadMapLibre.ts` pulls the script from `unpkg.com`, which is not in the CSP's `script-src`. unpkg is reachable (200); the CSP blocks it. So the landing always renders the SVG fallback, and the `maplibreStyle`/`driverAnimator` theming is correct but on a currently-unreachable path. Allowing a third-party CDN in `script-src` is a security call for the user.
+- **Verification**: 254 tests green (23 files, +9), typecheck clean, lint 0 errors / 6 pre-existing warnings, build succeeds. Wet-tested in a real browser across landing, vertical landing, pricing, login, dashboard, settings, orders, live map, driver profile — in both themes, plus rapid toggling, reload persistence, and live tile swap. The wet test found 5 light-mode bugs a diff read would not have (dark glass panel on `/cannabis`, dark-blue demo banner, white-on-white auth inputs, boot-style specificity pinning `body` to the wrong background, hero grid invisible).
+
 ### 2026-06-19T02:00 UTC — Maintenance pass: 5 correctness bugs across connectors, notifications, address dedup, billing
 - **Why**: Mature repo, clean tree. Fanned out 4 bug-hunting subagents over the logistics core (routing/dispatch, billing/analytics, tracking/geofence/notifications, orders/POD/connectors). Each candidate independently verified before fixing; an adversarial code-review subagent reviewed the full diff pre-commit. Landed 5 genuine bugs + 1 review-found edge guard, each with a discriminating test. Suite 1253 → 1273 (+20). No migrations.
 - **Fix 1 — Square line-item price ÷100 twice** (`lib/integrations/square.ts`): `toExternal` already converts Square cents→dollars, but `mapOrderToHomer` divided by 100 again, rendering a $12.00 item as "$0.12" in the driver-facing order notes. Square-only (Toast/Dutchie format already-dollar prices once). Test: new `connector-mapping.test.ts`.
@@ -194,16 +213,6 @@
 - **21 new tests**, 542 total passing, TypeScript clean
 
 
-### 2026-03-21T23:50 UTC — Email-Gated Demo Sessions
-- **Abuse prevention**: Demo sessions now require email address (was zero-auth `{}`)
-- **Backend**: email field in schema with `.transform(toLowerCase)`, disposable domain blocklist (~80 domains), email-based dedup (Redis 7d TTL + DB slow path), replaces IP-based 1hr dedup
-- **Frontend**: `DemoEmailGate.tsx` full-screen overlay, provisioning on email submit (no more background provisioning), 422 error handling
-- **Shared**: `demoSessionSchema` exported from shared package for frontend validation
-- **Tests**: 25 new tests (13 disposable-domains + 12 demo-email-gate), all 517 passing
-- **Files**: 4 new (disposable-domains.ts, DemoEmailGate.tsx, 2 test files), 4 modified (demo-session.ts, routes.ts, shared auth.ts, demo store, DemoDashboardLayout)
-
-
----
 
 ## Key Findings
 

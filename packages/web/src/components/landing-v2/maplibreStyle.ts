@@ -1,6 +1,61 @@
-import type { StyleSpecification } from 'maplibre-gl';
+import type { Map as MapLibreMap, StyleSpecification } from 'maplibre-gl';
+import type { ResolvedTheme } from '../../stores/theme.js';
 
-export function buildHeroStyle(apiKey: string): StyleSpecification {
+/**
+ * Paint values for the hero basemap, per theme.
+ *
+ * MapLibre style specs are parsed by the GL renderer, not CSS — `var(--token)`
+ * is not resolvable here, so these have to be literal colors.
+ *
+ * The light ramp is not a mechanical inversion: on a pale basemap the roads
+ * need to be *darker* than the land to read at all, which reverses the
+ * figure/ground relationship the dark ramp relies on.
+ */
+interface HeroPaint {
+  background: string;
+  water: string;
+  landcover: string;
+  building: string;
+  roadMinor: string;
+  roadSecondary: string;
+  roadPrimary: string;
+  bridge: string;
+  bridgeOpacity: number;
+  label: string;
+  labelHalo: string;
+}
+
+const HERO_PAINT: Record<ResolvedTheme, HeroPaint> = {
+  dark: {
+    background: '#06090F',
+    water: '#0A1628',
+    landcover: '#0D1520',
+    building: '#0E1525',
+    roadMinor: '#141F30',
+    roadSecondary: '#192A45',
+    roadPrimary: '#1E3055',
+    bridge: '#F59E0B',
+    bridgeOpacity: 0.45,
+    label: '#94A3B8',
+    labelHalo: '#06090F',
+  },
+  light: {
+    background: '#F2F5F9',
+    water: '#D7E3F0',
+    landcover: '#E4EDE3',
+    building: '#E2E8F0',
+    roadMinor: '#D2DAE4',
+    roadSecondary: '#BFC9D6',
+    roadPrimary: '#A7B4C4',
+    bridge: '#B45309',
+    bridgeOpacity: 0.55,
+    label: '#475569',
+    labelHalo: '#FFFFFF',
+  },
+};
+
+export function buildHeroStyle(apiKey: string, theme: ResolvedTheme = 'dark'): StyleSpecification {
+  const paint = HERO_PAINT[theme];
   return {
     version: 8,
     name: 'homer-command-center',
@@ -17,7 +72,7 @@ export function buildHeroStyle(apiKey: string): StyleSpecification {
       {
         id: 'background',
         type: 'background',
-        paint: { 'background-color': '#06090F' },
+        paint: { 'background-color': paint.background },
       },
       // Water
       {
@@ -25,7 +80,7 @@ export function buildHeroStyle(apiKey: string): StyleSpecification {
         type: 'fill',
         source: 'openmaptiles',
         'source-layer': 'water',
-        paint: { 'fill-color': '#0A1628' },
+        paint: { 'fill-color': paint.water },
       },
       // Landcover (parks, etc) — very subtle
       {
@@ -33,7 +88,7 @@ export function buildHeroStyle(apiKey: string): StyleSpecification {
         type: 'fill',
         source: 'openmaptiles',
         'source-layer': 'landcover',
-        paint: { 'fill-color': '#0D1520', 'fill-opacity': 0.5 },
+        paint: { 'fill-color': paint.landcover, 'fill-opacity': 0.5 },
       },
       // Building footprints — subtle dark
       {
@@ -41,7 +96,7 @@ export function buildHeroStyle(apiKey: string): StyleSpecification {
         type: 'fill',
         source: 'openmaptiles',
         'source-layer': 'building',
-        paint: { 'fill-color': '#0E1525', 'fill-opacity': 0.6 },
+        paint: { 'fill-color': paint.building, 'fill-opacity': 0.6 },
       },
       // Minor roads
       {
@@ -51,7 +106,7 @@ export function buildHeroStyle(apiKey: string): StyleSpecification {
         'source-layer': 'transportation',
         filter: ['all', ['in', 'class', 'minor', 'service', 'track']],
         paint: {
-          'line-color': '#141F30',
+          'line-color': paint.roadMinor,
           'line-width': 0.8,
         },
       },
@@ -63,7 +118,7 @@ export function buildHeroStyle(apiKey: string): StyleSpecification {
         'source-layer': 'transportation',
         filter: ['in', 'class', 'secondary', 'tertiary'],
         paint: {
-          'line-color': '#192A45',
+          'line-color': paint.roadSecondary,
           'line-width': 1.2,
         },
       },
@@ -75,7 +130,7 @@ export function buildHeroStyle(apiKey: string): StyleSpecification {
         'source-layer': 'transportation',
         filter: ['in', 'class', 'primary', 'trunk', 'motorway'],
         paint: {
-          'line-color': '#1E3055',
+          'line-color': paint.roadPrimary,
           'line-width': 2,
         },
       },
@@ -87,9 +142,9 @@ export function buildHeroStyle(apiKey: string): StyleSpecification {
         'source-layer': 'transportation',
         filter: ['all', ['==', 'brunnel', 'bridge'], ['in', 'class', 'primary', 'trunk', 'motorway']],
         paint: {
-          'line-color': '#F59E0B',
+          'line-color': paint.bridge,
           'line-width': 3,
-          'line-opacity': 0.45,
+          'line-opacity': paint.bridgeOpacity,
         },
       },
       // City labels
@@ -106,12 +161,42 @@ export function buildHeroStyle(apiKey: string): StyleSpecification {
           'text-max-width': 8,
         },
         paint: {
-          'text-color': '#94A3B8',
+          'text-color': paint.label,
           'text-opacity': 0.7,
-          'text-halo-color': '#06090F',
+          'text-halo-color': paint.labelHalo,
           'text-halo-width': 1.5,
         },
       },
     ],
   };
+}
+
+/**
+ * Repaint an already-initialized hero map for a new theme.
+ *
+ * Uses setPaintProperty rather than setStyle: a style swap tears down and
+ * rebuilds every source, which would invalidate the road geometry
+ * DriverAnimator extracted at load and strand the animated drivers.
+ */
+export function applyHeroPaint(map: MapLibreMap, theme: ResolvedTheme): void {
+  const paint = HERO_PAINT[theme];
+  const updates: Array<[string, string, string | number]> = [
+    ['background', 'background-color', paint.background],
+    ['water', 'fill-color', paint.water],
+    ['landcover', 'fill-color', paint.landcover],
+    ['building', 'fill-color', paint.building],
+    ['road-minor', 'line-color', paint.roadMinor],
+    ['road-secondary', 'line-color', paint.roadSecondary],
+    ['road-primary', 'line-color', paint.roadPrimary],
+    ['bridge', 'line-color', paint.bridge],
+    ['bridge', 'line-opacity', paint.bridgeOpacity],
+    ['place-city', 'text-color', paint.label],
+    ['place-city', 'text-halo-color', paint.labelHalo],
+  ];
+
+  for (const [layerId, property, value] of updates) {
+    // getLayer guards the window between construction and style parse, where
+    // the layers do not exist yet and setPaintProperty would throw.
+    if (map.getLayer(layerId)) map.setPaintProperty(layerId, property, value);
+  }
 }

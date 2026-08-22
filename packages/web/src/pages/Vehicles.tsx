@@ -130,7 +130,7 @@ export function VehiclesPage() {
         <EmptyState icon="🚛" title="No vehicles yet" description="Add your first vehicle to get started."
           action={<button onClick={openAdd} style={primaryBtnStyle}>+ Add Vehicle</button>} />
       ) : (
-        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
           <DataTable columns={columns} data={vehicles}
             pagination={{ page: vehiclePage, totalPages: vehicleTotalPages, onPageChange: fetchVehicles }} />
         </div>
@@ -162,10 +162,10 @@ export function VehiclesPage() {
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
+  border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
 };
 
 const actionBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none', color: C.accent, cursor: 'pointer',
+  background: 'none', border: 'none', color: C.accentText, cursor: 'pointer',
   fontSize: 13, fontFamily: F.body, padding: '2px 4px',
 };

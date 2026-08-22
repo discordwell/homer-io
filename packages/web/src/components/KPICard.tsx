@@ -1,12 +1,12 @@
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 interface KPICardProps { icon: string; label: string; value: string | number; sub?: string; color?: string; }
 
 export function KPICard({ icon, label, value, sub, color = C.accent }: KPICardProps) {
   return (
     <div style={{
-      background: `radial-gradient(ellipse at top left, ${color}12 0%, ${C.bg2} 70%)`,
-      borderRadius: 12, padding: 20, border: `1px solid ${C.muted}`,
+      background: `radial-gradient(ellipse at top left, ${alpha(color, 0.07)} 0%, ${C.bg2} 70%)`,
+      borderRadius: 12, padding: 20, border: `1px solid ${C.borderStrong}`,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <span style={{ fontSize: 18 }}>{icon}</span>

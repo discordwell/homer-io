@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 /**
  * Persistent banner shown at the top of the dashboard in demo mode.
@@ -10,8 +10,8 @@ export function DemoBanner() {
     <div
       data-testid="demo-banner"
       style={{
-        background: 'linear-gradient(90deg, #1a3a5c 0%, #0f2b4a 100%)',
-        borderBottom: '1px solid rgba(91, 164, 245, 0.3)',
+        background: 'var(--demo-banner-bg)',
+        borderBottom: '1px solid var(--demo-banner-border)',
         padding: '10px 24px',
         display: 'flex',
         alignItems: 'center',
@@ -22,7 +22,7 @@ export function DemoBanner() {
       }}
     >
       <span style={{
-        color: C.accent,
+        color: C.accentText,
         fontSize: 13,
         fontFamily: F.body,
         fontWeight: 500,
@@ -30,7 +30,7 @@ export function DemoBanner() {
         You're viewing a demo
       </span>
       <span style={{
-        color: 'rgba(255,255,255,0.4)',
+        color: alpha(C.text, 0.45),
         fontSize: 13,
       }}>
         |
@@ -38,7 +38,7 @@ export function DemoBanner() {
       <Link
         to="/register"
         style={{
-          color: '#fff',
+          color: C.onAccent,
           fontSize: 13,
           fontFamily: F.body,
           fontWeight: 600,

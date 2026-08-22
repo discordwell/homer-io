@@ -142,12 +142,12 @@ export function ReportDownload() {
             top: 'calc(100% + 4px)',
             right: 0,
             background: C.bg2,
-            border: `1px solid ${C.muted}`,
+            border: `1px solid ${C.borderStrong}`,
             borderRadius: 8,
             overflow: 'hidden',
             minWidth: 200,
             zIndex: 50,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            boxShadow: 'var(--shadow-lg)',
           }}
         >
           {REPORT_OPTIONS.map((option) => (

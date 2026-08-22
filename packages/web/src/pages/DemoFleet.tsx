@@ -45,7 +45,7 @@ export function DemoVehiclesPage() {
         </button>
       </div>
 
-      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
         <DataTable columns={columns} data={DEMO_VEHICLES} />
         <div style={{ padding: 12, textAlign: 'center', color: C.dim, fontSize: 13 }}>
           Showing {DEMO_VEHICLES.length} sample vehicles
@@ -90,7 +90,7 @@ export function DemoDriversPage() {
         </button>
       </div>
 
-      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
         <DataTable columns={columns} data={DEMO_DRIVERS} />
         <div style={{ padding: 12, textAlign: 'center', color: C.dim, fontSize: 13 }}>
           Showing {DEMO_DRIVERS.length} sample drivers

@@ -1,4 +1,6 @@
 import type { Map as MapLibreMap } from 'maplibre-gl';
+import { getMapPalette } from '../../map-theme.js';
+import type { ResolvedTheme } from '../../stores/theme.js';
 
 interface DriverDot {
   path: [number, number][]; // pixel coords
@@ -9,8 +11,10 @@ interface DriverDot {
   radius: number;
 }
 
-const AMBER = '#F59E0B';
-const GREEN = '#10B981';
+// Literal hex, per theme. Canvas fillStyle/strokeStyle is parsed without any
+// CSS context, so `var(--accent)` is rejected outright and the dot silently
+// paints black — unlike SVG presentation attributes, which do resolve var().
+// The `+ '15'` alpha suffixes below also require real hex, not var().
 const DOT_COUNT = 10;
 const AMBER_COUNT = 7;
 
@@ -21,9 +25,11 @@ export class DriverAnimator {
   private rafId: number | null = null;
   private map: MapLibreMap;
   private resizeTimer: ReturnType<typeof setTimeout> | null = null;
+  private theme: ResolvedTheme;
 
-  constructor(map: MapLibreMap, container: HTMLElement) {
+  constructor(map: MapLibreMap, container: HTMLElement, theme: ResolvedTheme = 'dark') {
     this.map = map;
+    this.theme = theme;
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'hero-driver-canvas';
     this.canvas.style.cssText = 'position:absolute;inset:0;z-index:2;pointer-events:none;';
@@ -35,6 +41,19 @@ export class DriverAnimator {
 
     this.resize();
     window.addEventListener('resize', this.debouncedResize);
+  }
+
+  /** Accent for the leading dots, green for the rest. */
+  private dotColor(index: number): string {
+    const palette = getMapPalette(this.theme);
+    return index < AMBER_COUNT ? palette.accent : palette.green;
+  }
+
+  /** Recolor in place on a theme change — the dots keep their positions. */
+  setTheme(theme: ResolvedTheme): void {
+    if (theme === this.theme) return;
+    this.theme = theme;
+    this.dots.forEach((dot, i) => { dot.color = this.dotColor(i); });
   }
 
   private resize = () => {
@@ -66,7 +85,7 @@ export class DriverAnimator {
         totalLength: pathLength(path),
         progress: Math.random(),
         speed: 0.0004 + Math.random() * 0.0006,
-        color: i < AMBER_COUNT ? AMBER : GREEN,
+        color: this.dotColor(i),
         radius: 3.5 + Math.random() * 1.5,
       });
     }

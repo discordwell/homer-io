@@ -33,7 +33,7 @@ function StackedTooltip({ active, payload, label }: { active?: boolean; payload?
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: C.bg, border: `1px solid ${C.muted}`, borderRadius: 8,
+      background: C.bg, border: `1px solid ${C.borderStrong}`, borderRadius: 8,
       padding: '10px 14px', fontFamily: F.body, fontSize: 12,
     }}>
       <div style={{ color: C.dim, marginBottom: 6, fontSize: 11 }}>{label}</div>

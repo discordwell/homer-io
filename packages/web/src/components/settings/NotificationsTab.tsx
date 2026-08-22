@@ -7,7 +7,7 @@ import { ConfirmDialog } from '../ConfirmDialog.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { NotificationTemplateEditor } from './NotificationTemplateEditor.js';
 import { useToast } from '../Toast.js';
-import { C, F, primaryBtnStyle, secondaryBtnStyle } from '../../theme.js';
+import { C, F, primaryBtnStyle, secondaryBtnStyle, alpha } from '../../theme.js';
 import type { NotificationTemplate, CreateTemplateInput, UpdateTemplateInput } from '../../stores/customer-notifications.js';
 
 const triggerLabels: Record<string, string> = {
@@ -183,7 +183,7 @@ export function NotificationsTab({ onViewLog }: Props) {
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={(e) => { e.stopPropagation(); handleTest(t.id); }}
-            style={{ ...actionBtnStyle, color: C.accent }}
+            style={{ ...actionBtnStyle, color: C.accentText }}
           >
             Test
           </button>
@@ -226,7 +226,7 @@ export function NotificationsTab({ onViewLog }: Props) {
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 20,
           padding: 14, borderRadius: 8,
-          background: 'rgba(255, 180, 50, 0.08)', border: `1px solid ${C.yellow}`,
+          background: alpha(C.yellow, 0.08), border: `1px solid ${C.yellow}`,
         }}>
           <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1.4 }}>!</span>
           <div style={{ fontSize: 13, color: C.text, lineHeight: 1.5 }}>
@@ -254,7 +254,7 @@ export function NotificationsTab({ onViewLog }: Props) {
         </div>
       </div>
 
-      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
         <DataTable columns={columns} data={templates} onRowClick={handleEdit} />
       </div>
 
@@ -293,6 +293,6 @@ function ProviderStatus({ label, configured }: { label: string; configured: bool
 }
 
 const actionBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none', color: C.accent, cursor: 'pointer',
+  background: 'none', border: 'none', color: C.accentText, cursor: 'pointer',
   fontSize: 13, fontFamily: F.body, padding: '2px 4px',
 };

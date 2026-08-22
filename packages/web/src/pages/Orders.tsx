@@ -366,7 +366,7 @@ export function OrdersPage() {
           placeholder="Search by recipient name..."
           style={{
             flex: 1, padding: '8px 14px', borderRadius: 8, background: C.bg2,
-            border: `1px solid ${C.muted}`, color: C.text, fontSize: 14,
+            border: `1px solid ${C.borderStrong}`, color: C.text, fontSize: 14,
             outline: 'none', fontFamily: F.body,
           }}
         />
@@ -386,7 +386,7 @@ export function OrdersPage() {
           <select value={batchStatus} onChange={(e) => setBatchStatus(e.target.value)}
             style={{
               padding: '6px 10px', borderRadius: 6, background: C.bg3,
-              border: `1px solid ${C.muted}`, color: C.text, fontSize: 13,
+              border: `1px solid ${C.borderStrong}`, color: C.text, fontSize: 13,
               fontFamily: F.body, outline: 'none',
             }}>
             <option value="">Set status...</option>
@@ -415,7 +415,7 @@ export function OrdersPage() {
             <button onClick={() => { setForm({ ...emptyForm, isGift: isFlorist }); setModalOpen(true); }} style={primaryBtnStyle}>+ Add Order</button>
           </div>} />
       ) : (
-        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: isCondensedOrders ? 12 : 16, overflowX: 'auto' }}>
+        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: isCondensedOrders ? 12 : 16, overflowX: 'auto' }}>
           <DataTable columns={columns} data={orders}
             onRowClick={toggleOrderExpand}
             pagination={{ page, totalPages, onPageChange: fetchOrders }} />
@@ -486,7 +486,7 @@ export function OrdersPage() {
                   placeholder="Optional message included with delivery"
                   style={{
                     width: '100%', padding: 12, borderRadius: 8,
-                    background: C.bg, border: `1px solid ${C.muted}`,
+                    background: C.bg, border: `1px solid ${C.borderStrong}`,
                     color: C.text, fontSize: 14, outline: 'none',
                     fontFamily: F.body, boxSizing: 'border-box' as const,
                     minHeight: 80, resize: 'vertical' as const,
@@ -569,7 +569,7 @@ export function OrdersPage() {
                   placeholder="Delivery instructions visible to driver — do not include PHI"
                   style={{
                     width: '100%', padding: 12, borderRadius: 8,
-                    background: C.bg, border: `1px solid ${C.muted}`,
+                    background: C.bg, border: `1px solid ${C.borderStrong}`,
                     color: C.text, fontSize: 14, outline: 'none',
                     fontFamily: F.body, boxSizing: 'border-box' as const,
                     minHeight: 80, resize: 'vertical' as const,
@@ -617,7 +617,7 @@ export function OrdersPage() {
                   placeholder="e.g., No gluten-free substitutions, prefer organic"
                   style={{
                     width: '100%', padding: 12, borderRadius: 8,
-                    background: C.bg, border: `1px solid ${C.muted}`,
+                    background: C.bg, border: `1px solid ${C.borderStrong}`,
                     color: C.text, fontSize: 14, outline: 'none',
                     fontFamily: F.body, boxSizing: 'border-box' as const,
                     minHeight: 80, resize: 'vertical' as const,
@@ -686,7 +686,7 @@ export function OrdersPage() {
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
+  border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
 };
 
 function AddressIntelligencePanel({ data, loading, onClose }: {
@@ -698,7 +698,7 @@ function AddressIntelligencePanel({ data, loading, onClose }: {
   return (
     <div style={{
       marginTop: 12, background: C.bg3, borderRadius: 10,
-      border: `1px solid ${C.muted}`, padding: 16,
+      border: `1px solid ${C.borderStrong}`, padding: 16,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontFamily: F.display, fontSize: 14, fontWeight: 600, color: C.text }}>

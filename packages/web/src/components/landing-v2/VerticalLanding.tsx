@@ -2,6 +2,7 @@ import { useState, useEffect, type ReactNode, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import type { VerticalContent } from './vertical-content.js';
 import './home.css';
+import { ThemeToggle } from '../ThemeToggle.js';
 
 /* ================================================================
    VerticalLanding — industry-specific conversion page
@@ -34,6 +35,7 @@ function VerticalNav({ industry }: { industry: string }) {
         <li><a href="#compare">Compare</a></li>
         <li><Link to="/login">Log in</Link></li>
       </ul>
+      <ThemeToggle compact className="hp-nav-theme" />
       <Link to={`/register?industry=${industry.toLowerCase()}`} className="hp-nav-cta">
         Start free
       </Link>
@@ -54,9 +56,9 @@ function VerticalHero({ content }: { content: VerticalContent }) {
         inset: 0,
         zIndex: 0,
         background: `
-          radial-gradient(ellipse 80% 60% at 70% 40%, rgba(245,158,11,0.04) 0%, transparent 60%),
-          radial-gradient(ellipse 60% 80% at 20% 80%, rgba(16,185,129,0.03) 0%, transparent 60%),
-          linear-gradient(180deg, #06090F 0%, #0A1220 50%, #06090F 100%)
+          radial-gradient(ellipse 80% 60% at 70% 40%, rgba(var(--accent-rgb),0.05) 0%, transparent 60%),
+          radial-gradient(ellipse 60% 80% at 20% 80%, rgba(var(--green-rgb),0.04) 0%, transparent 60%),
+          var(--section-fade)
         `,
       }} />
 
@@ -67,8 +69,8 @@ function VerticalHero({ content }: { content: VerticalContent }) {
         zIndex: 0,
         opacity: 0.03,
         backgroundImage: `
-          linear-gradient(rgba(241,245,249,1) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(241,245,249,1) 1px, transparent 1px)
+          linear-gradient(rgba(var(--t1-rgb),1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(var(--t1-rgb),1) 1px, transparent 1px)
         `,
         backgroundSize: '64px 64px',
       }} />
@@ -106,12 +108,12 @@ function VerticalHero({ content }: { content: VerticalContent }) {
           width: 440,
           maxWidth: '100%',
           flexShrink: 0,
-          background: 'rgba(12,18,32,0.85)',
+          background: 'var(--panel-glass)',
           backdropFilter: 'blur(24px)',
           border: '1px solid var(--border2)',
           borderRadius: 16,
           overflow: 'hidden',
-          boxShadow: '0 32px 64px rgba(0,0,0,0.5)',
+          boxShadow: 'var(--shadow-lg)',
         }}>
           <div style={{
             display: 'flex',
@@ -435,7 +437,7 @@ function PricingSection({ content }: { content: VerticalContent }) {
 
   return (
     <div className="hp-section-full" id="pricing" style={{
-      background: 'linear-gradient(180deg, #06090F 0%, #0A1018 50%, #06090F 100%)',
+      background: 'var(--section-fade)',
     }}>
       <div style={{ maxWidth: 1320, margin: '0 auto' }}>
         <Reveal>

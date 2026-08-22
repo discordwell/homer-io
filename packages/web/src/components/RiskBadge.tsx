@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 interface RiskFactor {
   name: string;
@@ -51,8 +51,8 @@ export function RiskBadge({ score, factors }: RiskBadgeProps) {
           display: 'inline-flex', alignItems: 'center', gap: 4,
           padding: '2px 8px', borderRadius: 999, fontSize: 11,
           fontWeight: 600, fontFamily: F.body,
-          background: `${level.color}18`, color: level.color,
-          border: `1px solid ${level.color}30`,
+          background: alpha(level.color, 0.09), color: level.color,
+          border: `1px solid ${alpha(level.color, 0.19)}`,
           textTransform: 'uppercase', letterSpacing: '0.5px',
           cursor: factors && factors.length > 0 ? 'pointer' : 'default',
         }}
@@ -66,9 +66,9 @@ export function RiskBadge({ score, factors }: RiskBadgeProps) {
           onClick={(e) => e.stopPropagation()}
           style={{
             position: 'absolute', top: '100%', left: 0, marginTop: 6,
-            background: C.bg2, border: `1px solid ${C.muted}`, borderRadius: 8,
+            background: C.bg2, border: `1px solid ${C.borderStrong}`, borderRadius: 8,
             padding: 12, minWidth: 240, zIndex: 100,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            boxShadow: 'var(--shadow-lg)',
           }}
         >
           <div style={{ fontFamily: F.display, fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 8 }}>

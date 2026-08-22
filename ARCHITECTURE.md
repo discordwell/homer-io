@@ -247,6 +247,97 @@ RESTful API at `/api/*` with Swagger docs at `/api/docs`:
 - `POST /api/ai/chat` — AI chat with fleet context
 - `GET /health` — Health check
 
+## Theming (Light / Dark / System)
+
+Dark is the product default; light is opt-in. The user picks one of three
+modes — `light`, `dark`, `system` — and `system` tracks the OS preference live.
+
+### How a theme is applied
+
+```
+public/theme-init.js  ──(pre-paint)──▶  <html data-theme="light|dark">
+        │                                        │
+        │  same resolution logic                 │  drives token overrides
+        ▼                                        ▼
+src/stores/theme.ts   ──(runtime)────▶       src/app.css
+   mode + resolved                        :root            = dark tokens
+   matchMedia listener                    html[data-theme='light'] = light tokens
+```
+
+1. **`public/theme-init.js`** runs render-blocking in `<head>`, reads
+   `localStorage['homer-theme']`, and stamps `data-theme` before first paint so
+   light-mode users never see a dark flash. It must stay an *external*
+   same-origin file — the CSP in `index.html` is `script-src 'self'` with no
+   `'unsafe-inline'`, so an inline block would be blocked.
+2. **`src/stores/theme.ts`** owns the mode at runtime, persists it as a bare
+   string (not zustand's `persist` envelope, so the init script can read it with
+   no dependencies), and subscribes to `prefers-color-scheme` for `system` mode.
+3. **`src/app.css`** defines every token twice: dark on bare `:root`, light
+   under `html[data-theme='light']`.
+
+There is deliberately **no** `prefers-color-scheme` fallback in CSS. This is a
+React SPA, so "scripts disabled" renders nothing to style, and a media-query
+fallback would flash light at a dark-mode user whenever `theme-init.js` is slow
+or missing. Absent attribute means dark, which is the product default.
+
+### Token roles
+
+Most tokens are a straight light/dark pair. Three exist specifically because a
+single value cannot serve both themes:
+
+| Token | Why it exists |
+|-------|---------------|
+| `--accent` / `--accent-text` | Brand amber as a *fill* vs. as *foreground*. Bright amber on white is 2.2:1, so `--accent-text` darkens to amber-700 (4.9:1). Use `C.accent` for backgrounds, `C.accentText` for type and icons. |
+| `--on-accent` | Text sitting on an `--accent` fill. Near-black in both themes — white on amber fails AA in *either* theme. |
+| `--border-strong` | The heavier card/input border the app uses in ~170 places. Equals `--t3` in dark (so dark is unchanged from before light mode); light needs its own value because `#64748B` reads as a hard charcoal rule on white. |
+| `--field-bg` / `--field-border` | Inputs. In light the card and the field are both white, so a field needs a recessed fill and a stronger edge to read as an input. |
+
+`alpha(color, opacity)` in `src/theme.ts` builds translucent variants via the
+paired `--*-rgb` tokens. **Never** string-concatenate a hex alpha suffix —
+`` `${C.green}18` `` produces the literal `var(--green)18`, which is invalid CSS
+and is dropped silently.
+
+### Colors outside CSS (maps)
+
+Browsers **do** resolve `var()` in SVG presentation attributes, so ordinary
+inline SVG and recharts pick up tokens normally. Two things do not, and read
+literal hex from a theme-keyed table instead:
+
+- **Canvas 2D** — `fillStyle`/`strokeStyle` are parsed without CSS context, so a
+  `var()` string is rejected and the shape paints black.
+- **MapLibre style specs** — read by the GL renderer, not CSS.
+
+Map code routes all paint through these tables regardless of layer type, since
+Leaflet may switch between its SVG and Canvas renderers:
+
+- `src/map-theme.ts` — Leaflet basemap tiles (Carto dark/light) and vector
+  colors, via `useMapPalette()`. Tiles swap with `setUrl()` rather than
+  recreating the map, so pan/zoom survives a theme change.
+- `components/landing-v2/maplibreStyle.ts` — hero basemap paint, repainted via
+  `applyHeroPaint()` (`setPaintProperty`, not `setStyle`, which would strand the
+  driver animation).
+- `components/landing-v2/BayAreaMap.tsx` — the SVG fallback hero map (mirrors
+  the MapLibre ramp value-for-value).
+- `components/landing-v2/driverAnimator.ts` — the Canvas driver dots on the
+  hero; recolored via `setTheme()` on a theme change.
+
+### Guardrails
+
+`src/theme-tokens.test.ts` parses `app.css` and fails the build if a color token
+gains a dark value without a light one, if an `--x-rgb` triple drifts from its
+`--x` hex, or if a contrast-critical role drops below AA.
+`src/stores/theme.test.ts` pins `theme-init.js` and the store to identical
+resolution for every (stored value × OS preference) combination.
+
+### Where users switch it
+
+- Dashboard and demo topnav, and the marketing nav — compact `ThemeToggle`,
+  cycles Light → Dark → System.
+- Settings → Organization → Appearance — three-way `ThemeModeSelector`.
+- Driver app → Profile → Appearance (the driver shell has no topnav).
+
+Theme is stored per-device in `localStorage`, not on the user account.
+
 ## Frontend Routes
 
 Nested under `DashboardLayout` with sidebar navigation:

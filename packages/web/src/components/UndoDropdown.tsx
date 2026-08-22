@@ -87,7 +87,7 @@ export function UndoDropdown({ undoableActions, onUndo }: UndoDropdownProps) {
         title="Undo recent actions"
         style={{
           background: open ? C.accent : 'none',
-          border: `1px solid ${open ? C.accent : C.muted}`,
+          border: `1px solid ${open ? C.accent : C.borderStrong}`,
           color: open ? '#000' : C.dim,
           cursor: 'pointer',
           padding: '4px 8px',
@@ -108,8 +108,8 @@ export function UndoDropdown({ undoableActions, onUndo }: UndoDropdownProps) {
       {open && (
         <div style={{
           position: 'absolute', top: '100%', right: 0, marginTop: 4,
-          width: 280, background: C.bg2, border: `1px solid ${C.muted}`,
-          borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          width: 280, background: C.bg2, border: `1px solid ${C.borderStrong}`,
+          borderRadius: 8, boxShadow: 'var(--shadow-lg)',
           zIndex: 1000, overflow: 'hidden',
         }}>
           <div style={{

@@ -50,7 +50,7 @@ export function PhotoCapture({ photos, onChange, maxPhotos = 4 }: PhotoCapturePr
                   objectFit: 'cover',
                   display: 'block',
                   borderRadius: 8,
-                  border: `1px solid ${C.muted}`,
+                  border: `1px solid ${C.borderStrong}`,
                 }}
               />
               <button
@@ -91,7 +91,7 @@ export function PhotoCapture({ photos, onChange, maxPhotos = 4 }: PhotoCapturePr
             gap: 8,
             padding: '16px',
             background: C.bg3,
-            border: `1px dashed ${C.muted}`,
+            border: `1px dashed ${C.borderStrong}`,
             borderRadius: 10,
             color: C.dim,
             fontSize: 14,

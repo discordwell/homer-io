@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useMessagesStore } from '../stores/messages.js';
 import { useAuthStore } from '../stores/auth.js';
 import { LoadingSpinner } from './LoadingSpinner.js';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 interface MessagePanelProps {
   routeId: string;
@@ -66,15 +66,15 @@ export function MessagePanel({ routeId, onClose }: MessagePanelProps) {
                 <div style={{
                   maxWidth: '75%', padding: '8px 12px', borderRadius: 10,
                   background: isMine ? C.accent : C.bg3,
-                  color: isMine ? '#fff' : C.text,
+                  color: isMine ? C.onAccent : C.text,
                 }}>
                   {!isMine && (
-                    <div style={{ fontSize: 11, fontWeight: 600, color: isMine ? 'rgba(255,255,255,0.7)' : C.accent, marginBottom: 2 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: isMine ? alpha(C.onAccent, 0.7) : C.accentText, marginBottom: 2 }}>
                       {msg.senderName || 'Unknown'}
                     </div>
                   )}
                   <div style={{ fontSize: 13, lineHeight: 1.4, wordBreak: 'break-word' }}>{msg.body}</div>
-                  <div style={{ fontSize: 10, color: isMine ? 'rgba(255,255,255,0.5)' : C.dim, marginTop: 4, textAlign: 'right' }}>
+                  <div style={{ fontSize: 10, color: isMine ? alpha(C.onAccent, 0.6) : C.dim, marginTop: 4, textAlign: 'right' }}>
                     {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
@@ -107,7 +107,7 @@ export function MessagePanel({ routeId, onClose }: MessagePanelProps) {
 const panelStyle: React.CSSProperties = {
   display: 'flex', flexDirection: 'column',
   background: C.bg2, borderRadius: 12,
-  border: `1px solid ${C.muted}`,
+  border: `1px solid ${C.borderStrong}`,
   height: 420, overflow: 'hidden',
 };
 
@@ -132,7 +132,7 @@ const inputBarStyle: React.CSSProperties = {
 
 const inputStyle: React.CSSProperties = {
   flex: 1, padding: '8px 12px', borderRadius: 8,
-  background: C.bg3, border: `1px solid ${C.muted}`,
+  background: C.bg3, border: `1px solid ${C.borderStrong}`,
   color: C.text, fontSize: 13, fontFamily: F.body, outline: 'none',
 };
 

@@ -45,7 +45,7 @@ export function DemoOrdersPage() {
         <div className="page-header-actions" style={{ display: 'flex', gap: 8 }}>
           <button onClick={handleDemoAction} style={{
             padding: '10px 20px', borderRadius: 8, background: C.bg3,
-            border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer',
+            border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer',
             fontFamily: F.body, fontSize: 14,
           }}>
             Import CSV
@@ -71,7 +71,7 @@ export function DemoOrdersPage() {
               fontFamily: F.body, cursor: 'pointer',
               background: statusFilter === status ? C.accent : C.bg3,
               color: statusFilter === status ? '#000' : C.dim,
-              border: statusFilter === status ? 'none' : `1px solid ${C.muted}`,
+              border: statusFilter === status ? 'none' : `1px solid ${C.borderStrong}`,
               fontWeight: statusFilter === status ? 600 : 400,
             }}
           >
@@ -80,7 +80,7 @@ export function DemoOrdersPage() {
         ))}
       </div>
 
-      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
         <DataTable columns={columns} data={filteredOrders} />
         <div style={{ padding: 12, textAlign: 'center', color: C.dim, fontSize: 13 }}>
           Showing {filteredOrders.length} of {DEMO_ORDERS.length} sample orders

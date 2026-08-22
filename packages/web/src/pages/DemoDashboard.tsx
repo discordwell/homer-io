@@ -42,11 +42,11 @@ export function DemoDashboardPage() {
       </div>
 
       {/* Recent orders */}
-      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h3 style={{ fontFamily: F.display, fontSize: 16, margin: 0 }}>Recent Orders</h3>
           <button onClick={() => navigate('/demo/orders')} style={{
-            background: 'none', border: 'none', color: C.accent, cursor: 'pointer',
+            background: 'none', border: 'none', color: C.accentText, cursor: 'pointer',
             fontSize: 13, fontFamily: F.body,
           }}>View all &rarr;</button>
         </div>

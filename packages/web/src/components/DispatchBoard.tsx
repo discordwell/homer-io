@@ -190,7 +190,7 @@ export const DispatchColumn = memo(function DispatchColumn({
           ) : (
             <div style={{
               padding: 24, textAlign: 'center', color: C.dim, fontSize: 12,
-              border: `2px dashed ${C.muted}`, borderRadius: 8, margin: 8,
+              border: `2px dashed ${C.borderStrong}`, borderRadius: 8, margin: 8,
             }}>
               Drop orders here
             </div>

@@ -1,6 +1,6 @@
 import { useState, useCallback, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 type ToastType = 'success' | 'error' | 'info';
 interface ToastItem { id: number; message: string; type: ToastType; }
@@ -32,8 +32,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             return (
               <div key={t.id} style={{
                 padding: '12px 20px', borderRadius: 8, background: C.bg2,
-                border: `1px solid ${color}40`, color: C.text,
-                fontSize: 14, fontFamily: F.body, boxShadow: `0 4px 12px rgba(0,0,0,0.3)`,
+                border: `1px solid ${alpha(color, 0.25)}`, color: C.text,
+                fontSize: 14, fontFamily: F.body, boxShadow: 'var(--shadow-md)',
                 animation: 'fadeIn 0.2s ease',
               }}>
                 {t.message}

@@ -209,12 +209,12 @@ export function MigrationPage() {
 
   const btnSecondary: React.CSSProperties = {
     padding: '10px 24px', borderRadius: 8, background: C.bg3,
-    border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
+    border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
     fontSize: 14,
   };
 
   const inputStyle: React.CSSProperties = {
-    padding: '10px 14px', borderRadius: 8, border: `1px solid ${C.muted}`,
+    padding: '10px 14px', borderRadius: 8, border: `1px solid ${C.borderStrong}`,
     background: C.bg2, color: C.text, fontFamily: F.body, fontSize: 14, width: '100%',
     boxSizing: 'border-box',
   };
@@ -285,13 +285,13 @@ export function MigrationPage() {
 
           {/* Mode toggle — only show if platform supports API */}
           {platformSupportsApi && (
-            <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.muted}`, width: 'fit-content' }}>
+            <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.borderStrong}`, width: 'fit-content' }}>
               <button
                 onClick={() => { setImportMode('api'); setValidationResult(null); }}
                 style={{
                   padding: '8px 20px', border: 'none', cursor: 'pointer', fontFamily: F.body, fontSize: 13, fontWeight: 600,
                   background: importMode === 'api' ? C.accent : C.bg2,
-                  color: importMode === 'api' ? '#fff' : C.dim,
+                  color: importMode === 'api' ? C.onAccent : C.dim,
                 }}
               >
                 API Import
@@ -301,7 +301,7 @@ export function MigrationPage() {
                 style={{
                   padding: '8px 20px', border: 'none', cursor: 'pointer', fontFamily: F.body, fontSize: 13, fontWeight: 600,
                   background: importMode === 'csv' ? C.accent : C.bg2,
-                  color: importMode === 'csv' ? '#fff' : C.dim,
+                  color: importMode === 'csv' ? C.onAccent : C.dim,
                 }}
               >
                 CSV Import
@@ -590,7 +590,7 @@ export function MigrationPage() {
           <div style={{ overflowX: 'auto' }}>
             <table className="migration-history-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ borderBottom: `1px solid ${C.muted}` }}>
+                <tr style={{ borderBottom: `1px solid ${C.borderStrong}` }}>
                   <th style={thStyle}>Platform</th>
                   <th style={thStyle}>Status</th>
                   <th style={thStyle}>Orders</th>
@@ -608,7 +608,7 @@ export function MigrationPage() {
                       <td style={tdStyle}>
                         <span style={{
                           padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600,
-                          background: alpha(C.accent, 0.1), color: C.accent,
+                          background: alpha(C.accent, 0.1), color: C.accentText,
                         }}>
                           {job.sourcePlatform}
                         </span>
@@ -676,7 +676,7 @@ function FileDropZone({ label, hint, fileRef, rowCount, onFile, onClear }: {
       ) : (
         <div
           style={{
-            border: `2px dashed ${C.muted}`, borderRadius: 8, padding: 32,
+            border: `2px dashed ${C.borderStrong}`, borderRadius: 8, padding: 32,
             textAlign: 'center', cursor: 'pointer',
           }}
           onClick={() => fileRef.current?.click()}
@@ -701,7 +701,7 @@ function SummaryCard({ label, count, active }: { label: string; count: number; a
       border: `1px solid ${active ? C.muted : C.border}`,
       opacity: active ? 1 : 0.4,
     }}>
-      <div style={{ fontSize: 28, fontWeight: 700, color: active ? C.accent : C.dim }}>{count}</div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: active ? C.accentText : C.dim }}>{count}</div>
       <div style={{ fontSize: 13, color: C.dim, marginTop: 4 }}>{label}</div>
     </div>
   );
@@ -714,7 +714,7 @@ function PreviewTable({ rows }: { rows: Record<string, string>[] }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: F.mono }}>
         <thead>
           <tr>{headers.map(h => (
-            <th key={h} style={{ padding: '4px 8px', textAlign: 'left', color: C.dim, borderBottom: `1px solid ${C.muted}`, whiteSpace: 'nowrap' }}>{h}</th>
+            <th key={h} style={{ padding: '4px 8px', textAlign: 'left', color: C.dim, borderBottom: `1px solid ${C.borderStrong}`, whiteSpace: 'nowrap' }}>{h}</th>
           ))}</tr>
         </thead>
         <tbody>
