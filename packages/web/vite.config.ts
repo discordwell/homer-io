@@ -12,8 +12,11 @@ export default defineConfig({
         name: 'HOMER.io — AI-Powered Logistics',
         short_name: 'HOMER.io',
         description: 'AI-powered logistics platform for route optimization, fleet management, and delivery tracking',
-        theme_color: '#03080F',
-        background_color: '#03080F',
+        // Matches --bg / the meta theme-color that theme-init.js stamps for the
+        // dark default. Installed PWAs get one static value, so it tracks the
+        // product default rather than the user's chosen theme.
+        theme_color: '#06090F',
+        background_color: '#06090F',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/dashboard',
@@ -76,5 +79,20 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    rollupOptions: {
+      output: {
+        // Zustand must live in its own chunk. Left to itself, Rollup inlines
+        // it into whichever chunk reaches it first — often the entry — and the
+        // lazily-loaded store chunks then import `create` back *from* the
+        // entry. That is a circular chunk dependency: the store chunk
+        // evaluates before the entry has finished defining `create`, and every
+        // `create(...)` call at module scope throws "is not a function",
+        // blanking the app in production only (dev is unbundled, so it never
+        // reproduces there).
+        manualChunks(id) {
+          if (id.includes('node_modules/zustand')) return 'vendor-zustand';
+        },
+      },
+    },
   },
 });

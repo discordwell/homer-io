@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import Papa from 'papaparse';
 import { Modal } from './Modal.js';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 interface CsvImportWizardProps {
   open: boolean;
@@ -60,7 +60,7 @@ export function CsvImportWizard({ open, onClose, onImport }: CsvImportWizardProp
     <Modal open={open} onClose={handleClose} title="Import Orders from CSV" size="lg">
       {error && (
         <div style={{
-          background: 'rgba(248,113,113,0.1)', border: `1px solid ${C.red}`,
+          background: alpha(C.red, 0.1), border: `1px solid ${C.red}`,
           color: C.red, padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 14,
         }}>{error}</div>
       )}
@@ -68,7 +68,7 @@ export function CsvImportWizard({ open, onClose, onImport }: CsvImportWizardProp
       {step === 1 && (
         <div>
           <div style={{
-            border: `2px dashed ${C.muted}`, borderRadius: 12, padding: 48,
+            border: `2px dashed ${C.borderStrong}`, borderRadius: 12, padding: 48,
             textAlign: 'center', cursor: 'pointer',
           }}
             onClick={() => fileRef.current?.click()}
@@ -95,7 +95,7 @@ export function CsvImportWizard({ open, onClose, onImport }: CsvImportWizardProp
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: F.mono }}>
               <thead>
                 <tr>{headers.map(h => (
-                  <th key={h} style={{ padding: '6px 8px', textAlign: 'left', color: C.dim, borderBottom: `1px solid ${C.muted}`, whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} style={{ padding: '6px 8px', textAlign: 'left', color: C.dim, borderBottom: `1px solid ${C.borderStrong}`, whiteSpace: 'nowrap' }}>{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
@@ -111,7 +111,7 @@ export function CsvImportWizard({ open, onClose, onImport }: CsvImportWizardProp
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <button onClick={() => setStep(1)} style={{
               padding: '8px 20px', borderRadius: 8, background: C.bg3,
-              border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
+              border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
             }}>Back</button>
             <button onClick={handleImport} disabled={importing} style={{
               padding: '8px 20px', borderRadius: 8, background: C.accent,

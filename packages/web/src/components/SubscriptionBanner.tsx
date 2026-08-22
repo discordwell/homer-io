@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useBillingStore } from '../stores/billing.js';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
 
 function daysUntil(dateStr: string | null): number | null {
   if (!dateStr) return null;
@@ -117,8 +117,8 @@ function Banner({
 }) {
   return (
     <div style={{
-      background: `${color}15`,
-      border: `1px solid ${color}40`,
+      background: alpha(color, 0.08),
+      border: `1px solid ${alpha(color, 0.25)}`,
       borderRadius: 8,
       padding: '10px 16px',
       display: 'flex',

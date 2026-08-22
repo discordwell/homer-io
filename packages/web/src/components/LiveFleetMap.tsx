@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { C, F } from '../theme.js';
+import { C, F, alpha } from '../theme.js';
+import { useMapPalette, CARTO_ATTRIBUTION, type MapPalette } from '../map-theme.js';
 import { useTrackingStore, type DriverLocation } from '../stores/tracking.js';
 import { useDemoStore } from '../stores/demo.js';
 import { DriverMarker } from './DriverMarker.js';
@@ -13,10 +14,9 @@ interface LiveFleetMapProps {
   driverProgress?: Map<string, number>;
 }
 
-// Leaflet needs actual hex colors (CSS vars don't work in SVG/canvas)
-const MAP_AMBER = '#F59E0B';
-const MAP_GREEN = '#22C55E';
-const MAP_DIM = '#6B7280';
+// Map paint comes from map-theme.ts rather than the CSS-variable tokens in
+// theme.ts, because Leaflet may render vectors to Canvas, which cannot resolve
+// var(). See the note in map-theme.ts.
 
 export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,6 +29,16 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
 
   // Track layers for cleanup
   const routeLayersRef = useRef<L.LayerGroup | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const palette = useMapPalette();
+  const paletteRef = useRef(palette);
+  useEffect(() => { paletteRef.current = palette; });
+
+  // Swap basemap tiles in place when the theme changes — recreating the map
+  // would drop the user's pan/zoom.
+  useEffect(() => {
+    tileLayerRef.current?.setUrl(palette.tileUrl);
+  }, [palette.tileUrl]);
 
   // Initialize map
   useEffect(() => {
@@ -41,8 +51,8 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
       zoomControl: true,
     }).setView(center, zoom);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+    tileLayerRef.current = L.tileLayer(paletteRef.current.tileUrl, {
+      attribution: CARTO_ATTRIBUTION,
     }).addTo(map);
 
     setMapInstance(map);
@@ -83,7 +93,7 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
     routeLayersRef.current = group;
 
     for (const route of DEMO_ROUTE_PATHS) {
-      drawRouteOnMap(group, route, driverProgress?.get(route.driverId));
+      drawRouteOnMap(group, route, palette, driverProgress?.get(route.driverId));
     }
 
     return () => {
@@ -92,7 +102,7 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
         routeLayersRef.current = null;
       }
     };
-  }, [isDemo, mapInstance, driverProgress]);
+  }, [isDemo, mapInstance, driverProgress, palette]);
 
   const drivers = Array.from(driverLocations.values());
 
@@ -111,7 +121,7 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
         width: '100%',
         borderRadius: 12,
         overflow: 'hidden',
-        border: `1px solid ${C.muted}`,
+        border: `1px solid ${C.borderStrong}`,
         position: 'relative',
       }}
     >
@@ -131,27 +141,27 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
             bottom: 16,
             left: 16,
             zIndex: 1000,
-            background: 'rgba(6, 9, 15, 0.92)',
+            background: C.chrome,
             borderRadius: 10,
             padding: '12px 16px',
-            border: '1px solid rgba(245, 158, 11, 0.3)',
+            border: `1px solid ${alpha(C.accent, 0.3)}`,
             minWidth: 200,
             backdropFilter: 'blur(8px)',
           }}
         >
-          <div style={{ fontFamily: F.display, fontSize: 13, fontWeight: 600, color: MAP_AMBER, marginBottom: 4 }}>
+          <div style={{ fontFamily: F.display, fontSize: 13, fontWeight: 600, color: C.accentText, marginBottom: 4 }}>
             {activeRoute.routeName}
           </div>
-          <div style={{ fontFamily: F.body, fontSize: 12, color: '#94A3B8', marginBottom: 8 }}>
+          <div style={{ fontFamily: F.body, fontSize: 12, color: C.dim, marginBottom: 8 }}>
             {activeRoute.driverName} — {activeProgress.completed}/{activeProgress.total} stops
           </div>
           {/* Progress bar */}
-          <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+          <div style={{ height: 6, borderRadius: 3, background: alpha(C.text, 0.1), overflow: 'hidden' }}>
             <div style={{
               height: '100%',
               borderRadius: 3,
               width: `${activeProgress.pct}%`,
-              background: `linear-gradient(90deg, ${MAP_GREEN}, ${MAP_AMBER})`,
+              background: `linear-gradient(90deg, ${C.green}, ${C.accent})`,
               transition: 'width 0.5s ease',
             }} />
           </div>
@@ -165,21 +175,21 @@ export function LiveFleetMap({ height = '100%', driverProgress }: LiveFleetMapPr
 // Helpers
 // ---------------------------------------------------------------------------
 
-function drawRouteOnMap(group: L.LayerGroup, route: DemoRoutePath, currentPathIndex?: number) {
+function drawRouteOnMap(group: L.LayerGroup, route: DemoRoutePath, palette: MapPalette, currentPathIndex?: number) {
   const pathLatLngs = route.path.map(([lat, lng]) => L.latLng(lat, lng));
   const isCompleted = route.status === 'completed';
 
   if (isCompleted) {
     // Completed route: solid green, dimmer
     L.polyline(pathLatLngs, {
-      color: MAP_GREEN,
+      color: palette.green,
       weight: 2,
       opacity: 0.25,
     }).addTo(group);
   } else {
     // In-progress route: dashed amber polyline
     L.polyline(pathLatLngs, {
-      color: MAP_AMBER,
+      color: palette.accent,
       weight: 2.5,
       opacity: 0.4,
       dashArray: '8, 6',
@@ -189,7 +199,7 @@ function drawRouteOnMap(group: L.LayerGroup, route: DemoRoutePath, currentPathIn
     if (currentPathIndex != null && currentPathIndex > 0) {
       const completedLatLngs = pathLatLngs.slice(0, currentPathIndex + 1);
       L.polyline(completedLatLngs, {
-        color: MAP_GREEN,
+        color: palette.green,
         weight: 3,
         opacity: 0.7,
       }).addTo(group);
@@ -203,16 +213,16 @@ function drawRouteOnMap(group: L.LayerGroup, route: DemoRoutePath, currentPathIn
     const isCompleted = stop.completed || (currentPathIndex != null && currentPathIndex >= stop.pathIndex);
     const isNext = i === nextStopIdx;
 
-    let color = MAP_DIM;
+    let color = palette.dim;
     let radius = 5;
     let fillOpacity = 0.4;
 
     if (isCompleted) {
-      color = MAP_GREEN;
+      color = palette.green;
       radius = 6;
       fillOpacity = 0.8;
     } else if (isNext) {
-      color = MAP_AMBER;
+      color = palette.accent;
       radius = 8;
       fillOpacity = 0.9;
     }

@@ -143,7 +143,7 @@ export function DeliveryFailureFlow({ orderId, routeId, onComplete, onCancel }: 
             >
               <div style={{
                 width: 18, height: 18, borderRadius: '50%',
-                border: `2px solid ${reason === r.value ? C.red : C.muted}`,
+                border: `2px solid ${reason === r.value ? C.red : C.borderStrong}`,
                 background: reason === r.value ? C.red : 'transparent',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
@@ -181,7 +181,7 @@ export function DeliveryFailureFlow({ orderId, routeId, onComplete, onCancel }: 
             minHeight: 80,
             padding: 12,
             background: C.bg3,
-            border: `1px solid ${C.muted}`,
+            border: `1px solid ${C.borderStrong}`,
             borderRadius: 8,
             color: C.text,
             fontSize: 14,
@@ -209,7 +209,7 @@ export function DeliveryFailureFlow({ orderId, routeId, onComplete, onCancel }: 
             flex: 1,
             padding: '14px 16px',
             background: 'transparent',
-            border: `1px solid ${C.muted}`,
+            border: `1px solid ${C.borderStrong}`,
             borderRadius: 8,
             color: C.dim,
             fontSize: 14,

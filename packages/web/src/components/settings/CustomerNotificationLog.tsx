@@ -125,7 +125,7 @@ export function CustomerNotificationLog({ onBack }: Props) {
       {logLoading && log.length === 0 ? (
         <LoadingSpinner />
       ) : (
-        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
           <DataTable
             columns={columns}
             data={log}
@@ -142,7 +142,7 @@ export function CustomerNotificationLog({ onBack }: Props) {
 }
 
 const backBtnStyle: React.CSSProperties = {
-  background: C.bg3, border: `1px solid ${C.muted}`, color: C.dim,
+  background: C.bg3, border: `1px solid ${C.borderStrong}`, color: C.dim,
   padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
   fontSize: 14, fontFamily: F.body,
 };

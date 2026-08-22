@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type maplibregl from 'maplibre-gl';
-import { buildHeroStyle } from './maplibreStyle.js';
+import { buildHeroStyle, applyHeroPaint } from './maplibreStyle.js';
+import { useThemeStore } from '../../stores/theme.js';
 import { DriverAnimator } from './driverAnimator.js';
 import { loadMapLibre } from './loadMapLibre.js';
 
@@ -23,13 +24,27 @@ export default function MapLibreHeroMap({ lat, lng, onReady, onError }: MapLibre
   const onReadyRef = useRef(onReady);
   const onErrorRef = useRef(onError);
   const readyFired = useRef(false);
+  const resolvedTheme = useThemeStore((s) => s.resolved);
+  const themeRef = useRef(resolvedTheme);
 
   // Mirror callback props into refs so the init effect can call the latest
   // versions without retriggering on every render.
   useEffect(() => {
     onReadyRef.current = onReady;
     onErrorRef.current = onError;
+    themeRef.current = resolvedTheme;
   });
+
+  // Repaint in place on theme change. The init effect below is keyed only on
+  // position, so it must not re-run here — a rebuilt map would restart the
+  // driver animation from scratch.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map) applyHeroPaint(map, resolvedTheme);
+    // The driver dots paint to a Canvas overlay, which cannot read CSS
+    // variables — they have to be recolored explicitly.
+    animatorRef.current?.setTheme(resolvedTheme);
+  }, [resolvedTheme]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -68,7 +83,7 @@ export default function MapLibreHeroMap({ lat, lng, onReady, onError }: MapLibre
         try {
           map = new maplibre.Map({
             container,
-            style: buildHeroStyle(apiKey),
+            style: buildHeroStyle(apiKey, themeRef.current),
             center: [lng, lat],
             zoom: 10,
             interactive: false,
@@ -88,7 +103,10 @@ export default function MapLibreHeroMap({ lat, lng, onReady, onError }: MapLibre
           readyFired.current = true;
 
           try {
-            const animator = new DriverAnimator(map, container);
+            // Between construction and style parse, applyHeroPaint's getLayer()
+            // guards drop every update — re-apply now that the layers exist.
+            applyHeroPaint(map, themeRef.current);
+            const animator = new DriverAnimator(map, container, themeRef.current);
             animatorRef.current = animator;
             animator.start();
           } catch (error) {

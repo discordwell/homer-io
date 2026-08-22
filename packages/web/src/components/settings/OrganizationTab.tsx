@@ -6,6 +6,7 @@ import { SelectField } from '../SelectField.js';
 import { LoadingSpinner } from '../LoadingSpinner.js';
 import { useToast } from '../Toast.js';
 import { C, F } from '../../theme.js';
+import { ThemeModeSelector } from '../ThemeToggle.js';
 import { FEATURE_DEFINITIONS, type FeatureKey } from '@homer-io/shared';
 
 const timezoneOptions = [
@@ -101,7 +102,20 @@ export function OrganizationTab() {
   return (
     <>
     <div style={{
-      background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
+      background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`,
+      padding: 24, maxWidth: 560, marginBottom: 24,
+    }}>
+      <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 4, color: C.text }}>
+        Appearance
+      </h3>
+      <p style={{ color: C.dim, fontSize: 13, marginTop: 0, marginBottom: 16 }}>
+        Theme is stored on this device, not on your account.
+      </p>
+      <ThemeModeSelector />
+    </div>
+
+    <div style={{
+      background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`,
       padding: 24, maxWidth: 560,
     }}>
       <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 20, color: C.text }}>
@@ -154,7 +168,7 @@ export function OrganizationTab() {
             }}
             style={{
               padding: '6px 14px', borderRadius: 6,
-              background: 'transparent', border: `1px solid ${C.muted}`,
+              background: 'transparent', border: `1px solid ${C.borderStrong}`,
               color: C.dim, cursor: sampleDataLoading || !form.industry || industryDirty ? 'not-allowed' : 'pointer',
               fontFamily: F.body, fontSize: 12, fontWeight: 500,
               opacity: sampleDataLoading || !form.industry || industryDirty ? 0.5 : 1,
@@ -189,7 +203,7 @@ export function OrganizationTab() {
               value={form.primaryColor}
               onChange={(e) => setForm({ ...form, primaryColor: e.target.value })}
               style={{
-                width: 44, height: 44, border: `1px solid ${C.muted}`,
+                width: 44, height: 44, border: `1px solid ${C.borderStrong}`,
                 borderRadius: 8, background: C.bg, cursor: 'pointer',
                 padding: 2,
               }}
@@ -220,7 +234,7 @@ export function OrganizationTab() {
 
     {/* Feature Toggles */}
     <div style={{
-      background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
+      background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`,
       padding: 24, maxWidth: 560, marginTop: 24,
     }}>
       <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 4, color: C.text }}>

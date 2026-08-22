@@ -22,9 +22,9 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: C.bg, border: `1px solid ${C.muted}`, borderRadius: 8,
+      background: C.bg, border: `1px solid ${C.borderStrong}`, borderRadius: 8,
       padding: '10px 14px', fontFamily: F.body, fontSize: 12,
-      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+      boxShadow: 'var(--shadow-md)',
     }}>
       <div style={{ color: C.dim, marginBottom: 6, fontSize: 11 }}>{label}</div>
       {payload.map((entry: TooltipPayloadEntry) => (
@@ -77,7 +77,7 @@ export function EnhancedTrendChart({ data, previousData }: EnhancedTrendChartPro
 
   return (
     <div style={{
-      background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
+      background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`,
       padding: 20, flex: 1,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -89,7 +89,7 @@ export function EnhancedTrendChart({ data, previousData }: EnhancedTrendChartPro
             onClick={() => setShowComparison(!showComparison)}
             style={{
               padding: '4px 12px', borderRadius: 6,
-              border: `1px solid ${showComparison ? C.accent : C.muted}`,
+              border: `1px solid ${showComparison ? C.accent : C.borderStrong}`,
               background: showComparison ? C.accent : 'transparent',
               color: showComparison ? '#000' : C.dim,
               cursor: 'pointer', fontFamily: F.body, fontSize: 11, fontWeight: 500,

@@ -135,7 +135,7 @@ export function RouteBuilderPage() {
 
         {/* Right: Controls */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 20 }}>
+          <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 20 }}>
             <FormField label="Route Name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. Downtown Morning Route" />
             <SelectField label="Driver" value={driverId} onChange={(e) => setDriverId(e.target.value)}
               options={[{ value: '', label: 'Unassigned' }, ...drivers.map(d => ({ value: d.id, label: d.name }))]} />
@@ -150,7 +150,7 @@ export function RouteBuilderPage() {
           </div>
 
           {/* Stop list */}
-          <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16, flex: 1, overflow: 'auto' }}>
+          <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16, flex: 1, overflow: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <span style={{ fontWeight: 600, fontSize: 14 }}>Stops</span>
               <button onClick={handleOptimize} disabled={optimizing || stops.length < 2}
@@ -170,7 +170,7 @@ export function RouteBuilderPage() {
                     display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
                     background: C.bg3, borderRadius: 6, fontSize: 13,
                   }}>
-                    <span style={{ color: C.accent, fontWeight: 600, width: 20 }}>{i + 1}</span>
+                    <span style={{ color: C.accentText, fontWeight: 600, width: 20 }}>{i + 1}</span>
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stop.label}</span>
                     <div style={{ display: 'flex', gap: 4 }}>
                       <button onClick={() => moveStop(i, i - 1)} disabled={i === 0}
@@ -188,7 +188,7 @@ export function RouteBuilderPage() {
 
           {/* Available orders */}
           {availableOrders.length > 0 && (
-            <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16, maxHeight: 200, overflow: 'auto' }}>
+            <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16, maxHeight: 200, overflow: 'auto' }}>
               <span style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, display: 'block' }}>Available Orders</span>
               {availableOrders.map(o => (
                 <div key={o.id} onClick={() => addOrderAsStop(o.id)}
@@ -211,7 +211,7 @@ export function RouteBuilderPage() {
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
+  border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
 };
 
 const moveBtnStyle: React.CSSProperties = {

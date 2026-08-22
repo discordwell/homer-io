@@ -97,7 +97,7 @@ export function RoutesPage() {
         <EmptyState icon="🗺️" title="No routes yet" description="Create your first delivery route."
           action={<button onClick={() => navigate('/dashboard/routes/new')} style={primaryBtnStyle}>+ Create Route</button>} />
       ) : (
-        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
           <DataTable columns={columns} data={routes}
             onRowClick={(r) => navigate(`/dashboard/routes/${r.id}`)}
             pagination={{ page, totalPages, onPageChange: fetchRoutes }} />

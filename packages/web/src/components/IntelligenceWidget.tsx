@@ -137,5 +137,5 @@ export function IntelligenceWidget() {
 
 const containerStyle: React.CSSProperties = {
   background: C.bg2, borderRadius: 12,
-  border: `1px solid ${C.muted}`, padding: 16,
+  border: `1px solid ${C.borderStrong}`, padding: 16,
 };

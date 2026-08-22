@@ -144,7 +144,7 @@ export function WebhookDeliveryLog({ endpointId, onClose }: WebhookDeliveryLogPr
             setExpandedId(expandedId === d.id ? null : d.id);
           }}
           style={{
-            background: 'none', border: 'none', color: C.accent,
+            background: 'none', border: 'none', color: C.accentText,
             cursor: 'pointer', fontSize: 16, padding: '2px 4px',
             fontFamily: F.body, transform: expandedId === d.id ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s ease',
@@ -160,7 +160,7 @@ export function WebhookDeliveryLog({ endpointId, onClose }: WebhookDeliveryLogPr
 
   return (
     <div style={{
-      background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
+      background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`,
       padding: 20, marginTop: 16,
     }}>
       <div style={{

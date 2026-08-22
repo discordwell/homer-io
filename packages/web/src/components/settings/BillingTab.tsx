@@ -17,8 +17,9 @@ function daysUntil(dateStr: string | null): number | null {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
+// Rendered as `color:` on status text — foreground role, not a fill.
 const statusColors: Record<string, string> = {
-  trialing: C.accent,
+  trialing: C.accentText,
   active: C.green,
   past_due: C.orange,
   canceled: C.red,
@@ -89,7 +90,7 @@ export function BillingTab() {
       <div style={{
         background: C.bg2,
         borderRadius: 12,
-        border: `1px solid ${C.muted}`,
+        border: `1px solid ${C.borderStrong}`,
         padding: 24,
         marginBottom: 24,
       }}>
@@ -172,7 +173,7 @@ export function BillingTab() {
       <div style={{
         background: C.bg2,
         borderRadius: 12,
-        border: `1px solid ${C.muted}`,
+        border: `1px solid ${C.borderStrong}`,
         padding: 24,
         marginBottom: 24,
       }}>
@@ -190,7 +191,7 @@ export function BillingTab() {
             style={{
               padding: '8px 20px',
               borderRadius: 8,
-              border: `1px solid ${subscription.payAsYouGoEnabled ? C.green : C.muted}`,
+              border: `1px solid ${subscription.payAsYouGoEnabled ? C.green : C.borderStrong}`,
               background: subscription.payAsYouGoEnabled ? alpha(C.green, 0.08) : 'transparent',
               color: subscription.payAsYouGoEnabled ? C.green : C.dim,
               cursor: 'pointer',
@@ -245,7 +246,7 @@ export function BillingTab() {
       <div style={{
         background: C.bg2,
         borderRadius: 12,
-        border: `1px solid ${C.muted}`,
+        border: `1px solid ${C.borderStrong}`,
         padding: 24,
       }}>
         <h3 style={{ fontFamily: F.display, fontSize: 18, color: C.text, margin: '0 0 16px' }}>
@@ -287,7 +288,7 @@ export function BillingTab() {
                         href={inv.invoicePdf}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ color: C.accent, fontSize: 13, textDecoration: 'none', fontFamily: F.body }}
+                        style={{ color: C.accentText, fontSize: 13, textDecoration: 'none', fontFamily: F.body }}
                       >
                         Download
                       </a>

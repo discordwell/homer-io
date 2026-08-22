@@ -38,7 +38,7 @@ export function AnalyticsPage() {
           {/* Range selector */}
           <div style={{
             display: 'flex', background: C.bg3, borderRadius: 8,
-            border: `1px solid ${C.muted}`, overflow: 'hidden',
+            border: `1px solid ${C.borderStrong}`, overflow: 'hidden',
           }}>
             {ranges.map(r => (
               <button
@@ -60,7 +60,7 @@ export function AnalyticsPage() {
           <button
             onClick={exportCsv}
             style={{
-              padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.muted}`,
+              padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.borderStrong}`,
               background: C.bg3, color: C.text, cursor: 'pointer',
               fontFamily: F.body, fontSize: 13, fontWeight: 500,
               display: 'flex', alignItems: 'center', gap: 6,
@@ -154,7 +154,7 @@ export function AnalyticsPage() {
 
       {/* Tab bar */}
       <div className="analytics-tab-bar" style={{
-        display: 'flex', gap: 0, marginBottom: 20, borderBottom: `1px solid ${C.muted}`,
+        display: 'flex', gap: 0, marginBottom: 20, borderBottom: `1px solid ${C.borderStrong}`,
       }}>
         {([
           { key: 'drivers' as const, label: 'Drivers' },
@@ -168,7 +168,7 @@ export function AnalyticsPage() {
               padding: '10px 20px', border: 'none', cursor: 'pointer',
               fontFamily: F.body, fontSize: 13, fontWeight: 500,
               background: 'transparent',
-              color: activeTab === key ? C.accent : C.dim,
+              color: activeTab === key ? C.accentText : C.dim,
               borderBottom: `2px solid ${activeTab === key ? C.accent : 'transparent'}`,
               marginBottom: -1,
               transition: 'all 0.15s ease',
@@ -181,7 +181,7 @@ export function AnalyticsPage() {
 
       {/* Tab content */}
       <div style={{
-        background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 20,
+        background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 20,
         animation: 'tab-fade-in 200ms ease-out',
       }}>
         {activeTab === 'drivers' && enhancedDrivers.length > 0 && (

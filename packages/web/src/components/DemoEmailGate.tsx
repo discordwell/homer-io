@@ -71,7 +71,7 @@ export function DemoEmailGate() {
           letterSpacing: '-0.02em',
           marginBottom: 8,
         }}>
-          HOMER<span style={{ color: C.accent }}>.</span>
+          HOMER<span style={{ color: C.accentText }}>.</span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'center' }}>
@@ -151,7 +151,7 @@ export function DemoEmailGate() {
             borderRadius: 8,
             border: 'none',
             background: isValid && !submitting ? C.accent : alpha(C.accent, 0.3),
-            color: '#000',
+            color: C.onAccent,
             fontSize: 15,
             fontWeight: 600,
             fontFamily: F.body,

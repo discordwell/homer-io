@@ -134,7 +134,7 @@ export function IntegrationsTab() {
             <div
               key={platform.platform}
               style={{
-                background: C.bg2, borderRadius: 14, border: `1px solid ${isConnected ? alpha(statusColor, 0.25) : C.muted}`,
+                background: C.bg2, borderRadius: 14, border: `1px solid ${isConnected ? alpha(statusColor, 0.25) : C.borderStrong}`,
                 padding: 20, display: 'flex', flexDirection: 'column', gap: 14,
                 transition: 'border-color 0.2s',
               }}

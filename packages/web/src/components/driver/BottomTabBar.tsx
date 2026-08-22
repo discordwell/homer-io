@@ -37,7 +37,7 @@ export function BottomTabBar() {
             minWidth: 44,
             minHeight: 44,
             padding: '6px 16px',
-            color: isActive ? C.accent : C.dim,
+            color: isActive ? C.accentText : C.dim,
             transition: 'color 0.2s',
           })}
         >

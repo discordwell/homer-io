@@ -35,7 +35,7 @@ export function VoiceMicButton({ isRecording, isTranscribing, disabled, onClick 
         width: 40,
         height: 40,
         borderRadius: 8,
-        border: `1px solid ${isRecording ? '#ff3b30' : C.muted}`,
+        border: `1px solid ${isRecording ? '#ff3b30' : C.borderStrong}`,
         background: isRecording ? 'rgba(255,59,48,0.15)' : C.bg,
         color: isRecording ? '#ff3b30' : C.dim,
         cursor: disabled || isTranscribing ? 'not-allowed' : 'pointer',
@@ -52,7 +52,7 @@ export function VoiceMicButton({ isRecording, isTranscribing, disabled, onClick 
       {isTranscribing ? (
         <span style={{
           display: 'inline-block', width: 14, height: 14,
-          border: `2px solid ${C.muted}`, borderTopColor: C.accent,
+          border: `2px solid ${C.borderStrong}`, borderTopColor: C.accent,
           borderRadius: '50%', animation: 'spin 0.8s linear infinite',
         }} />
       ) : (

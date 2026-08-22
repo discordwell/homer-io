@@ -93,8 +93,8 @@ export function NotificationCenter() {
             position: 'absolute', top: 'calc(100% + 8px)', right: 0,
             width: 380, maxHeight: 480,
             background: C.bg2, borderRadius: 12,
-            border: `1px solid ${C.muted}`,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            border: `1px solid ${C.borderStrong}`,
+            boxShadow: 'var(--shadow-lg)',
             overflow: 'hidden', zIndex: 500,
             display: 'flex', flexDirection: 'column',
           }}
@@ -111,7 +111,7 @@ export function NotificationCenter() {
               <button
                 onClick={() => markAllAsRead()}
                 style={{
-                  background: 'none', border: 'none', color: C.accent,
+                  background: 'none', border: 'none', color: C.accentText,
                   cursor: 'pointer', fontSize: 12, fontFamily: F.body,
                   padding: '4px 8px',
                 }}

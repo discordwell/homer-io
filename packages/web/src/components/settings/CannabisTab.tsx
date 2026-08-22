@@ -146,7 +146,7 @@ export function CannabisTab() {
     <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
       {/* Settings form */}
       <div style={{
-        background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
+        background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`,
         padding: 24, maxWidth: 520, flex: '1 1 400px',
       }}>
         <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 20, color: C.text }}>
@@ -282,7 +282,7 @@ export function CannabisTab() {
 
       {/* Recent manifests */}
       <div style={{
-        background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
+        background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`,
         padding: 24, flex: '1 1 400px', maxWidth: 520,
       }}>
         <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 20, color: C.text }}>
@@ -320,8 +320,8 @@ export function CannabisTab() {
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      fontSize: 12, color: C.accent, textDecoration: 'none',
-                      padding: '4px 10px', borderRadius: 6, border: `1px solid ${C.muted}`,
+                      fontSize: 12, color: C.accentText, textDecoration: 'none',
+                      padding: '4px 10px', borderRadius: 6, border: `1px solid ${C.borderStrong}`,
                     }}
                   >
                     PDF

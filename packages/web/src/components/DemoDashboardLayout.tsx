@@ -7,6 +7,7 @@ import { DemoEmailGate } from './DemoEmailGate.js';
 import { useDemoStore } from '../stores/demo.js';
 import { useAuthStore } from '../stores/auth.js';
 import { C } from '../theme.js';
+import { ThemeToggle } from './ThemeToggle.js';
 
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(() =>
@@ -110,7 +111,7 @@ export function DemoDashboardLayout() {
         </div>
         <span style={{
           background: 'rgba(91, 164, 245, 0.15)',
-          color: C.accent,
+          color: C.accentText,
           padding: '4px 12px',
           borderRadius: 20,
           fontSize: 12,
@@ -120,11 +121,12 @@ export function DemoDashboardLayout() {
           DEMO MODE
         </span>
         <div className="topnav-right">
+          <ThemeToggle compact />
           <Link
             to="/register"
             style={{
               background: C.accent,
-              color: '#000',
+              color: C.onAccent,
               padding: '6px 16px',
               borderRadius: 6,
               fontSize: 13,
@@ -248,7 +250,7 @@ function DemoSidebar({ collapsed, onToggle, mobileOpen }: { collapsed: boolean; 
         <Link
           to="/register"
           style={{
-            color: C.accent,
+            color: C.accentText,
             fontSize: 12,
             textDecoration: 'none',
             fontWeight: 600,

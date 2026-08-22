@@ -91,7 +91,7 @@ function QuickActionsSection({ industry }: { industry: string; ordersToday: numb
             onMouseLeave={() => setHoveredIdx(null)}
             style={{
               background: C.bg2, borderRadius: 12,
-              border: `1px solid ${hoveredIdx === idx ? C.accent : C.muted}`,
+              border: `1px solid ${hoveredIdx === idx ? C.accent : C.borderStrong}`,
               padding: 20, display: 'flex', flexDirection: 'column', gap: 8,
               transition: 'border-color 0.2s, transform 0.15s',
               transform: hoveredIdx === idx ? 'translateY(-2px)' : 'none',
@@ -108,7 +108,7 @@ function QuickActionsSection({ industry }: { industry: string; ordersToday: numb
               style={{
                 alignSelf: 'flex-start', padding: '6px 16px', borderRadius: 6,
                 background: hoveredIdx === idx ? C.accent : C.bg3,
-                border: hoveredIdx === idx ? 'none' : `1px solid ${C.muted}`,
+                border: hoveredIdx === idx ? 'none' : `1px solid ${C.borderStrong}`,
                 color: hoveredIdx === idx ? '#000' : C.text,
                 cursor: 'pointer', fontFamily: F.body, fontSize: 12, fontWeight: 600,
                 transition: 'all 0.2s ease',
@@ -184,11 +184,11 @@ export function DashboardPage() {
 
       {/* Recent orders or empty state */}
       {hasData ? (
-        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ fontFamily: F.display, fontSize: 16, margin: 0 }}>Recent Orders</h3>
             <button onClick={() => navigate('/dashboard/orders')} style={{
-              background: 'none', border: 'none', color: C.accent, cursor: 'pointer',
+              background: 'none', border: 'none', color: C.accentText, cursor: 'pointer',
               fontSize: 13, fontFamily: F.body,
             }}>View all \u2192</button>
           </div>
@@ -201,7 +201,7 @@ export function DashboardPage() {
       ) : (
         <div style={{
           padding: 40, background: C.bg2, borderRadius: 12,
-          border: `1px solid ${C.muted}`, textAlign: 'center',
+          border: `1px solid ${C.borderStrong}`, textAlign: 'center',
         }}>
           <p style={{ fontSize: 16, marginBottom: 8, color: C.text }}>
             Get started with HOMER.io
@@ -228,6 +228,6 @@ export function DashboardPage() {
 
 const ctaBtnStyle: React.CSSProperties = {
   padding: '12px 24px', borderRadius: 10, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.text, cursor: 'pointer',
+  border: `1px solid ${C.borderStrong}`, color: C.text, cursor: 'pointer',
   fontFamily: F.body, fontSize: 14, fontWeight: 500,
 };

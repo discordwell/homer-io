@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar.js';
 import { AIChatPanel } from './AIChatPanel.js';
 import { NotificationCenter } from './NotificationCenter.js';
+import { ThemeToggle } from './ThemeToggle.js';
 import { SubscriptionBanner } from './SubscriptionBanner.js';
 import { BillingBlockedModal } from './BillingBlockedModal.js';
 import { useAuthStore } from '../stores/auth.js';
@@ -85,7 +86,7 @@ export function DashboardLayout() {
         {user?.isDemo && (
           <span style={{
             background: alpha(C.accent, 0.15),
-            color: C.accent,
+            color: C.accentText,
             padding: '4px 12px',
             borderRadius: 20,
             fontSize: 12,
@@ -96,6 +97,7 @@ export function DashboardLayout() {
           </span>
         )}
         <div className="topnav-right">
+          <ThemeToggle compact />
           <NotificationCenter />
         </div>
       </header>

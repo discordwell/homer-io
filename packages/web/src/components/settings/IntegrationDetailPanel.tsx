@@ -300,6 +300,6 @@ const statLabelStyle: React.CSSProperties = {
 };
 
 const paginationBtnStyle: React.CSSProperties = {
-  background: 'none', border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer',
+  background: 'none', border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer',
   fontSize: 12, fontFamily: F.body, padding: '4px 12px', borderRadius: 6,
 };

@@ -53,7 +53,7 @@ export function AnimatedKPICard({
   return (
     <div style={{
       background: `radial-gradient(ellipse at top left, ${alpha(color, 0.08)} 0%, ${C.bg2} 70%)`,
-      borderRadius: 12, padding: '16px 18px', border: `1px solid ${C.muted}`,
+      borderRadius: 12, padding: '16px 18px', border: `1px solid ${C.borderStrong}`,
       opacity: 0, animation: `kpi-fade-in 400ms ease-out ${delay}ms forwards`,
       minWidth: 0,
     }}>

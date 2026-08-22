@@ -160,7 +160,7 @@ export function RouteDetailPage() {
 
       {/* Optimization notes */}
       {route.optimizationNotes && (
-        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16, marginBottom: 24 }}>
+        <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16, marginBottom: 24 }}>
           <h3 style={{ fontFamily: F.display, fontSize: 15, marginBottom: 8 }}>Optimization Notes</h3>
           <p style={{ color: C.dim, fontSize: 14, whiteSpace: 'pre-wrap' }}>{route.optimizationNotes}</p>
         </div>
@@ -191,7 +191,7 @@ export function RouteDetailPage() {
       })()}
 
       {/* Order list */}
-      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
         <h3 style={{ fontFamily: F.display, fontSize: 15, marginBottom: 16 }}>Stops ({route.orders?.length || 0})</h3>
         {(route.orders || []).length === 0 ? (
           <p style={{ color: C.dim, fontSize: 14, textAlign: 'center', padding: 24 }}>No stops assigned</p>
@@ -204,7 +204,7 @@ export function RouteDetailPage() {
                   display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
                   background: C.bg3, borderRadius: 8,
                 }}>
-                  <span style={{ color: C.accent, fontWeight: 600, fontSize: 16, width: 28, textAlign: 'center' }}>{i + 1}</span>
+                  <span style={{ color: C.accentText, fontWeight: 600, fontSize: 16, width: 28, textAlign: 'center' }}>{i + 1}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 500, fontSize: 14 }}>{order.recipientName}</div>
                     <div style={{ color: C.dim, fontSize: 12 }}>{order.deliveryAddress.street}, {order.deliveryAddress.city}</div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import '../components/landing-v2/home.css';
+import { ThemeToggle } from '../components/ThemeToggle.js';
 
 /* ---- Scroll reveal (same as landing) ---- */
 
@@ -26,6 +27,7 @@ function Nav() {
         <li><Link to="/pricing">Pricing</Link></li>
         <li><Link to="/login">Log in</Link></li>
       </ul>
+      <ThemeToggle compact className="hp-nav-theme" />
       <Link to="/register" className="hp-nav-cta">Start free</Link>
     </nav>
   );
@@ -234,7 +236,7 @@ export function PricingPage() {
         paddingTop: 'clamp(104px, 18vw, 140px)',
         paddingBottom: 'clamp(56px, 10vw, 80px)',
         textAlign: 'center',
-        background: 'linear-gradient(180deg, #06090F 0%, #0A1018 100%)',
+        background: 'linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%)',
       }}>
         <Reveal>
           <span className="hp-eyebrow">Pricing</span>
@@ -260,7 +262,7 @@ export function PricingPage() {
               style={{
                 padding: '8px 20px', borderRadius: 8,
                 background: !annual ? 'var(--accent)' : 'transparent',
-                color: !annual ? '#000' : 'var(--t2)',
+                color: !annual ? 'var(--on-accent)' : 'var(--t2)',
                 border: 'none', cursor: 'pointer',
                 fontFamily: 'var(--fb)', fontSize: 14, fontWeight: 600,
                 transition: 'all 0.2s ease',
@@ -273,7 +275,7 @@ export function PricingPage() {
               style={{
                 padding: '8px 20px', borderRadius: 8,
                 background: annual ? 'var(--accent)' : 'transparent',
-                color: annual ? '#000' : 'var(--t2)',
+                color: annual ? 'var(--on-accent)' : 'var(--t2)',
                 border: 'none', cursor: 'pointer',
                 fontFamily: 'var(--fb)', fontSize: 14, fontWeight: 600,
                 transition: 'all 0.2s ease',
@@ -283,8 +285,8 @@ export function PricingPage() {
               Annual
               <span style={{
                 padding: '2px 8px', borderRadius: 20,
-                background: annual ? 'rgba(0,0,0,0.2)' : 'rgba(245,158,11,0.15)',
-                color: annual ? '#000' : 'var(--accent)',
+                background: annual ? 'rgba(var(--t1-rgb),0.14)' : 'rgba(var(--accent-rgb),0.15)',
+                color: annual ? 'var(--on-accent)' : 'var(--accent-text)',
                 fontSize: 11, fontWeight: 700,
                 fontFamily: 'var(--fm)',
               }}>
@@ -298,7 +300,7 @@ export function PricingPage() {
       {/* Plan cards */}
       <section style={{
         padding: '0 48px 80px',
-        background: 'linear-gradient(180deg, #0A1018 0%, #06090F 100%)',
+        background: 'linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%)',
       }}>
         <Reveal>
           <div style={{
@@ -459,7 +461,7 @@ export function PricingPage() {
       {/* Metered pricing */}
       <section style={{
         padding: '80px 48px',
-        background: 'linear-gradient(180deg, #06090F 0%, #0A1018 50%, #06090F 100%)',
+        background: 'var(--section-fade)',
       }}>
         <Reveal>
           <div style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -501,7 +503,7 @@ export function PricingPage() {
                     fontFamily: 'var(--fm)', fontSize: 12,
                     color: 'var(--green)',
                     padding: '4px 10px', borderRadius: 6,
-                    background: 'rgba(16,185,129,0.1)',
+                    background: 'rgba(var(--green-rgb),0.1)',
                     alignSelf: 'flex-start',
                   }}>
                     {item.free}

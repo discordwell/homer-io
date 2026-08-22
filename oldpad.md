@@ -410,3 +410,14 @@ Older entries rotated out of claudepad.md (20-summary cap). Newest first.
 - Implemented full Phase 0: Turborepo monorepo, Fastify API, Drizzle/Postgres schema, shared Zod schemas, auth module (JWT + refresh tokens + argon2), fleet/orders/routes CRUD, web frontend (login/register/dashboard), BullMQ worker skeleton, CI/CD pipeline, Caddy config, ARCHITECTURE.md.
 - Demo (src/App.jsx) preserved — builds independently via `npm run build:demo`.
 - All packages type-check clean. Shared package builds successfully.
+
+### 2026-03-21T23:50 UTC — Email-Gated Demo Sessions
+- **Abuse prevention**: Demo sessions now require email address (was zero-auth `{}`)
+- **Backend**: email field in schema with `.transform(toLowerCase)`, disposable domain blocklist (~80 domains), email-based dedup (Redis 7d TTL + DB slow path), replaces IP-based 1hr dedup
+- **Frontend**: `DemoEmailGate.tsx` full-screen overlay, provisioning on email submit (no more background provisioning), 422 error handling
+- **Shared**: `demoSessionSchema` exported from shared package for frontend validation
+- **Tests**: 25 new tests (13 disposable-domains + 12 demo-email-gate), all 517 passing
+- **Files**: 4 new (disposable-domains.ts, DemoEmailGate.tsx, 2 test files), 4 modified (demo-session.ts, routes.ts, shared auth.ts, demo store, DemoDashboardLayout)
+
+
+---

@@ -4,7 +4,30 @@
    (dashboard, auth, driver app)
    ============================================ */
 
+/* ------------------------------------------------------------------
+   PALETTE
+
+   Dark is the product default and lives on bare :root. Light overrides
+   only the tokens that change, under html[data-theme='light'].
+
+   `data-theme` is stamped on <html> before first paint by
+   public/theme-init.js and kept in sync by src/stores/theme.ts. There is
+   deliberately no prefers-color-scheme fallback: this is a React SPA, so
+   "scripts disabled" renders nothing to style, and a media-query fallback
+   would flash light at a dark-mode user on the OS-light + script-404 path.
+   Absent attribute therefore means dark, which is the product default.
+
+   Token roles that matter when adding colors:
+     --accent       brand amber used as a FILL (buttons, bars, dots)
+     --accent-text  brand amber used as FOREGROUND (links, labels, icons)
+     --on-accent    text/icons sitting on top of an --accent fill
+   In dark these collapse to the same amber; in light --accent-text is
+   darkened to clear 4.5:1 on white, which bright amber cannot do.
+   ------------------------------------------------------------------ */
+
 :root {
+  color-scheme: dark;
+
   /* Backgrounds */
   --bg: #06090F;
   --bg2: #0C1220;
@@ -14,18 +37,21 @@
   /* Accent — golden amber */
   --accent: #F59E0B;
   --accent-h: #D97706;
+  --accent-text: #F59E0B;
+  --on-accent: #0A0A0A;
   --accent-bg: rgba(245, 158, 11, 0.1);
   --accent-glow: 0 0 20px rgba(245, 158, 11, 0.25);
 
-  /* Status colors (functional, unchanged) */
+  /* Status colors (functional) */
   --green: #10B981;
   --red: #EF4444;
   --yellow: #FBBF24;
   --orange: #FB923C;
   --purple: #A78BFA;
 
-  /* RGB components for alpha blending (use with rgba()) */
+  /* RGB components for alpha blending (use with rgba(), or theme.ts alpha()) */
   --accent-rgb: 245, 158, 11;
+  --accent-text-rgb: 245, 158, 11;
   --green-rgb: 16, 185, 129;
   --red-rgb: 239, 68, 68;
   --yellow-rgb: 251, 191, 36;
@@ -33,8 +59,13 @@
   --purple-rgb: 167, 139, 250;
   --t1-rgb: 241, 245, 249;
   --t2-rgb: 148, 163, 184;
-  --t3-rgb: 101, 116, 139;
+  --t3-rgb: 100, 116, 139;
   --border-rgb: 30, 41, 59;
+  --bg-rgb: 6, 9, 15;
+  --border-strong-rgb: 100, 116, 139;
+  --on-accent-rgb: 10, 10, 10;
+  --bg2-rgb: 12, 18, 32;
+  --bg-card-rgb: 17, 24, 39;
 
   /* Text */
   --t1: #F1F5F9;
@@ -44,6 +75,47 @@
   /* Borders */
   --border: #1E293B;
   --border2: #141F30;
+  /* Heavier border used by cards/inputs across the app. Deliberately equal to
+     --t3 in dark so the dark theme is unchanged from before light mode
+     existed; light needs its own value because #64748B reads as a hard
+     charcoal rule on white. */
+  --border-strong: #64748B;
+
+  /* Form fields. Separate from --bg-card/--border because in light the card
+     and the field are both white — a field needs its own recessed fill and a
+     stronger edge to read as an input at all. Dark values are the historical
+     --bg-card/--border pair, so dark is unchanged. */
+  --field-bg: #111827;
+  --field-border: #1E293B;
+
+  /* Elevation — dark separates with borders, light leans on shadow */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  /* Scrim behind modals / mobile sidebar. 0.6 matches what Modal.tsx used
+     before this token existed, so dark is unchanged there. */
+  --overlay: rgba(0, 0, 0, 0.6);
+
+  /* Translucent chrome (backdrop-filtered nav bars) */
+  --chrome-bg: rgba(6, 9, 15, 0.88);
+
+  /* Landing surfaces. The hero scrim sits between the basemap and the hero
+     copy — it exists to push the map back far enough for text to read, so it
+     inverts wholesale rather than shifting hue. */
+  --panel-glass: rgba(12, 18, 32, 0.82);
+  --panel-glass-soft: rgba(12, 18, 32, 0.5);
+  --hero-grid: rgba(24, 37, 64, 0.2);
+  --hero-grid-soft: rgba(24, 37, 64, 0.15);
+  --hero-scrim:
+    linear-gradient(135deg, rgba(6, 9, 15, 0.93) 0%, rgba(6, 9, 15, 0.5) 50%, rgba(6, 9, 15, 0.78) 100%),
+    linear-gradient(to bottom, rgba(6, 9, 15, 0.5) 0%, transparent 25%, transparent 70%, rgba(6, 9, 15, 0.97) 100%);
+
+  /* Demo-mode banner keeps a blue identity distinct from the amber brand, so
+     it needs its own pair rather than reusing a surface token. */
+  --demo-banner-bg: linear-gradient(90deg, #1a3a5c 0%, #0f2b4a 100%);
+  --demo-banner-border: rgba(91, 164, 245, 0.3);
+  --section-fade: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 50%, var(--bg) 100%);
 
   /* Fonts */
   --fd: 'Syne', sans-serif;
@@ -62,8 +134,86 @@
   --card-gap: clamp(8px, 1.5vw, 16px);
   --section-gap: clamp(16px, 3vw, 32px);
 
-  color-scheme: dark;
   background: var(--bg);
+}
+
+/* ---- Light palette ---- */
+
+html[data-theme='light'] {
+  color-scheme: light;
+
+  /* Backgrounds — page is a soft slate, panels/cards are white so they
+     read as elevated rather than recessed (the inverse of dark). */
+  --bg: #F7F9FC;
+  --bg2: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-h: #F1F5F9;
+
+  /* Accent. --accent stays a vivid fill; --accent-text is amber-700, the
+     lightest amber that still clears AA on white (4.9:1). */
+  --accent: #D97706;
+  --accent-h: #B45309;
+  --accent-text: #B45309;
+  --on-accent: #1C1400;
+  --accent-bg: rgba(217, 119, 6, 0.1);
+  --accent-glow: 0 2px 12px rgba(217, 119, 6, 0.28);
+
+  /* Status colors darkened to stay legible as text on white.
+     Bright dark-mode equivalents run 1.7:1–3.8:1 here, well under AA. */
+  --green: #047857;
+  --red: #DC2626;
+  --yellow: #A16207;
+  --orange: #C2410C;
+  --purple: #7C3AED;
+
+  --accent-rgb: 217, 119, 6;
+  --accent-text-rgb: 180, 83, 9;
+  --green-rgb: 4, 120, 87;
+  --red-rgb: 220, 38, 38;
+  --yellow-rgb: 161, 98, 7;
+  --orange-rgb: 194, 65, 12;
+  --purple-rgb: 124, 58, 237;
+  --t1-rgb: 15, 23, 42;
+  --t2-rgb: 71, 85, 105;
+  --t3-rgb: 100, 116, 139;
+  --border-rgb: 226, 232, 240;
+  --bg-rgb: 247, 249, 252;
+  --border-strong-rgb: 203, 213, 225;
+  --on-accent-rgb: 28, 20, 0;
+  --bg2-rgb: 255, 255, 255;
+  --bg-card-rgb: 255, 255, 255;
+
+  /* Text */
+  --t1: #0F172A;
+  --t2: #475569;
+  --t3: #64748B;
+
+  /* Borders */
+  --border: #E2E8F0;
+  --border2: #EDF1F6;
+  --border-strong: #CBD5E1;
+
+  --field-bg: #F8FAFC;
+  --field-border: #CBD5E1;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+
+  --overlay: rgba(15, 23, 42, 0.35);
+  --chrome-bg: rgba(255, 255, 255, 0.85);
+
+  --panel-glass: rgba(255, 255, 255, 0.86);
+  --panel-glass-soft: rgba(255, 255, 255, 0.66);
+  --hero-grid: rgba(100, 116, 139, 0.22);
+  --hero-grid-soft: rgba(100, 116, 139, 0.16);
+  --hero-scrim:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.58) 50%, rgba(255, 255, 255, 0.82) 100%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.6) 0%, transparent 25%, transparent 70%, rgba(247, 249, 252, 0.97) 100%);
+
+  --demo-banner-bg: linear-gradient(90deg, #DBEAFE 0%, #EFF6FF 100%);
+  --demo-banner-border: rgba(37, 99, 235, 0.28);
+  --section-fade: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 50%, var(--bg) 100%);
 }
 
 /* Global resets using new tokens */
@@ -157,7 +307,7 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: space-between;
   padding: 0 clamp(12px, 3vw, 24px);
-  background: rgba(6, 9, 15, 0.88);
+  background: var(--chrome-bg);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border2);
 }
@@ -175,7 +325,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .topnav-logo .dot {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .topnav-right {
@@ -296,6 +446,8 @@ h1, h2, h3, h4, h5, h6 {
   height: 16px;
   border-radius: 8px;
   background: var(--red);
+  /* Literal white, not --t1: this always sits on the red fill, which is
+     dark in both palettes. */
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -430,7 +582,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .auth-card h1 .dot {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .auth-card .subtitle {
@@ -455,8 +607,8 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   padding: 12px;
   border-radius: 8px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
   color: var(--t1);
   font-size: 15px;
   outline: none;
@@ -474,7 +626,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 14px;
   border-radius: 10px;
   background: var(--accent);
-  color: #000;
+  color: var(--on-accent);
   border: none;
   font-size: 15px;
   font-weight: 700;
@@ -493,7 +645,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .auth-card .error-box {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(var(--red-rgb), 0.1);
   border: 1px solid var(--red);
   color: var(--red);
   padding: 12px;
@@ -503,7 +655,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .auth-card a {
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: none;
 }
 
@@ -569,7 +721,7 @@ h1, h2, h3, h4, h5, h6 {
     position: fixed;
     inset: 0;
     z-index: 55;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--overlay);
     backdrop-filter: blur(2px);
     -webkit-tap-highlight-color: transparent;
   }

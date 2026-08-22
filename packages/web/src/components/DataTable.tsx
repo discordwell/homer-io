@@ -28,7 +28,7 @@ export function DataTable<T extends Record<string, any>>({ columns, data, onRowC
                 <th key={col.key} style={{
                   padding: '10px 12px', textAlign: 'left', color: C.dim, fontSize: 12,
                   fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px',
-                  borderBottom: `1px solid ${C.muted}`, whiteSpace: 'nowrap',
+                  borderBottom: `1px solid ${C.borderStrong}`, whiteSpace: 'nowrap',
                   width: col.width, position: 'sticky', top: 0, background: C.bg2, zIndex: 1,
                 }}>{col.header}</th>
               ))}
@@ -93,7 +93,7 @@ function getColumnMinWidth<T extends Record<string, any>>(column: Column<T>): nu
 function pgBtnStyle(disabled: boolean): React.CSSProperties {
   return {
     padding: '6px 14px', borderRadius: 6, fontSize: 13,
-    background: C.bg3, border: `1px solid ${C.muted}`, color: C.dim,
+    background: C.bg3, border: `1px solid ${C.borderStrong}`, color: C.dim,
     cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: F.body,
     opacity: disabled ? 0.5 : 1,
   };

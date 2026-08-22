@@ -49,7 +49,7 @@ export function TelematicsDetailPanel({ open, connectionId, onClose }: Props) {
       role="dialog"
       aria-modal="true"
       style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000,
+        position: 'fixed', inset: 0, background: C.overlay, zIndex: 1000,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
       onClick={onClose}
@@ -57,7 +57,7 @@ export function TelematicsDetailPanel({ open, connectionId, onClose }: Props) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: C.bg2, borderRadius: 16, border: `1px solid ${C.muted}`,
+          background: C.bg2, borderRadius: 16, border: `1px solid ${C.borderStrong}`,
           padding: 24, width: '100%', maxWidth: 520, maxHeight: '85vh', overflowY: 'auto',
         }}
       >

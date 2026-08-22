@@ -35,7 +35,7 @@ export function VerifyEmailPage() {
         {status === 'success' && (
           <div>
             <div style={{
-              background: 'rgba(16,185,129,0.1)', border: '1px solid var(--green)',
+              background: 'rgba(var(--green-rgb),0.1)', border: '1px solid var(--green)',
               color: 'var(--green)', padding: 16, borderRadius: 8, marginBottom: 24, fontSize: 14,
             }}>
               Your email has been verified successfully!

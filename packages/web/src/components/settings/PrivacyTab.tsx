@@ -28,9 +28,10 @@ const RETENTION_POLICIES = [
   { name: 'Webhook Deliveries', days: 90 },
 ];
 
+// Rendered as `color:` on status text — foreground role, not a fill.
 const statusColors: Record<string, string> = {
   queued: C.dim,
-  processing: C.accent,
+  processing: C.accentText,
   completed: C.green,
   failed: C.red,
   pending: C.yellow,
@@ -140,7 +141,7 @@ export function PrivacyTab() {
       <div style={{
         background: C.bg2,
         borderRadius: 12,
-        border: `1px solid ${C.muted}`,
+        border: `1px solid ${C.borderStrong}`,
         padding: 24,
         marginBottom: 24,
       }}>
@@ -194,7 +195,7 @@ export function PrivacyTab() {
                       <a
                         href={exp.fileUrl}
                         download={`homer-export-${exp.id}.json`}
-                        style={{ color: C.accent, fontSize: 13, textDecoration: 'none', fontFamily: F.body }}
+                        style={{ color: C.accentText, fontSize: 13, textDecoration: 'none', fontFamily: F.body }}
                       >
                         Download
                       </a>
@@ -215,7 +216,7 @@ export function PrivacyTab() {
       <div style={{
         background: C.bg2,
         borderRadius: 12,
-        border: `1px solid ${C.muted}`,
+        border: `1px solid ${C.borderStrong}`,
         padding: 24,
         marginBottom: 24,
       }}>
@@ -308,7 +309,7 @@ export function PrivacyTab() {
                   flex: 1,
                   padding: '10px 14px',
                   borderRadius: 8,
-                  border: `1px solid ${C.muted}`,
+                  border: `1px solid ${C.borderStrong}`,
                   background: C.bg,
                   color: C.text,
                   fontFamily: F.body,

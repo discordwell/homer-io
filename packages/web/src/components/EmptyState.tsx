@@ -6,7 +6,7 @@ export function EmptyState({ icon = '📭', title, description, action }: EmptyS
   return (
     <div style={{
       padding: 48, textAlign: 'center', background: C.bg2,
-      borderRadius: 12, border: `1px solid ${C.muted}`,
+      borderRadius: 12, border: `1px solid ${C.borderStrong}`,
     }}>
       <div style={{ fontSize: 40, marginBottom: 16 }}>{icon}</div>
       <h3 style={{ fontFamily: F.display, fontSize: 18, marginBottom: 8, color: C.text }}>{title}</h3>

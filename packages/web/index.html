@@ -46,21 +46,48 @@
     <meta name="twitter:image" content="https://homer.discordwell.com/og-image.png" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%2306090F'/><path d='M20 65 L35 45 L50 55 L65 35 L80 50 L80 65 Z' fill='%23F59E0B' opacity='0.9'/><rect x='20' y='58' width='60' height='12' rx='4' fill='%23F59E0B'/><circle cx='35' cy='70' r='5' fill='%2306090F'/><circle cx='65' cy='70' r='5' fill='%2306090F'/><rect x='60' y='50' width='15' height='14' rx='2' fill='%2306090F'/></svg>" type="image/svg+xml" />
     <title>HOMER.io — AI-Powered Logistics Platform</title>
+    <!--
+      Resolves the persisted light/dark/system choice and stamps data-theme on
+      <html> before first paint, so light-mode users never see a dark flash.
+      Must stay an external same-origin file: the CSP above is `script-src
+      'self'` with no 'unsafe-inline', which would block an inline block.
+
+      Placed above the font <link> deliberately: a classic script blocks on any
+      stylesheet declared before it, which would serialize theme resolution
+      behind a third-party CSS fetch.
+    -->
+    <script src="/theme-init.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
-      /* Minimal pre-app styles — full tokens in app.css */
-      :root { color-scheme: dark; background: #06090F; }
+      /* Minimal pre-app styles — full tokens in app.css.
+         Both palettes live here so the first paint (before app.css arrives)
+         already matches the theme theme-init.js resolved.
+
+         The palette is switched via a variable rather than
+         `html[data-theme='light'] body { ... }` on purpose: an
+         attribute-scoped selector outranks app.css's plain `html, body, #root`
+         rule and would keep winning for the whole session, pinning the page to
+         these boot colors instead of the real --bg token. Same selectors +
+         later source order means app.css takes over cleanly. */
+      :root {
+        --boot-bg: #06090F;
+        --boot-fg: #F1F5F9;
+      }
+      html[data-theme='light'] {
+        --boot-bg: #F7F9FC;
+        --boot-fg: #0F172A;
+      }
       html, body, #root {
         margin: 0;
         min-height: 100%;
         width: 100%;
-        background: #06090F;
+        background: var(--boot-bg);
         overflow-x: hidden;
       }
       body {
-        color: #F1F5F9;
+        color: var(--boot-fg);
         font-family: 'Inter', sans-serif;
       }
     </style>

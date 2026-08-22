@@ -95,7 +95,7 @@ export function KitManagement() {
 
   return (
     <div style={{
-      background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
+      background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`,
       padding: 24, width: '100%',
     }}>
       <h3 style={{ fontFamily: F.display, fontSize: 16, marginBottom: 20, color: C.text }}>
@@ -169,7 +169,11 @@ function KitRow({ kit, expanded, onToggle, onStartReconciliation, onOpenReconcil
         <td style={{ padding: '10px 12px' }}>
           <span style={{
             display: 'inline-block', padding: '2px 8px', borderRadius: 4,
-            background: statusColor, color: '#000', fontWeight: 600, fontSize: 11,
+            // Wash + colored text rather than a solid fill: the status colors
+            // darken in light mode, so black-on-fill drops to ~3:1 there.
+            background: alpha(statusColor, 0.13), color: statusColor,
+            border: `1px solid ${alpha(statusColor, 0.27)}`,
+            fontWeight: 600, fontSize: 11,
           }}>
             {STATUS_LABELS[kit.status]}
           </span>

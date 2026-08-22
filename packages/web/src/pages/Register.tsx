@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.js';
 import { api } from '../api/client.js';
 import { GoogleSignInButton } from '../components/GoogleSignInButton.js';
+import { C } from '../theme.js';
 import type { AuthResponse, GoogleAuthResponse } from '@homer-io/shared';
 
 const VALID_INDUSTRIES = ['courier', 'restaurant', 'florist', 'pharmacy', 'cannabis', 'grocery', 'furniture', 'other'] as const;
@@ -90,10 +91,10 @@ export function RegisterPage() {
           <div style={{
             padding: '8px 14px',
             borderRadius: 8,
-            background: 'rgba(245,158,11,0.08)',
-            border: '1px solid rgba(245,158,11,0.2)',
+            background: 'rgba(var(--accent-rgb),0.08)',
+            border: '1px solid rgba(var(--accent-rgb),0.2)',
             fontSize: 13,
-            color: '#F59E0B',
+            color: C.accentText,
             textAlign: 'center',
             marginBottom: 8,
           }}>
@@ -110,9 +111,9 @@ export function RegisterPage() {
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0' }}>
-          <hr style={{ flex: 1, border: 'none', borderTop: '1px solid #e0e0e0' }} />
-          <span style={{ color: '#888', fontSize: 13 }}>or</span>
-          <hr style={{ flex: 1, border: 'none', borderTop: '1px solid #e0e0e0' }} />
+          <hr style={{ flex: 1, border: 'none', borderTop: `1px solid ${C.border}` }} />
+          <span style={{ color: C.muted, fontSize: 13 }}>or</span>
+          <hr style={{ flex: 1, border: 'none', borderTop: `1px solid ${C.border}` }} />
         </div>
 
         <label>

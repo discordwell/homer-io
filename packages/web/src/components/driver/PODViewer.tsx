@@ -101,7 +101,7 @@ export function PODViewer({ orderId, open, onClose }: PODViewerProps) {
                         height: 140,
                         objectFit: 'cover',
                         borderRadius: 8,
-                        border: `1px solid ${C.muted}`,
+                        border: `1px solid ${C.borderStrong}`,
                         cursor: 'pointer',
                         transition: 'opacity 0.15s',
                       }}
@@ -128,7 +128,7 @@ export function PODViewer({ orderId, open, onClose }: PODViewerProps) {
                     objectFit: 'contain',
                     background: C.bg3,
                     borderRadius: 8,
-                    border: `1px solid ${C.muted}`,
+                    border: `1px solid ${C.borderStrong}`,
                     padding: 8,
                   }}
                 />

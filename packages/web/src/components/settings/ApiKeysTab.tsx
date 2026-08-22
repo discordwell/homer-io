@@ -140,7 +140,7 @@ export function ApiKeysTab() {
         </button>
       </div>
 
-      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`, padding: 16 }}>
+      <div style={{ background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`, padding: 16 }}>
         <DataTable columns={columns} data={apiKeys} />
       </div>
 
@@ -166,7 +166,7 @@ export function ApiKeysTab() {
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '8px 12px', borderRadius: 8,
                     background: selectedScopes.includes(scope.value) ? alpha(C.accent, 0.08) : C.bg,
-                    border: `1px solid ${selectedScopes.includes(scope.value) ? C.accent : C.muted}`,
+                    border: `1px solid ${selectedScopes.includes(scope.value) ? C.accent : C.borderStrong}`,
                     cursor: 'pointer', fontSize: 13, color: C.text,
                     fontFamily: F.body, transition: 'all 0.15s ease',
                   }}
@@ -206,7 +206,7 @@ export function ApiKeysTab() {
         </div>
         <div style={{
           background: C.bg, borderRadius: 8, padding: 16,
-          border: `1px solid ${C.muted}`, marginBottom: 16,
+          border: `1px solid ${C.borderStrong}`, marginBottom: 16,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <code style={{
@@ -221,7 +221,7 @@ export function ApiKeysTab() {
                 toast('API key copied to clipboard', 'info');
               }}
               style={{
-                background: C.bg3, border: `1px solid ${C.muted}`, color: C.accent,
+                background: C.bg3, border: `1px solid ${C.borderStrong}`, color: C.accentText,
                 padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
                 fontSize: 13, fontFamily: F.body, fontWeight: 600,
                 whiteSpace: 'nowrap',
@@ -252,10 +252,10 @@ export function ApiKeysTab() {
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '10px 20px', borderRadius: 8, background: C.bg3,
-  border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
+  border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer', fontFamily: F.body,
 };
 
 const actionBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none', color: C.accent, cursor: 'pointer',
+  background: 'none', border: 'none', color: C.accentText, cursor: 'pointer',
   fontSize: 13, fontFamily: F.body, padding: '2px 4px',
 };

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.js';
 import { api } from '../api/client.js';
 import { GoogleSignInButton } from '../components/GoogleSignInButton.js';
+import { C } from '../theme.js';
 import type { AuthResponse, GoogleAuthResponse } from '@homer-io/shared';
 
 export function LoginPage() {
@@ -64,9 +65,9 @@ export function LoginPage() {
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0' }}>
-          <hr style={{ flex: 1, border: 'none', borderTop: '1px solid #e0e0e0' }} />
-          <span style={{ color: '#888', fontSize: 13 }}>or</span>
-          <hr style={{ flex: 1, border: 'none', borderTop: '1px solid #e0e0e0' }} />
+          <hr style={{ flex: 1, border: 'none', borderTop: `1px solid ${C.border}` }} />
+          <span style={{ color: C.muted, fontSize: 13 }}>or</span>
+          <hr style={{ flex: 1, border: 'none', borderTop: `1px solid ${C.border}` }} />
         </div>
 
         <label>

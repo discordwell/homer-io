@@ -33,7 +33,8 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   received: C.dim,
   assigned: C.yellow,
-  in_transit: C.accent,
+  // Rendered as `color:` on the status pill, so this is the foreground role.
+  in_transit: C.accentText,
   delivered: C.green,
   failed: C.red,
   returned: C.orange,
@@ -138,7 +139,7 @@ export function PublicTrackingPage() {
               style={{
                 width: 32,
                 height: 32,
-                border: `3px solid ${C.muted}`,
+                border: `3px solid ${C.borderStrong}`,
                 borderTopColor: C.accent,
                 borderRadius: '50%',
                 animation: 'spin 0.8s linear infinite',
@@ -203,9 +204,9 @@ export function PublicTrackingPage() {
                     borderRadius: 20,
                     fontSize: 12,
                     fontWeight: 600,
-                    background: `${STATUS_COLORS[data.status] || C.dim}22`,
+                    background: alpha(STATUS_COLORS[data.status] || C.dim, 0.13),
                     color: STATUS_COLORS[data.status] || C.dim,
-                    border: `1px solid ${STATUS_COLORS[data.status] || C.dim}44`,
+                    border: `1px solid ${alpha(STATUS_COLORS[data.status] || C.dim, 0.27)}`,
                   }}
                 >
                   {STATUS_LABELS[data.status] || data.status}
@@ -225,7 +226,7 @@ export function PublicTrackingPage() {
                   }}
                 >
                   <span style={{ fontSize: 13, color: C.dim }}>Estimated Delivery</span>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: C.accent }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: C.accentText }}>
                     {formatETA(data.estimatedDelivery)}
                   </span>
                 </div>

@@ -26,7 +26,7 @@ export function InsightCard({ insight }: InsightCardProps) {
 
   return (
     <div style={{
-      background: C.bg2, borderRadius: 10, border: `1px solid ${C.muted}`,
+      background: C.bg2, borderRadius: 10, border: `1px solid ${C.borderStrong}`,
       borderLeft: `3px solid ${config.borderColor}`,
       padding: '14px 16px', minWidth: 260, maxWidth: 320, flex: '0 0 auto',
     }}>
@@ -43,8 +43,8 @@ export function InsightCard({ insight }: InsightCardProps) {
         <button
           onClick={handleAsk}
           style={{
-            padding: '5px 12px', borderRadius: 6, border: `1px solid ${C.muted}`,
-            background: 'transparent', color: C.accent, cursor: 'pointer',
+            padding: '5px 12px', borderRadius: 6, border: `1px solid ${C.borderStrong}`,
+            background: 'transparent', color: C.accentText, cursor: 'pointer',
             fontFamily: F.body, fontSize: 11, fontWeight: 500,
             transition: 'background 0.15s',
           }}

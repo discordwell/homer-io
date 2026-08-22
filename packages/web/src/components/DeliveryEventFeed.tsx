@@ -110,7 +110,7 @@ export function DeliveryEventFeed() {
         flexDirection: 'column',
         backgroundColor: C.bg2,
         borderRadius: 12,
-        border: `1px solid ${C.muted}`,
+        border: `1px solid ${C.borderStrong}`,
         overflow: 'hidden',
       }}
     >

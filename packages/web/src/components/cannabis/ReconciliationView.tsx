@@ -119,7 +119,7 @@ export function ReconciliationView({ kitId, onClose }: Props) {
 
   return (
     <div style={{
-      background: C.bg2, borderRadius: 12, border: `1px solid ${C.muted}`,
+      background: C.bg2, borderRadius: 12, border: `1px solid ${C.borderStrong}`,
       padding: 24, width: '100%',
     }}>
       {/* Header */}
@@ -138,7 +138,7 @@ export function ReconciliationView({ kitId, onClose }: Props) {
         </div>
         <button onClick={onClose} style={{
           padding: '6px 14px', borderRadius: 6, background: C.bg3,
-          border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer',
+          border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer',
           fontFamily: F.body, fontSize: 13,
         }}>
           Close
@@ -200,7 +200,7 @@ export function ReconciliationView({ kitId, onClose }: Props) {
               borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`,
             }}>
               <span style={{
-                fontSize: 12, fontWeight: 600, color: C.accent,
+                fontSize: 12, fontWeight: 600, color: C.accentText,
                 textTransform: 'uppercase', letterSpacing: '0.05em',
               }}>
                 Loaded
@@ -211,7 +211,7 @@ export function ReconciliationView({ kitId, onClose }: Props) {
               borderBottom: `1px solid ${C.border}`,
             }}>
               <span style={{
-                fontSize: 12, fontWeight: 600, color: C.accent,
+                fontSize: 12, fontWeight: 600, color: C.accentText,
                 textTransform: 'uppercase', letterSpacing: '0.05em',
               }}>
                 Returned
@@ -308,7 +308,7 @@ export function ReconciliationView({ kitId, onClose }: Props) {
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
             <button onClick={onClose} style={{
               padding: '10px 20px', borderRadius: 8, background: C.bg3,
-              border: `1px solid ${C.muted}`, color: C.dim, cursor: 'pointer',
+              border: `1px solid ${C.borderStrong}`, color: C.dim, cursor: 'pointer',
               fontFamily: F.body, fontSize: 14,
             }}>
               Cancel
@@ -333,7 +333,7 @@ export function ReconciliationView({ kitId, onClose }: Props) {
 }
 
 const linkBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none', color: C.accent,
+  background: 'none', border: 'none', color: C.accentText,
   cursor: 'pointer', textDecoration: 'underline', fontSize: 14,
   fontFamily: F.body, padding: 0,
 };
