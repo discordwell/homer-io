@@ -1,0 +1,89 @@
+name: Repair HOMER production
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/repair-production.yml
+      - infra/Caddyfile
+      - infra/repair-production.sh
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homer-production
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Repair Caddy and restart the API
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.OVH2_HOST }}
+          username: ${{ secrets.OVH2_USER }}
+          key: ${{ secrets.OVH2_KEY }}
+          port: 41022
+          command_timeout: 10m
+          script: |
+            set -eu
+            umask 077
+            work_dir="$(mktemp -d "${TMPDIR:-/tmp}/homer-repair.XXXXXX")"
+            trap 'rm -rf "$work_dir"' EXIT
+
+            cd /opt/homer-io
+            exec 9>"$HOME/.homer-production.lock"
+            flock -w 300 9
+
+            repair_sha="${{ github.sha }}"
+            git fetch --no-tags origin "$repair_sha"
+            git cat-file -e "${repair_sha}^{commit}"
+
+            repair_script="$work_dir/repair-production.sh"
+            caddy_source="$work_dir/Caddyfile"
+            git show "$repair_sha":infra/repair-production.sh > "$repair_script"
+            git show "$repair_sha":infra/Caddyfile > "$caddy_source"
+            chmod 700 "$repair_script"
+            "$repair_script" "$caddy_source"
+
+      - name: Verify public HTTPS and signup route
+        run: |
+          set -eu
+          https_ready=false
+          for attempt in $(seq 1 36); do
+            if curl -fsS https://homer.discordwell.com/health > /dev/null; then
+              https_ready=true
+              break
+            fi
+            sleep 5
+          done
+          if [ "$https_ready" != true ]; then
+            echo "Public HTTPS health check did not recover" >&2
+            exit 1
+          fi
+
+          register_status="$(curl -sS -o /tmp/homer-register-response -w '%{http_code}' \
+            https://homer.discordwell.com/api/auth/register \
+            -H 'Content-Type: application/json' \
+            --data '{}')"
+          if [ "$register_status" != 400 ]; then
+            echo "Expected signup validation status 400, received $register_status" >&2
+            exit 1
+          fi
+
+      - name: Show Caddy diagnostics on failure
+        if: failure()
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.OVH2_HOST }}
+          username: ${{ secrets.OVH2_USER }}
+          key: ${{ secrets.OVH2_KEY }}
+          port: 41022
+          command_timeout: 2m
+          script: |
+            sudo -n journalctl -u caddy --since '10 minutes ago' --no-pager -n 120

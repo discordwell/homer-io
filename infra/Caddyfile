@@ -6,11 +6,19 @@
 # block below — the response header takes precedence over the meta tag.
 # See packages/web/index.html for the canonical policy and rationale.
 
-# Demo site — preserved at homer.discordwell.com
+# Public site and same-origin application API. Keep the /api prefix when
+# proxying: Fastify mounts its application routes beneath /api.
 homer.discordwell.com {
-	root * /opt/homer-io/site
-	file_server
-	try_files {path} /index.html
+	@backend path /api /api/* /health /stripe/webhook /socket.io /socket.io/*
+	handle @backend {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	handle {
+		root * /opt/homer-io/site
+		try_files {path} /index.html
+		file_server
+	}
 }
 
 # Product app — app.homer.io

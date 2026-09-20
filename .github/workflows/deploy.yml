@@ -88,11 +88,14 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    concurrency:
+      group: homer-production
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
       - name: Deploy to ovh2 via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
           host: ${{ secrets.OVH2_HOST }}
           username: ${{ secrets.OVH2_USER }}
@@ -100,7 +103,10 @@ jobs:
           port: 41022
           command_timeout: 8m
           script: |
+            set -eu
             cd /opt/homer-io
+            exec 9>"$HOME/.homer-production.lock"
+            flock -w 600 9
             git fetch origin
             git pull --ff-only origin main
             npm ci
