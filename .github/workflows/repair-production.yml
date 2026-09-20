@@ -40,6 +40,30 @@ jobs:
             exec 9>"$HOME/.homer-production.lock"
             flock -w 300 9
 
+            echo "Disk usage before guarded cleanup:"
+            df -h /
+            sudo -n du -x -BM --max-depth=1 /var /opt /home 2>/dev/null \
+              | sort -n \
+              | tail -20 \
+              || true
+
+            available_kb="$(df --output=avail -k / | tail -1 | tr -d ' ')"
+            if [ "$available_kb" -lt 524288 ]; then
+              echo "Less than 512 MiB is free; removing regenerable logs and caches."
+              sudo -n journalctl --vacuum-size=200M
+              pm2 flush || true
+              npm cache clean --force || true
+              sudo -n apt-get clean
+            fi
+
+            echo "Disk usage after guarded cleanup:"
+            df -h /
+            available_kb="$(df --output=avail -k / | tail -1 | tr -d ' ')"
+            if [ "$available_kb" -lt 262144 ]; then
+              echo "At least 256 MiB of free disk space is required to continue safely." >&2
+              exit 1
+            fi
+
             repair_sha="${{ github.sha }}"
             git fetch --no-tags origin "$repair_sha"
             git cat-file -e "${repair_sha}^{commit}"
