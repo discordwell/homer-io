@@ -110,4 +110,12 @@ jobs:
           port: 41022
           command_timeout: 2m
           script: |
+            echo 'Caddy imports from the primary configuration:'
+            sudo -n grep -nE '^[[:space:]]*import[[:space:]]' /etc/caddy/Caddyfile || true
+            echo 'Active Caddy files containing the Homer hostname:'
+            sudo -n grep -Rns \
+              --exclude='*.before-*' \
+              --exclude='*.bak' \
+              --exclude='*.backup' \
+              -- 'homer.discordwell.com' /etc/caddy || true
             sudo -n journalctl -u caddy --since '10 minutes ago' --no-pager -n 120
