@@ -8,18 +8,108 @@ LIVE_CADDYFILE=/etc/caddy/Caddyfile
 cd "$REPOSITORY_DIR"
 
 node --env-file=.env <<'NODE'
-const checks = [
-  ['JWT_SECRET', 'dev-only-change-me-rotate-in-prod-0123456789abcdef0123456789abcdef'],
-  ['INTEGRATION_ENCRYPTION_KEY', 'change-this-to-a-random-64-char-string-generated-by-openssl-rand'],
-];
+const crypto = require('node:crypto');
+const fs = require('node:fs');
 
-for (const [name, placeholder] of checks) {
+const envPath = '.env';
+const placeholders = {
+  JWT_SECRET: 'dev-only-change-me-rotate-in-prod-0123456789abcdef0123456789abcdef',
+  INTEGRATION_ENCRYPTION_KEY: 'change-this-to-a-random-64-char-string-generated-by-openssl-rand',
+};
+
+function isSecure(name) {
   const value = process.env[name] ?? '';
-  if (value.length < 32 || value === placeholder) {
-    console.error(`${name} is missing, too short, or still a public placeholder; repair stopped without changing production`);
-    process.exit(1);
+  return value.length >= 32 && value !== placeholders[name];
+}
+
+function upsertEnv(content, name, value) {
+  const linePattern = new RegExp(`^(?:export\\s+)?${name}\\s*=.*$`, 'gm');
+  const normalized = content.endsWith('\n') ? content : `${content}\n`;
+  return linePattern.test(normalized)
+    ? normalized.replace(linePattern, `${name}=${value}`)
+    : `${normalized}${name}=${value}\n`;
+}
+
+async function countEncryptedRecords() {
+  const postgres = require('postgres');
+  const sql = postgres(
+    process.env.DATABASE_URL || 'postgresql://homer:homer@localhost:5432/homer',
+    { max: 1, connect_timeout: 5, idle_timeout: 1 },
+  );
+
+  async function countOrZeroWhenTableIsMissing(statement) {
+    try {
+      const rows = await sql.unsafe(statement);
+      return Number(rows[0].count);
+    } catch (error) {
+      if (error?.code === '42P01') return 0;
+      throw error;
+    }
+  }
+
+  try {
+    const counts = await Promise.all([
+      countOrZeroWhenTableIsMissing('SELECT count(*)::int AS count FROM integration_connections'),
+      countOrZeroWhenTableIsMissing('SELECT count(*)::int AS count FROM telematics_connections'),
+      countOrZeroWhenTableIsMissing(
+        "SELECT count(*)::int AS count FROM migration_jobs WHERE config ? 'apiKey' AND coalesce(config->>'apiKey', '') <> ''",
+      ),
+    ]);
+    return counts.reduce((total, count) => total + count, 0);
+  } finally {
+    await sql.end({ timeout: 1 });
   }
 }
+
+(async () => {
+  const replacements = {};
+
+  if (!isSecure('JWT_SECRET')) {
+    replacements.JWT_SECRET = crypto.randomBytes(32).toString('hex');
+  }
+
+  if (!isSecure('INTEGRATION_ENCRYPTION_KEY')) {
+    const encryptedRecordCount = await countEncryptedRecords();
+    if (encryptedRecordCount > 0) {
+      console.error(
+        'INTEGRATION_ENCRYPTION_KEY is invalid and encrypted integration, telematics, or migration records exist; refusing to rotate it automatically',
+      );
+      process.exit(1);
+    }
+    replacements.INTEGRATION_ENCRYPTION_KEY = crypto.randomBytes(32).toString('hex');
+  }
+
+  const replacementEntries = Object.entries(replacements);
+  if (replacementEntries.length === 0) {
+    console.log('Production secrets passed validation.');
+    return;
+  }
+
+  let content = fs.readFileSync(envPath, 'utf8');
+  for (const [name, value] of replacementEntries) {
+    content = upsertEnv(content, name, value);
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '');
+  const backupPath = `${envPath}.before-homer-repair-${timestamp}`;
+  const temporaryPath = `${envPath}.homer-repair-${process.pid}-${crypto.randomBytes(6).toString('hex')}`;
+  fs.copyFileSync(envPath, backupPath);
+  fs.chmodSync(backupPath, 0o600);
+  try {
+    fs.writeFileSync(temporaryPath, content, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+    fs.renameSync(temporaryPath, envPath);
+  } finally {
+    if (fs.existsSync(temporaryPath)) fs.rmSync(temporaryPath);
+  }
+
+  console.log(`Generated ${replacementEntries.map(([name]) => name).join(' and ')} locally on the production host.`);
+  if (replacements.JWT_SECRET) {
+    console.log('Existing login sessions, if any, must sign in again.');
+  }
+})().catch((error) => {
+  console.error(`Production secret preflight failed: ${error.message}`);
+  process.exit(1);
+});
 NODE
 
 umask 077
@@ -82,20 +172,29 @@ NODE
 
 sudo -n caddy validate --config "$candidate_caddyfile" --adapter caddyfile
 
-pm2 restart infra/ecosystem.config.cjs --only homer-api --update-env \
-  || pm2 start infra/ecosystem.config.cjs --only homer-api
+for process_name in homer-api homer-worker; do
+  pm2 restart infra/ecosystem.config.cjs --only "$process_name" --update-env \
+    || pm2 start infra/ecosystem.config.cjs --only "$process_name"
+done
 
 api_ready=false
+worker_ready=false
 for attempt in 1 2 3 4 5 6 7 8 9 10; do
+  api_ready=false
+  worker_ready=false
   if curl -fsS http://127.0.0.1:3000/health > /dev/null; then
     api_ready=true
-    break
   fi
+  worker_pid="$(pm2 pid homer-worker | tail -1 | tr -d '[:space:]')"
+  if [[ "$worker_pid" =~ ^[1-9][0-9]*$ ]]; then
+    worker_ready=true
+  fi
+  if [ "$api_ready" = true ] && [ "$worker_ready" = true ]; then break; fi
   sleep 2
 done
 
-if [ "$api_ready" != true ]; then
-  echo "The API did not recover; inspect: pm2 logs homer-api --lines 100 --nostream" >&2
+if [ "$api_ready" != true ] || [ "$worker_ready" != true ]; then
+  echo "The API or worker did not recover; inspect: pm2 logs --lines 100 --nostream" >&2
   exit 1
 fi
 
@@ -111,4 +210,4 @@ if ! sudo -n systemctl reload caddy; then
 fi
 sudo -n systemctl is-active --quiet caddy
 
-echo "The Homer API is healthy and only the homer.discordwell.com Caddy block was updated."
+echo "The Homer API and worker are healthy, and only the homer.discordwell.com Caddy block was updated."
