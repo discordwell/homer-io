@@ -3,7 +3,8 @@ set -euo pipefail
 
 REPOSITORY_DIR=/opt/homer-io
 SOURCE_CADDYFILE="${1:-$REPOSITORY_DIR/infra/Caddyfile}"
-LIVE_CADDYFILE=/etc/caddy/Caddyfile
+PRIMARY_CADDYFILE=/etc/caddy/Caddyfile
+LIVE_CADDYFILE=/etc/caddy/sites/homer.discordwell.com
 
 cd "$REPOSITORY_DIR"
 
@@ -198,12 +199,25 @@ if [ "$api_ready" != true ] || [ "$worker_ready" != true ]; then
   exit 1
 fi
 
-backup_path="$LIVE_CADDYFILE.before-homer-repair-$(date +%Y%m%d%H%M%S)"
-sudo -n cp "$LIVE_CADDYFILE" "$backup_path"
-sudo -n install -o root -g root -m 0644 "$candidate_caddyfile" "$LIVE_CADDYFILE"
+sudo -n install -d -o root -g root -m 0700 /var/backups/caddy
+backup_path="/var/backups/caddy/homer.discordwell.com.before-repair-$(date +%Y%m%d%H%M%S)"
+sudo -n cp -p "$LIVE_CADDYFILE" "$backup_path"
+live_uid="$(sudo -n stat -c '%u' "$LIVE_CADDYFILE")"
+live_gid="$(sudo -n stat -c '%g' "$LIVE_CADDYFILE")"
+live_mode="$(sudo -n stat -c '%a' "$LIVE_CADDYFILE")"
+staged_caddyfile="/etc/caddy/.homer.discordwell.com.repair-new-$$"
+sudo -n install -o "$live_uid" -g "$live_gid" -m "$live_mode" \
+  "$candidate_caddyfile" "$staged_caddyfile"
+sudo -n mv "$staged_caddyfile" "$LIVE_CADDYFILE"
+
+if ! sudo -n caddy validate --config "$PRIMARY_CADDYFILE" --adapter caddyfile; then
+  sudo -n cp -p "$backup_path" "$LIVE_CADDYFILE"
+  echo "The combined Caddy configuration was invalid; the previous Homer site file was restored" >&2
+  exit 1
+fi
 
 if ! sudo -n systemctl reload caddy; then
-  sudo -n cp "$backup_path" "$LIVE_CADDYFILE"
+  sudo -n cp -p "$backup_path" "$LIVE_CADDYFILE"
   sudo -n systemctl reload caddy
   echo "Caddy reload failed; the previous configuration was restored" >&2
   exit 1
